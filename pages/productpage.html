@@ -1836,17 +1836,14 @@
       
       // Buy Now Button
       const buyNowBtn = document.getElementById('buyNowBtn');
-      
+
       buyNowBtn.addEventListener('click', function() {
-        const selectedSize = document.querySelector('.size-option.active').textContent;
-        const selectedColor = document.querySelector('.color-option.active').getAttribute('data-color');
-        const quantity = parseInt(quantityInput.value);
+      const selectedSize = document.querySelector('.size-option.active').textContent;
+      const selectedColor = document.querySelector('.color-option.active').getAttribute('data-color');
+      const quantity = parseInt(quantityInput.value);
         
-        // Simulate buy now action
-        alert(`Proceeding to checkout: Premium Cotton Formal Shirt\nSize: ${selectedSize}\nColor: ${selectedColor}\nQuantity: ${quantity}`);
-        
-        // Redirect to checkout page (commented for demo)
-        // window.location.href = 'checkout.html';
+      // Redirect to checkout page
+      window.location.href = 'checkout.html';
       });
     });
   </script>

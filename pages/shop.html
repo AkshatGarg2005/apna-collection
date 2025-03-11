@@ -1134,21 +1134,22 @@
         filteredProducts.forEach(product => {
           const productCard = document.createElement('div');
           productCard.className = 'product-card';
-          
           productCard.innerHTML = `
-            <div class="product-image">
-              <img src="${product.image}" alt="${product.name}">
-              ${product.isNew ? '<span class="product-badge">New</span>' : ''}
-            </div>
-            <div class="product-info">
-              <h3 class="product-name">${product.name}</h3>
-              <p class="product-category">${capitalizeFirstLetter(product.category)}</p>
-              <p class="product-price">₹${product.price.toLocaleString()}</p>
-              <div class="product-actions">
-                <button class="add-to-cart">Add to Cart</button>
-                <i class="far fa-heart product-favorite"></i>
+            <a href="productpage.html?id=${product.id}" style="text-decoration: none; color: inherit;">
+              <div class="product-image">
+                <img src="${product.image}" alt="${product.name}">
+                ${product.isNew ? '<span class="product-badge">New</span>' : ''}
               </div>
-            </div>
+              <div class="product-info">
+                <h3 class="product-name">${product.name}</h3>
+                <p class="product-category">${capitalizeFirstLetter(product.category)}</p>
+                <p class="product-price">₹${product.price.toLocaleString()}</p>
+                <div class="product-actions">
+                  <button class="add-to-cart">Add to Cart</button>
+                  <i class="far fa-heart product-favorite"></i>
+                </div>
+              </div>
+            </a>
           `;
           
           productsGrid.appendChild(productCard);
@@ -1163,7 +1164,10 @@
         // Add to cart functionality
         const addToCartButtons = document.querySelectorAll('.add-to-cart');
         addToCartButtons.forEach(button => {
-          button.addEventListener('click', function() {
+          button.addEventListener('click', function(e) {
+            e.preventDefault(); // Prevent the link from being followed
+            e.stopPropagation(); // Stop the event from bubbling up
+            
             const cartCount = document.querySelector('.cart-count');
             const currentCount = parseInt(cartCount.textContent);
             cartCount.textContent = currentCount + 1;
@@ -1181,7 +1185,10 @@
         // Favorites functionality
         const favoriteButtons = document.querySelectorAll('.product-favorite');
         favoriteButtons.forEach(button => {
-          button.addEventListener('click', function() {
+          button.addEventListener('click', function(e) {
+            e.preventDefault(); // Prevent the link from being followed
+            e.stopPropagation(); // Stop the event from bubbling up
+            
             this.classList.toggle('fas');
             this.classList.toggle('far');
             this.style.color = this.classList.contains('fas') ? '#e74c3c' : '#777';
@@ -1312,15 +1319,17 @@
           productCard.className = 'product-card';
           
           productCard.innerHTML = `
-            <div class="product-image">
-              <img src="${product.image}" alt="${product.name}">
-              ${product.isNew ? '<span class="product-badge">New</span>' : ''}
-            </div>
-            <div class="product-info">
-              <h3 class="product-name">${product.name}</h3>
-              <p class="product-category">${capitalizeFirstLetter(product.category)}</p>
-              <p class="product-price">₹${product.price.toLocaleString()}</p>
-            </div>
+            <a href="productpage.html?id=${product.id}" style="text-decoration: none; color: inherit;">
+              <div class="product-image">
+                <img src="${product.image}" alt="${product.name}">
+                ${product.isNew ? '<span class="product-badge">New</span>' : ''}
+              </div>
+              <div class="product-info">
+                <h3 class="product-name">${product.name}</h3>
+                <p class="product-category">${capitalizeFirstLetter(product.category)}</p>
+                <p class="product-price">₹${product.price.toLocaleString()}</p>
+              </div>
+            </a>
           `;
           
           searchResults.appendChild(productCard);
