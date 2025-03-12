@@ -233,7 +233,7 @@ const OrderConfirmation = () => {
     <div className="confirmation-container">
       <div className="confirmation-header">
         <div className="checkmark-circle">
-          <i className="fas fa-check-circle checkmark"></i>
+        <i className="fas fa-check checkmark"></i>
         </div>
         <h1 className="confirmation-title">Order Confirmed!</h1>
         <p className="confirmation-message">Thank you for shopping with Apna Collection. Your order has been successfully placed and is being processed.</p>

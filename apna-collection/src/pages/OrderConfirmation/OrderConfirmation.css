@@ -52,6 +52,7 @@
   color: #fff;
   font-size: 2.8rem;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  line-height: 0; /* This helps center the icon vertically */
 }
 
 .confirmation-title {
@@ -568,4 +569,69 @@
     width: 70px;
     height: 70px;
   }
+}
+
+/* Ultra-precise checkmark positioning with micro-adjustments */
+.checkmark-circle {
+  position: relative;
+  width: 90px;
+  height: 90px;
+  margin: 0 auto 25px;
+  background: linear-gradient(135deg, #E1D9D2, #c59b6d);
+  border-radius: 50%;
+  box-shadow: 0 6px 16px rgba(197, 155, 109, 0.2);
+  display: block;
+  isolation: isolate; /* Create stacking context */
+}
+
+/* Separate animation keyframes that only affect scale */
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+/* Apply animation to circle only */
+.checkmark-circle {
+  animation: pulse 2s ease-in-out infinite;
+  transform-origin: center center;
+}
+
+/* Icon-specific fixes with micro-adjustments */
+.checkmark-circle i.checkmark,
+.checkmark-circle .checkmark {
+  /* Absolute positioning with critical micro-adjustment */
+  position: absolute;
+  top: 47%; /* Slight upward adjustment */
+  left: 47%; /* Slight leftward adjustment */
+  transform: translate(-45%, -45%); /* Adjusted offset for visual centering */
+  
+  /* Prevent animation inheritance */
+  animation: none;
+  
+  /* Reset all properties that affect positioning */
+  display: block;
+  width: auto;
+  height: auto;
+  margin: 0;
+  padding: 0;
+  line-height: 0;
+  
+  /* Styling */
+  color: #fff;
+  font-size: 2.8rem;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  
+  /* Ensure visibility */
+  z-index: 5;
+  
+  /* Force hardware acceleration */
+  -webkit-transform: translate(-45%, -45%);
+  -moz-transform: translate(-45%, -45%);
+  -ms-transform: translate(-45%, -45%);
+  transform: translate(-45%, -45%);
+  
+  /* Fix for icon-specific rendering */
+  transform-box: fill-box;
+  will-change: transform;
 }
