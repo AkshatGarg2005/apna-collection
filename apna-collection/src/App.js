@@ -32,14 +32,47 @@ const ScrollToTop = () => {
 
 function App() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [cart, setCart] = useState([]);
+  const [cart, setCart] = useState([
+    // Default items in cart for testing
+    {
+      id: 1,
+      name: "Premium Cotton Shirt",
+      category: "shirts",
+      price: 1299,
+      image: "/api/placeholder/400/500",
+      size: "M",
+      color: "White",
+      quantity: 1
+    },
+    {
+      id: 2,
+      name: "Slim Fit Trousers",
+      category: "trousers",
+      price: 1599,
+      image: "/api/placeholder/400/500",
+      size: "32",
+      color: "Navy Blue",
+      quantity: 1
+    },
+    {
+      id: 3,
+      name: "Designer Blazer",
+      category: "blazers",
+      price: 3499,
+      image: "/api/placeholder/400/500",
+      size: "L",
+      color: "Black",
+      quantity: 1
+    }
+  ]);
   
   // Load cart from localStorage on initial render
   useEffect(() => {
     const savedCart = localStorage.getItem('cart');
-    if (savedCart) {
+    if (savedCart && JSON.parse(savedCart).length > 0) {
       setCart(JSON.parse(savedCart));
     }
+    // Don't load from localStorage if we already have default items
   }, []);
   
   // Save cart to localStorage whenever it changes
@@ -90,6 +123,9 @@ function App() {
     });
     setCart(updatedCart);
   };
+
+  // Debug to see if cart has items
+  console.log("Current cart items:", cart);
   
   return (
     <Router>
