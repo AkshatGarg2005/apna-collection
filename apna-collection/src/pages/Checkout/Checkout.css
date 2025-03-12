@@ -179,13 +179,28 @@
   align-items: center;
   padding: 20px 0;
   border-bottom: 1px solid #f0f0f0;
-  transition: all 0.3s ease;
+  transition: all 0.3s ease, height 0.5s ease, margin 0.5s ease, padding 0.5s ease;
   position: relative;
 }
 
 .cart-item:hover {
   background-color: rgba(241, 236, 229, 0.15);
   transform: translateY(-2px);
+}
+
+@keyframes itemRemoval {
+  0% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  30% {
+    opacity: 0.7;
+    transform: translateX(10px);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(20px);
+  }
 }
 
 .cart-item:last-child {
@@ -286,6 +301,16 @@
 .quantity-btn:hover {
   background-color: #eee;
   color: #333;
+}
+
+.quantity-btn:hover .fa-trash-alt {
+  color: #ff4444;
+}
+
+.quantity-btn .fa-trash-alt {
+  font-size: 0.9rem;
+  color: #888;
+  transition: all 0.3s ease;
 }
 
 .quantity-btn.active {
@@ -531,6 +556,7 @@
 
 .place-order-btn {
   width: 100%;
+  min-height: 60px;
   padding: 18px;
   margin-top: 25px;
   background: linear-gradient(135deg, #d4af7a, #c59b6d);
@@ -549,6 +575,24 @@
   position: relative;
   overflow: hidden;
   letter-spacing: 0.5px;
+}
+
+.place-order-btn .btn-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.place-order-btn i {
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 5px;
 }
 
 .place-order-btn::before {
@@ -570,6 +614,227 @@
 
 .place-order-btn:hover::before {
   left: 100%;
+}
+
+/* Place Order Button States */
+.place-order-btn.loading {
+  background: linear-gradient(135deg, #7e7e7e, #5a5a5a);
+  cursor: not-allowed;
+  transform: none;
+}
+
+.place-order-btn.success {
+  background: linear-gradient(135deg, #28a745, #218838);
+  transform: translateY(-5px);
+  box-shadow: 0 15px 30px rgba(40, 167, 69, 0.4), 0 5px 10px rgba(40, 167, 69, 0.2);
+}
+
+/* Button ripple effect */
+.place-order-btn {
+  position: relative;
+  overflow: hidden;
+}
+
+.ripple-effect {
+  position: absolute;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.4);
+  transform: scale(0);
+  animation: ripple 0.6s linear;
+  z-index: 1;
+}
+
+@keyframes ripple {
+  to {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
+/* Order progress bar */
+.order-progress-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background-color: rgba(197, 155, 109, 0.2);
+  z-index: 2000;
+  transition: opacity 0.5s ease;
+}
+
+.progress-inner {
+  height: 100%;
+  width: 0;
+  background: linear-gradient(to right, #d4af7a, #c59b6d);
+  box-shadow: 0 0 10px rgba(197, 155, 109, 0.5);
+  transition: width 2.5s cubic-bezier(0.19, 1, 0.22, 1);
+}
+
+/* Success overlay animation */
+.order-success-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(255, 255, 255, 0.9);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 1999;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+
+.success-message {
+  margin-top: 20px;
+  font-size: 2rem;
+  font-weight: 700;
+  color: #28a745;
+  opacity: 0;
+  animation: fadeIn 0.5s ease forwards 0.8s;
+}
+
+@keyframes fadeIn {
+  to {
+    opacity: 1;
+    transform: translateY(10px);
+  }
+}
+
+/* Animated checkmark */
+.checkmark {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  display: block;
+  stroke-width: 3;
+  stroke: #28a745;
+  stroke-miterlimit: 10;
+  box-shadow: 0 0 20px rgba(40, 167, 69, 0.3);
+  animation: fill .4s ease-in-out .4s forwards, scale .3s ease-in-out .9s both;
+}
+
+.checkmark__circle {
+  stroke-dasharray: 166;
+  stroke-dashoffset: 166;
+  stroke-width: 2;
+  stroke-miterlimit: 10;
+  stroke: #28a745;
+  fill: none;
+  animation: stroke 0.6s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+}
+
+.checkmark__check {
+  transform-origin: 50% 50%;
+  stroke-dasharray: 48;
+  stroke-dashoffset: 48;
+  animation: stroke 0.3s cubic-bezier(0.65, 0, 0.45, 1) 0.8s forwards;
+}
+
+@keyframes stroke {
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes scale {
+  0%, 100% {
+    transform: none;
+  }
+  50% {
+    transform: scale3d(1.1, 1.1, 1);
+  }
+}
+
+@keyframes fill {
+  100% {
+    box-shadow: inset 0 0 0 30px rgba(40, 167, 69, 0.1);
+  }
+}
+
+/* Enhanced confetti animation */
+.confetti-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+@keyframes confettiDrop {
+  0% {
+    transform: translateY(-100vh) rotate(0deg);
+    opacity: 1;
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+.confetti {
+  position: fixed;
+  z-index: 1000;
+  top: -10px;
+  border-radius: 0;
+  animation: confettiDrop linear forwards;
+}
+
+.confetti-circle {
+  border-radius: 50%;
+}
+
+.confetti-star {
+  background: transparent !important;
+  color: gold;
+  font-size: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-shadow: 0 0 5px rgba(255, 215, 0, 0.7);
+  animation: confettiDrop linear forwards, twinkle 0.5s ease-in-out infinite alternate;
+}
+
+@keyframes twinkle {
+  from { opacity: 0.7; }
+  to { opacity: 1; }
+}
+
+/* Price animation */
+@keyframes priceGlow {
+  0%, 100% {
+    box-shadow: 0 0 5px rgba(197, 155, 109, 0);
+  }
+  50% {
+    box-shadow: 0 0 15px rgba(197, 155, 109, 0.6);
+  }
+}
+
+.summary-value {
+  position: relative;
+  padding: 5px 10px;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+}
+
+/* Count animation */
+@keyframes countUp {
+  from {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
 .secure-info {
@@ -709,6 +974,62 @@
 .add-address-btn:hover {
   border-color: #c59b6d;
   color: #c59b6d;
+}
+
+/* Coupon Animation */
+.coupon-form .form-input {
+  transition: all 0.3s ease;
+}
+
+.coupon-form .form-input:focus {
+  border-color: #c59b6d;
+  box-shadow: 0 0 0 3px rgba(197, 155, 109, 0.15);
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-2px); }
+  20%, 40%, 60%, 80% { transform: translateX(2px); }
+}
+
+.coupon-error {
+  animation: shake 0.5s ease-in-out;
+  border-color: #dc3545 !important;
+}
+
+.coupon-success {
+  border-color: #28a745 !important;
+  background-color: rgba(40, 167, 69, 0.05) !important;
+}
+
+/* Button shine effect */
+@keyframes shine {
+  0% { left: -100%; }
+  100% { left: 100%; }
+}
+
+.btn-shine:hover {
+  animation: shine 1s ease-in-out;
+}
+
+/* Number update animation */
+@keyframes numberUpdate {
+  0% {
+    opacity: 0.5;
+    transform: scale(0.95);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.number-update {
+  animation: numberUpdate 0.5s ease-out;
 }
 
 /* Responsive Styles */

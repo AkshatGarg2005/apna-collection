@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import './Checkout.css';
 
@@ -88,6 +88,20 @@ const Checkout = () => {
     total: 0
   });
   
+  // Animation references
+  const subtotalRef = useRef(null);
+  const discountRef = useRef(null);
+  const gstRef = useRef(null);
+  const totalRef = useRef(null);
+  
+  // Place order animation state
+  const [orderButtonState, setOrderButtonState] = useState({
+    isLoading: false,
+    isSuccess: false,
+    text: 'Place Order',
+    icon: 'fas fa-lock'
+  });
+  
   // Coupon state
   const [coupon, setCoupon] = useState({
     code: '',
@@ -117,22 +131,92 @@ const Checkout = () => {
     // Calculate total
     const total = afterDiscount + gst;
     
-    setSummary({
-      subtotal,
-      discount,
-      gst,
-      total
+    // Update state with new values
+    setSummary(prevSummary => {
+      const newSummary = {
+        subtotal,
+        discount,
+        gst,
+        total
+      };
+      
+      // Animate changes if values are different
+      if (prevSummary.subtotal !== 0) {
+        if (prevSummary.subtotal !== subtotal) animateValue(subtotalRef.current, prevSummary.subtotal, subtotal);
+        if (prevSummary.discount !== discount) animateValue(discountRef.current, prevSummary.discount, discount, true);
+        if (prevSummary.gst !== gst) animateValue(gstRef.current, prevSummary.gst, gst);
+        if (prevSummary.total !== total) animateValue(totalRef.current, prevSummary.total, total, false, true);
+      }
+      
+      return newSummary;
     });
+  };
+  
+  // Animate value change
+  const animateValue = (element, start, end, isDiscount = false, isTotal = false) => {
+    if (!element) return;
+    
+    const duration = 800;
+    const startTime = performance.now();
+    const prefix = isDiscount ? '-₹' : '₹';
+    
+    // Highlight the element
+    element.style.transition = 'all 0.3s ease';
+    element.style.backgroundColor = isTotal 
+      ? 'rgba(197, 155, 109, 0.15)' 
+      : 'rgba(241, 236, 229, 0.5)';
+    element.style.transform = 'scale(1.05)';
+    
+    const animateFrame = (timestamp) => {
+      const elapsed = timestamp - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      
+      // Easing function for smooth animation
+      const easeOut = t => 1 - Math.pow(1 - t, 3);
+      const easedProgress = easeOut(progress);
+      
+      // Calculate current value
+      const current = Math.round(start + (end - start) * easedProgress);
+      
+      // Update the element
+      element.textContent = `${prefix}${current.toLocaleString()}`;
+      
+      // Add glow effect for total
+      if (isTotal) {
+        const intensity = 1 - progress;
+        element.style.textShadow = `0 0 ${5 * intensity}px rgba(197, 155, 109, ${0.8 * intensity})`;
+      }
+      
+      if (progress < 1) {
+        requestAnimationFrame(animateFrame);
+      } else {
+        // Restore element style after animation
+        setTimeout(() => {
+          element.style.backgroundColor = '';
+          element.style.transform = '';
+          element.style.textShadow = '';
+        }, 300);
+      }
+    };
+    
+    requestAnimationFrame(animateFrame);
   };
   
   // Handle quantity changes
   const decreaseQuantity = (itemId) => {
-    setCartItems(cartItems.map(item => {
-      if (item.id === itemId && item.quantity > 1) {
-        return { ...item, quantity: item.quantity - 1 };
-      }
-      return item;
-    }));
+    const item = cartItems.find(item => item.id === itemId);
+    
+    // If quantity is 1, remove the item instead of decreasing
+    if (item && item.quantity === 1) {
+      removeItem(itemId);
+    } else {
+      setCartItems(cartItems.map(item => {
+        if (item.id === itemId && item.quantity > 1) {
+          return { ...item, quantity: item.quantity - 1 };
+        }
+        return item;
+      }));
+    }
   };
   
   const increaseQuantity = (itemId) => {
@@ -156,9 +240,37 @@ const Checkout = () => {
     }));
   };
   
-  // Remove item from cart
+  // Remove item from cart with animation
   const removeItem = (itemId) => {
-    setCartItems(cartItems.filter(item => item.id !== itemId));
+    // Find the cart item element
+    const itemElement = document.querySelector(`.cart-item[data-id="${itemId}"]`);
+    
+    if (itemElement) {
+      // Add removal animation
+      itemElement.style.transition = 'all 0.5s ease';
+      itemElement.style.height = `${itemElement.offsetHeight}px`;
+      itemElement.style.overflow = 'hidden';
+      
+      // First fade out
+      itemElement.style.opacity = '0';
+      itemElement.style.transform = 'translateX(20px)';
+      
+      setTimeout(() => {
+        // Then collapse
+        itemElement.style.height = '0';
+        itemElement.style.marginTop = '0';
+        itemElement.style.marginBottom = '0';
+        itemElement.style.padding = '0';
+        
+        // Finally remove from state after animation completes
+        setTimeout(() => {
+          setCartItems(cartItems.filter(item => item.id !== itemId));
+        }, 300);
+      }, 300);
+    } else {
+      // If element not found, just update the state
+      setCartItems(cartItems.filter(item => item.id !== itemId));
+    }
   };
   
   // Select address
@@ -210,7 +322,7 @@ const Checkout = () => {
     }));
   };
   
-  // Handle coupon application
+  // Handle coupon application with animation
   const handleApplyCoupon = () => {
     const couponCode = coupon.code.trim();
     
@@ -219,23 +331,87 @@ const Checkout = () => {
       return;
     }
     
-    // Simulate coupon validation
-    if (couponCode.toUpperCase() === 'WELCOME10') {
-      showCouponMessage('Coupon applied! 10% discount', true);
-      setCoupon(prev => ({
-        ...prev,
-        isValid: true,
-        discount: 0.1
-      }));
-    } else if (couponCode.toUpperCase() === 'APNA20') {
-      showCouponMessage('Coupon applied! 20% discount', true);
-      setCoupon(prev => ({
-        ...prev,
-        isValid: true,
-        discount: 0.2
-      }));
-    } else {
-      showCouponMessage('Invalid coupon code', false);
+    // Add a loading effect to the input
+    const couponInput = document.querySelector('.coupon-form .form-input');
+    if (couponInput) {
+      couponInput.style.transition = 'all 0.3s ease';
+      couponInput.style.backgroundColor = '#f9f9f9';
+      couponInput.style.boxShadow = '0 0 0 2px rgba(0, 0, 0, 0.05)';
+      couponInput.disabled = true;
+    }
+    
+    // Simulate API validation with delay
+    setTimeout(() => {
+      if (couponInput) {
+        couponInput.style.backgroundColor = '';
+        couponInput.style.boxShadow = '';
+        couponInput.disabled = false;
+      }
+      
+      // Validate coupon code
+      if (couponCode.toUpperCase() === 'WELCOME10') {
+        showCouponSuccess('Coupon applied! 10% discount', 0.1);
+      } else if (couponCode.toUpperCase() === 'APNA20') {
+        showCouponSuccess('Coupon applied! 20% discount', 0.2);
+      } else {
+        showCouponError('Invalid coupon code');
+      }
+    }, 800);
+  };
+  
+  // Show success animation for coupon
+  const showCouponSuccess = (message, discountRate) => {
+    // Show message
+    showCouponMessage(message, true);
+    
+    // Update discount rate
+    setCoupon(prev => ({
+      ...prev,
+      isValid: true,
+      discount: discountRate
+    }));
+    
+    // Highlight the summary section
+    const discountRow = document.querySelector('.summary-row:nth-child(2)');
+    if (discountRow) {
+      discountRow.style.transition = 'all 0.5s ease';
+      discountRow.style.backgroundColor = 'rgba(40, 167, 69, 0.1)';
+      discountRow.style.borderLeft = '3px solid #28a745';
+      
+      setTimeout(() => {
+        discountRow.style.backgroundColor = '';
+        discountRow.style.borderLeft = '';
+      }, 3000);
+    }
+  };
+  
+  // Show error animation for coupon
+  const showCouponError = (message) => {
+    showCouponMessage(message, false);
+    
+    // Shake effect on the input
+    const couponInput = document.querySelector('.coupon-form .form-input');
+    if (couponInput) {
+      couponInput.style.transition = 'all 0.1s ease';
+      couponInput.style.borderColor = '#dc3545';
+      
+      // Create shake animation
+      let position = 1;
+      const shake = setInterval(() => {
+        couponInput.style.transform = position ? 'translateX(2px)' : 'translateX(-2px)';
+        position = !position;
+      }, 50);
+      
+      // Stop after a short time
+      setTimeout(() => {
+        clearInterval(shake);
+        couponInput.style.transform = '';
+        
+        setTimeout(() => {
+          couponInput.style.borderColor = '';
+        }, 500);
+      }, 300);
+      
       setCoupon(prev => ({
         ...prev,
         isValid: false
@@ -257,12 +433,195 @@ const Checkout = () => {
     }, 5000);
   };
   
-  // Handle place order
+  // Enhanced place order with advanced animation
   const handlePlaceOrder = () => {
-    // Here you would typically validate all inputs and process the order
+    // Store the original button width and text for consistency
+    const button = document.querySelector('.place-order-btn');
+    if (button) {
+      // Ensure consistent width during state changes
+      const buttonWidth = button.offsetWidth;
+      button.style.width = `${buttonWidth}px`;
+    }
     
-    // For demonstration, we'll just navigate to the confirmation page
-    navigate('/order-confirmation');
+    // Add a ripple effect to the button first
+    if (button) {
+      const diameter = Math.max(button.clientWidth, button.clientHeight);
+      const radius = diameter / 2;
+      
+      const ripple = document.createElement('span');
+      ripple.className = 'ripple-effect';
+      ripple.style.width = ripple.style.height = `${diameter}px`;
+      ripple.style.left = `${button.clientWidth / 2 - radius}px`;
+      ripple.style.top = `${button.clientHeight / 2 - radius}px`;
+      
+      button.appendChild(ripple);
+      
+      // Remove ripple after animation
+      setTimeout(() => ripple.remove(), 600);
+    }
+    
+    // Set loading state with progress animation
+    setOrderButtonState({
+      isLoading: true,
+      isSuccess: false,
+      text: 'Processing...',
+      icon: 'fas fa-spinner fa-spin'
+    });
+    
+    // Create a progress indication
+    createProgressAnimation();
+    
+    // Simulate order processing (would be an API call in real app)
+    setTimeout(() => {
+      // Flash summary section
+      const summary = document.querySelector('.checkout-summary .checkout-section');
+      if (summary) {
+        summary.style.transition = 'all 0.5s ease';
+        summary.style.boxShadow = '0 0 30px rgba(197, 155, 109, 0.5)';
+        
+        setTimeout(() => {
+          summary.style.boxShadow = '';
+        }, 800);
+      }
+      
+      // Set success state
+      setOrderButtonState({
+        isLoading: false,
+        isSuccess: true,
+        text: 'Order Placed Successfully!',
+        icon: 'fas fa-check'
+      });
+      
+      // Celebration effects
+      triggerConfettiEffect();
+      createSuccessAnimation();
+      playCelebrativeSound();
+      
+      // Navigate to confirmation page after a delay
+      setTimeout(() => {
+        navigate('/order-confirmation');
+      }, 2200);
+    }, 2500);
+  };
+  
+  // Progress animation for order processing
+  const createProgressAnimation = () => {
+    const container = document.querySelector('.checkout-container');
+    if (!container) return;
+    
+    // Create progress bar
+    const progressBar = document.createElement('div');
+    progressBar.className = 'order-progress-bar';
+    progressBar.innerHTML = `
+      <div class="progress-inner"></div>
+    `;
+    
+    container.appendChild(progressBar);
+    
+    // Start animation
+    setTimeout(() => {
+      const inner = progressBar.querySelector('.progress-inner');
+      if (inner) inner.style.width = '100%';
+    }, 50);
+    
+    // Remove after completion
+    setTimeout(() => {
+      progressBar.style.opacity = '0';
+      setTimeout(() => progressBar.remove(), 500);
+    }, 2500);
+  };
+  
+  // Success animation
+  const createSuccessAnimation = () => {
+    const container = document.querySelector('.checkout-container');
+    if (!container) return;
+    
+    // Create success overlay
+    const overlay = document.createElement('div');
+    overlay.className = 'order-success-overlay';
+    
+    // Add animated check mark
+    overlay.innerHTML = `
+      <svg class="checkmark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52">
+        <circle class="checkmark__circle" cx="26" cy="26" r="25" fill="none"/>
+        <path class="checkmark__check" fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8"/>
+      </svg>
+      <div class="success-message">Order Confirmed!</div>
+    `;
+    
+    container.appendChild(overlay);
+    
+    // Animate in
+    setTimeout(() => {
+      overlay.style.opacity = '1';
+    }, 100);
+    
+    // Animate out before redirect
+    setTimeout(() => {
+      overlay.style.opacity = '0';
+      setTimeout(() => overlay.remove(), 500);
+    }, 1800);
+  };
+  
+  // Play celebratory sound (silent by default, uncomment to enable)
+  const playCelebrativeSound = () => {
+    // Uncomment below for audio feedback
+    // const audio = new Audio('success-sound-url.mp3');
+    // audio.volume = 0.3;
+    // audio.play().catch(e => console.log('Audio play prevented by browser policy'));
+  };
+  
+  // Enhanced confetti effect for successful order
+  const triggerConfettiEffect = () => {
+    const colors = ['#c59b6d', '#d4af7a', '#e1d9d2', '#f1ece5', '#ffffff', '#28a745', '#ffc107'];
+    const confettiCount = 250;
+    const container = document.querySelector('.checkout-container');
+    
+    if (!container) return;
+    
+    // Create confetti container for better performance
+    const confettiContainer = document.createElement('div');
+    confettiContainer.className = 'confetti-container';
+    container.appendChild(confettiContainer);
+    
+    // Generate different types of confetti
+    for (let i = 0; i < confettiCount; i++) {
+      const confetti = document.createElement('div');
+      
+      // Randomize confetti type (circle, square, or star)
+      const type = Math.floor(Math.random() * 3);
+      if (type === 0) {
+        confetti.className = 'confetti confetti-circle';
+      } else if (type === 1) {
+        confetti.className = 'confetti';
+      } else {
+        confetti.className = 'confetti confetti-star';
+        confetti.innerHTML = '★';
+      }
+      
+      // Random styling
+      confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+      confetti.style.left = Math.random() * 100 + 'vw';
+      confetti.style.width = Math.random() * 10 + 5 + 'px';
+      confetti.style.height = Math.random() * 5 + 3 + 'px';
+      confetti.style.opacity = Math.random() + 0.5;
+      confetti.style.transform = `rotate(${Math.random() * 360}deg)`;
+      
+      // Animation duration and delay
+      confetti.style.animationDuration = Math.random() * 3 + 2 + 's';
+      confetti.style.animationDelay = Math.random() * 3 + 's';
+      
+      confettiContainer.appendChild(confetti);
+    }
+    
+    // Clean up confetti after animation
+    setTimeout(() => {
+      confettiContainer.style.transition = 'opacity 1s ease';
+      confettiContainer.style.opacity = '0';
+      setTimeout(() => {
+        confettiContainer.remove();
+      }, 1000);
+    }, 5000);
   };
   
   // Show add address form
@@ -308,7 +667,7 @@ const Checkout = () => {
             <div className="cart-items">
               {cartItems.length > 0 ? (
                 cartItems.map(item => (
-                  <div className="cart-item" key={item.id}>
+                  <div className="cart-item" key={item.id} data-id={item.id}>
                     <div className="item-image">
                       <img src={item.image} alt={item.name} />
                     </div>
@@ -325,8 +684,9 @@ const Checkout = () => {
                         <button 
                           className="quantity-btn" 
                           onClick={() => decreaseQuantity(item.id)}
+                          title={item.quantity === 1 ? "Remove item" : "Decrease quantity"}
                         >
-                          -
+                          {item.quantity === 1 ? <i className="fas fa-trash-alt"></i> : "-"}
                         </button>
                         <input 
                           type="number" 
@@ -635,17 +995,17 @@ const Checkout = () => {
             
             <div className="summary-row">
               <div className="summary-label"><i className="fas fa-shopping-cart" style={{ color: '#c59b6d' }}></i> Subtotal</div>
-              <div className="summary-value" id="summary-subtotal">₹{summary.subtotal}</div>
+              <div className="summary-value" id="summary-subtotal" ref={subtotalRef}>₹{summary.subtotal}</div>
             </div>
             
             <div className="summary-row">
               <div className="summary-label"><i className="fas fa-tag" style={{ color: '#c59b6d' }}></i> Discount</div>
-              <div className="summary-value" id="summary-discount">-₹{summary.discount}</div>
+              <div className="summary-value" id="summary-discount" ref={discountRef}>-₹{summary.discount}</div>
             </div>
             
             <div className="summary-row">
               <div className="summary-label"><i className="fas fa-percent" style={{ color: '#c59b6d' }}></i> GST (18%)</div>
-              <div className="summary-value" id="summary-gst">₹{summary.gst}</div>
+              <div className="summary-value" id="summary-gst" ref={gstRef}>₹{summary.gst}</div>
             </div>
             
             <div className="summary-row">
@@ -655,11 +1015,18 @@ const Checkout = () => {
             
             <div className="summary-row summary-total">
               <div className="summary-label"><i className="fas fa-rupee-sign" style={{ marginRight: '5px' }}></i> Total Amount</div>
-              <div className="summary-value" id="summary-total">₹{summary.total}</div>
+              <div className="summary-value" id="summary-total" ref={totalRef}>₹{summary.total}</div>
             </div>
             
-            <button className="place-order-btn" onClick={handlePlaceOrder}>
-              <i className="fas fa-lock"></i> Place Order
+            <button 
+              className={`place-order-btn ${orderButtonState.isSuccess ? 'success' : ''} ${orderButtonState.isLoading ? 'loading' : ''}`} 
+              onClick={handlePlaceOrder}
+              disabled={orderButtonState.isLoading || orderButtonState.isSuccess}
+            >
+              <span className="btn-content">
+                <i className={orderButtonState.icon}></i> 
+                <span>{orderButtonState.text}</span>
+              </span>
             </button>
             
             <div className="secure-info">
@@ -680,7 +1047,7 @@ const Checkout = () => {
             <div className="coupon-form">
               <div className="form-group">
                 <label className="form-label">Apply Coupon</label>
-                <div style={{ display: 'flex' }}>
+                <div style={{ display: 'flex' }} className="coupon-form">
                   <input 
                     type="text" 
                     className="form-input" 
@@ -699,10 +1066,26 @@ const Checkout = () => {
                       borderRadius: '0 12px 12px 0', 
                       cursor: 'pointer', 
                       fontWeight: '600', 
-                      transition: 'all 0.3s ease' 
+                      transition: 'all 0.3s ease',
+                      position: 'relative',
+                      overflow: 'hidden'
                     }}
                   >
-                    Apply
+                    <span style={{ position: 'relative', zIndex: 2 }}>Apply</span>
+                    <span 
+                      style={{ 
+                        position: 'absolute', 
+                        top: 0, 
+                        left: '-100%', 
+                        width: '100%', 
+                        height: '100%', 
+                        background: 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent)', 
+                        transition: 'all 0.6s ease',
+                        zIndex: 1
+                      }}
+                      className="btn-shine"
+                      onMouseEnter={(e) => { e.currentTarget.style.left = '100%' }}
+                    ></span>
                   </button>
                 </div>
                 {coupon.message && (
