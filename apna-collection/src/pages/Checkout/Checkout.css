@@ -1,15 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&display=swap');
 
-.checkout-page {
-  background-color: #E1D9D2;
-  color: #333;
-  line-height: 1.6;
-  background-image: linear-gradient(135deg, #E1D9D2, #F1ECE5);
-  min-height: 100vh;
-  font-family: 'Poppins', sans-serif;
-}
-
 /* Checkout Page Styles */
 .checkout-container {
   max-width: 1200px;
@@ -274,22 +265,26 @@
   border: 1px solid #ddd;
   border-radius: 5px;
   overflow: hidden;
+  height: 40px;
+  user-select: none;
 }
 
 .quantity-btn {
-  width: 35px;
-  height: 35px;
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
   background-color: #f6f6f6;
   border: none;
+  outline: none;
   cursor: pointer;
-  font-size: 1rem;
-  transition: all 0.3s ease;
+  font-size: 1.2rem;
+  font-weight: 500;
   color: #666;
-  position: relative;
-  overflow: hidden;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  padding: 0;
 }
 
 .quantity-btn:hover {
@@ -297,14 +292,15 @@
   color: #333;
 }
 
-.quantity-btn.active {
+.quantity-btn:active {
   background-color: rgba(197, 155, 109, 0.1);
   color: #c59b6d;
+  transform: scale(0.95);
 }
 
 .quantity-input {
   width: 45px;
-  height: 35px;
+  height: 40px;
   border: none;
   border-left: 1px solid #e8e8e8;
   border-right: 1px solid #e8e8e8;
@@ -313,6 +309,37 @@
   font-weight: 500;
   color: #333;
   background-color: #fff;
+  -moz-appearance: textfield;
+  -webkit-appearance: none;
+  margin: 0;
+  outline: none;
+  padding: 0;
+}
+
+.quantity-input::-webkit-outer-spin-button,
+.quantity-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Ensure quantity button and related elements are displayed correctly */
+.item-quantity {
+  display: flex;
+  align-items: center;
+  margin-right: 20px;
+}
+
+.item-total {
+  font-weight: 600;
+  width: 80px;
+  text-align: right;
+  transition: color 0.3s ease;
+}
+
+.quantity-input::-webkit-outer-spin-button,
+.quantity-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
 .item-total {
@@ -454,11 +481,12 @@
   padding: 20px;
   background-color: #f9f9f9;
   border-radius: 10px;
-  display: none;
+  animation: fadeIn 0.3s ease-in-out;
 }
 
-.payment-details.active {
-  display: block;
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 /* Order Summary */
@@ -561,10 +589,22 @@
   left: 100%;
 }
 
+/* Pulse animation for the place order button */
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(197, 155, 109, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 15px rgba(197, 155, 109, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(197, 155, 109, 0);
+  }
+}
+
 .place-order-btn:disabled {
   opacity: 0.7;
   cursor: not-allowed;
-  transform: none;
 }
 
 .secure-info {
@@ -706,22 +746,6 @@
   color: #c59b6d;
 }
 
-/* Animation keyframes */
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes pulse {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.05); }
-  100% { transform: scale(1); }
-}
-
-.checkout-section {
-  animation: fadeIn 0.6s ease-out;
-}
-
 /* Responsive Styles */
 @media (max-width: 992px) {
   .checkout-content {
@@ -739,24 +763,6 @@
   
   .address-cards {
     flex-direction: column;
-  }
-}
-
-@media (max-width: 768px) {
-  .checkout-container {
-    padding: 0 20px;
-  }
-  
-  .checkout-title {
-    font-size: 2.2rem;
-  }
-  
-  .checkout-section {
-    padding: 25px;
-  }
-  
-  .payment-methods {
-    gap: 10px;
   }
 }
 
@@ -779,19 +785,375 @@
   }
   
   .checkout-title {
-    font-size: 1.8rem;
+    font-size: 2rem;
   }
   
-  .section-title {
-    font-size: 1.2rem;
+  .checkout-subtitle {
+    font-size: 0.95rem;
   }
   
-  .summary-total .summary-value {
-    font-size: 1.2rem;
+  .checkout-section {
+    padding: 25px 20px;
   }
-  
-  .place-order-btn {
-    font-size: 1rem;
-    padding: 15px;
+}
+
+/* Coupon Form Styles */
+.coupon-form {
+  margin-bottom: 10px;
+}
+
+.coupon-form .form-input {
+  font-size: 0.95rem;
+}
+
+.coupon-form button {
+  transition: all 0.3s ease;
+}
+
+.coupon-form button:hover {
+  background: linear-gradient(135deg, #c59b6d, #b48a5c);
+  box-shadow: 0 5px 15px rgba(197, 155, 109, 0.2);
+}
+
+.coupon-form button:active {
+  transform: translateY(2px);
+}
+
+/* Button Animations */
+.place-order-btn i {
+  transition: all 0.3s ease;
+}
+
+.place-order-btn:hover i {
+  transform: scale(1.2);
+  margin-right: 5px;
+}
+
+.place-order-btn:disabled:hover {
+  transform: none;
+  box-shadow: 0 10px 25px rgba(197, 155, 109, 0.3), 0 2px 3px rgba(197, 155, 109, 0.2);
+}
+
+/* Quantity Button Animation */
+.quantity-btn::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  background-color: rgba(197, 155, 109, 0.2);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  opacity: 0;
+  transition: all 0.4s ease;
+}
+
+.quantity-btn:active::after {
+  width: 100px;
+  height: 100px;
+  opacity: 1;
+}
+
+/* Focus States */
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  border-color: #c59b6d;
+  box-shadow: 0 0 0 3px rgba(197, 155, 109, 0.15);
+}
+
+/* Visual Feedback for Actions */
+@keyframes success-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7); }
+  70% { box-shadow: 0 0 0 10px rgba(40, 167, 69, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0); }
+}
+
+@keyframes error-shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-5px); }
+  40%, 80% { transform: translateX(5px); }
+}
+
+.success-animation {
+  animation: success-pulse 1.5s ease-in-out;
+}
+
+.error-animation {
+  animation: error-shake 0.5s ease-in-out;
+}
+
+/* Order Summary Value Animations */
+@keyframes highlight-row {
+  0% { background-color: rgba(197, 155, 109, 0.2); }
+  100% { background-color: transparent; }
+}
+
+.highlight-row {
+  animation: highlight-row 1.5s ease-in-out;
+}
+
+.summary-value {
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.summary-value:after {
+  content: '';
+  position: absolute;
+  bottom: -3px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: linear-gradient(to right, #d4af7a, #c59b6d);
+  transition: width 0.5s ease;
+  opacity: 0;
+  border-radius: 2px;
+}
+
+.summary-value.updating {
+  transform: scale(1.1);
+  color: #c59b6d;
+  font-weight: 700;
+}
+
+.summary-value.updating:after {
+  width: 100%;
+  opacity: 1;
+}
+
+.summary-total .summary-value.updating {
+  transform: scale(1.15);
+  text-shadow: 0 0 15px rgba(197, 155, 109, 0.3);
+  transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* Enhanced summary row animations */
+.summary-row {
+  position: relative;
+  overflow: hidden;
+}
+
+.summary-row:before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(197, 155, 109, 0.1), transparent);
+  z-index: 1;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.summary-row.highlight {
+  position: relative;
+}
+
+.summary-row.highlight:before {
+  animation: sweep 1s ease-in-out;
+}
+
+@keyframes sweep {
+  0% {
+    left: -100%;
+    opacity: 1;
   }
+  100% {
+    left: 100%;
+    opacity: 0;
+  }
+}
+
+/* Ripple effect for quantity buttons */
+@keyframes ripple {
+  0% { 
+    width: 0; 
+    height: 0; 
+    opacity: 1; 
+  }
+  100% { 
+    width: 100px; 
+    height: 100px; 
+    opacity: 0; 
+  }
+}
+
+.quantity-btn .ripple {
+  animation: ripple 0.5s linear;
+  position: absolute;
+  border-radius: 50%;
+  background-color: rgba(197, 155, 109, 0.3);
+  transform: translate(-50%, -50%);
+}
+
+/* Address Card Hover Effect */
+.address-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
+}
+
+.address-card.selected:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 20px rgba(197, 155, 109, 0.15);
+}
+
+/* Empty Cart Styling */
+.empty-cart {
+  text-align: center;
+  padding: 40px 0;
+  color: #888;
+}
+
+.empty-cart i {
+  font-size: 3.5rem;
+  color: #ddd;
+  margin-bottom: 15px;
+  display: block;
+}
+
+.empty-cart p {
+  margin-bottom: 20px;
+}
+
+.continue-shopping-btn {
+  display: inline-block;
+  padding: 10px 20px;
+  background: linear-gradient(135deg, #d4af7a, #c59b6d);
+  color: #fff;
+  border-radius: 25px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  box-shadow: 0 5px 15px rgba(197, 155, 109, 0.2);
+}
+
+.continue-shopping-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(197, 155, 109, 0.3);
+}
+
+/* Remove Item Animation */
+@keyframes item-remove {
+  0% { opacity: 1; transform: translateX(0); }
+  100% { opacity: 0; transform: translateX(20px); height: 0; margin: 0; padding: 0; }
+}
+
+.item-removing {
+  animation: item-remove 0.5s ease-in-out forwards;
+  overflow: hidden;
+}
+
+/* Order Summary Highlight Effect */
+@keyframes highlight-row {
+  0% { background-color: rgba(197, 155, 109, 0.2); }
+  100% { background-color: transparent; }
+}
+
+.highlight-row {
+  animation: highlight-row 1.5s ease-in-out;
+}
+
+/* Scroll To Top on Checkout */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Better Form Focus for Accessibility */
+.form-input:focus, .note-textarea:focus {
+  outline: none;
+  border-color: #c59b6d;
+  box-shadow: 0 0 0 3px rgba(197, 155, 109, 0.2);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c59b6d;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #b48a5c;
+}
+
+/* Background pattern like in the design reference */
+body {
+  background-color: #E1D9D2;
+  background-image: linear-gradient(45deg, rgba(197, 155, 109, 0.05) 25%, transparent 25%, transparent 50%, rgba(197, 155, 109, 0.05) 50%, rgba(197, 155, 109, 0.05) 75%, transparent 75%, transparent);
+  background-size: 60px 60px;
+}
+
+/* Additional animations for payment cards to match design */
+.payment-label::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0));
+  border-radius: 16px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.payment-label:hover::after {
+  opacity: 1;
+}
+
+/* Enhanced quantity control animations */
+.quantity-control {
+  position: relative;
+  overflow: hidden;
+}
+
+.quantity-control::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(to right, rgba(197, 155, 109, 0.1), transparent);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.quantity-control:hover::after {
+  opacity: 1;
+}
+
+/* Smoother item hover effects to match design */
+.cart-item {
+  position: relative;
+  z-index: 1;
+}
+
+.cart-item::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(197, 155, 109, 0.03);
+  z-index: -1;
+  opacity: 0;
+  transform: scaleX(0.97);
+  transition: all 0.3s ease;
+  border-radius: 10px;
+}
+
+.cart-item:hover::before {
+  opacity: 1;
+  transform: scaleX(1);
 }

@@ -1,169 +1,131 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useParams, useNavigate } from 'react-router-dom';
 import './ProductPage.css';
 
 const ProductPage = () => {
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [mainImage, setMainImage] = useState('/api/placeholder/600/700');
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const [product, setProduct] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [selectedImage, setSelectedImage] = useState(0);
   const [selectedSize, setSelectedSize] = useState('M');
   const [selectedColor, setSelectedColor] = useState('White');
   const [quantity, setQuantity] = useState(1);
   const [activeTab, setActiveTab] = useState('details');
-  const navigate = useNavigate();
+  const [cartCount, setCartCount] = useState(3); // Initial cart count
 
-  // Product data
-  const product = {
-    name: 'Premium Cotton Formal Shirt',
+  // Sample product data
+  const productData = {
+    id: 1,
+    name: "Premium Cotton Formal Shirt",
     price: 1299,
     originalPrice: 1699,
-    discount: 24,
+    discount: "24%",
     rating: 4.5,
     reviewCount: 128,
-    tag: 'New Arrival',
-    description: 'Elevate your formal attire with our Premium Cotton Formal Shirt. Crafted from high-quality Egyptian cotton, this shirt offers exceptional comfort and a sophisticated appearance. The tailored fit accentuates your silhouette while allowing ease of movement throughout the day. Perfect for office wear, formal events, or pair with jeans for a smart-casual look.',
-    stock: 12,
     images: [
-      '/api/placeholder/600/700',
-      '/api/placeholder/600/700',
-      '/api/placeholder/600/700',
-      '/api/placeholder/600/700'
+      "/api/placeholder/600/700",
+      "/api/placeholder/600/700",
+      "/api/placeholder/600/700",
+      "/api/placeholder/600/700"
     ],
-    sizes: ['S', 'M', 'L', 'XL', 'XXL'],
-    colors: [
-      { name: 'White', class: 'color-white' },
-      { name: 'Blue', class: 'color-blue' },
-      { name: 'Black', class: 'color-black' },
-      { name: 'Beige', class: 'color-beige' }
-    ],
+    description: "Elevate your formal attire with our Premium Cotton Formal Shirt. Crafted from high-quality Egyptian cotton, this shirt offers exceptional comfort and a sophisticated appearance. The tailored fit accentuates your silhouette while allowing ease of movement throughout the day. Perfect for office wear, formal events, or pair with jeans for a smart-casual look.",
+    sizes: ["S", "M", "L", "XL", "XXL"],
+    colors: ["White", "Blue", "Black", "Beige"],
+    stock: 12,
+    isNew: true,
     features: [
       {
-        icon: 'tshirt',
-        title: 'Premium Fabric',
-        desc: 'Made from 100% Egyptian cotton with a thread count of 120, ensuring softness and durability.'
+        title: "Premium Fabric",
+        description: "Made from 100% Egyptian cotton with a thread count of 120, ensuring softness and durability.",
+        icon: "tshirt"
       },
       {
-        icon: 'ruler',
-        title: 'Tailored Fit',
-        desc: 'Designed with a contemporary tailored fit that provides comfort while maintaining a sleek appearance.'
+        title: "Tailored Fit",
+        description: "Designed with a contemporary tailored fit that provides comfort while maintaining a sleek appearance.",
+        icon: "ruler"
       },
       {
-        icon: 'palette',
-        title: 'Superior Finishing',
-        desc: 'Single-needle stitching with 18 stitches per inch for a refined finish and enhanced durability.'
+        title: "Superior Finishing",
+        description: "Single-needle stitching with 18 stitches per inch for a refined finish and enhanced durability.",
+        icon: "palette"
       },
       {
-        icon: 'th',
-        title: 'Detail-Oriented Design',
-        desc: 'Features mother-of-pearl buttons, reinforced collar and cuffs, and a classic pointed collar style.'
+        title: "Detail-Oriented Design",
+        description: "Features mother-of-pearl buttons, reinforced collar and cuffs, and a classic pointed collar style.",
+        icon: "th"
       }
     ],
-    specs: [
-      { label: 'Material', value: '100% Egyptian Cotton' },
-      { label: 'Pattern', value: 'Solid' },
-      { label: 'Sleeve', value: 'Full Sleeve' },
-      { label: 'Collar', value: 'Classic Pointed Collar' },
-      { label: 'Cuff', value: 'Single Button' },
-      { label: 'Fit', value: 'Tailored Fit' },
-      { label: 'Occasion', value: 'Formal, Office, Business Casual' },
-      { label: 'Package Contents', value: '1 Shirt' }
+    specifications: [
+      { label: "Material", value: "100% Egyptian Cotton" },
+      { label: "Pattern", value: "Solid" },
+      { label: "Sleeve", value: "Full Sleeve" },
+      { label: "Collar", value: "Classic Pointed Collar" },
+      { label: "Cuff", value: "Single Button" },
+      { label: "Fit", value: "Tailored Fit" },
+      { label: "Occasion", value: "Formal, Office, Business Casual" },
+      { label: "Package Contents", value: "1 Shirt" }
     ],
     careInstructions: [
-      { icon: 'tint', text: 'Machine wash cold with similar colors' },
-      { icon: 'ban', text: 'Do not use bleach' },
-      { icon: 'temperature-low', text: 'Tumble dry on low heat' },
-      { icon: 'iron', text: 'Iron on medium heat' },
-      { icon: 'minus-circle', text: 'Do not dry clean' }
+      { text: "Machine wash cold with similar colors", icon: "tint" },
+      { text: "Do not use bleach", icon: "ban" },
+      { text: "Tumble dry on low heat", icon: "temperature-low" },
+      { text: "Iron on medium heat", icon: "iron" },
+      { text: "Do not dry clean", icon: "minus-circle" }
+    ],
+    careTips: [
+      "Turn the shirt inside out before washing to protect the buttons and surface of the fabric",
+      "Always unbutton the shirt completely before washing",
+      "Remove collar stays before washing",
+      "For best results, iron while slightly damp",
+      "Hang on a quality hanger when not in use to maintain the shape"
     ],
     reviews: [
       {
-        name: 'Rajesh Kumar',
-        date: '15 Feb, 2025',
+        name: "Rajesh Kumar",
+        date: "15 Feb, 2025",
         rating: 5,
-        text: 'The quality of this shirt is exceptional! The fabric feels premium and comfortable, even after a full day at the office. The fit is perfect for my body type, not too tight or loose. Definitely worth the price and I\'ll be ordering more colors soon.',
+        text: "The quality of this shirt is exceptional! The fabric feels premium and comfortable, even after a full day at the office. The fit is perfect for my body type, not too tight or loose. Definitely worth the price and I'll be ordering more colors soon.",
         photos: []
       },
       {
-        name: 'Aman Singh',
-        date: '3 Feb, 2025',
+        name: "Aman Singh",
+        date: "3 Feb, 2025",
         rating: 4,
-        text: 'Great formal shirt that looks very professional. The Egyptian cotton makes a noticeable difference compared to regular cotton shirts. The only minor issue is that the sleeves are slightly longer than expected, but otherwise perfect.',
-        photos: ['/api/placeholder/80/80', '/api/placeholder/80/80']
+        text: "Great formal shirt that looks very professional. The Egyptian cotton makes a noticeable difference compared to regular cotton shirts. The only minor issue is that the sleeves are slightly longer than expected, but otherwise perfect.",
+        photos: ["/api/placeholder/80/80", "/api/placeholder/80/80"]
       },
       {
-        name: 'Vikram Patel',
-        date: '27 Jan, 2025',
+        name: "Vikram Patel",
+        date: "27 Jan, 2025",
         rating: 4.5,
-        text: 'I\'ve been searching for quality formal shirts for a while, and Apna Collection has nailed it with this premium cotton shirt. The material is breathable and doesn\'t wrinkle easily, which is perfect for long workdays. The stitching and buttons are top-notch too. Highly recommend!',
+        text: "I've been searching for quality formal shirts for a while, and Apna Collection has nailed it with this premium cotton shirt. The material is breathable and doesn't wrinkle easily, which is perfect for long workdays. The stitching and buttons are top-notch too. Highly recommend!",
         photos: []
       }
     ],
+    ratingDistribution: [
+      { rating: 5, count: 96, percentage: 75 },
+      { rating: 4, count: 19, percentage: 15 },
+      { rating: 3, count: 6, percentage: 5 },
+      { rating: 2, count: 4, percentage: 3 },
+      { rating: 1, count: 3, percentage: 2 }
+    ],
     relatedProducts: [
-      {
-        name: 'Classic White Shirt',
-        price: 1199,
-        image: '/api/placeholder/400/500',
-        colors: ['color-white', 'color-blue', 'color-black']
-      },
-      {
-        name: 'Slim Fit Trousers',
-        price: 1599,
-        image: '/api/placeholder/400/500',
-        colors: ['color-black', 'color-beige']
-      },
-      {
-        name: 'Designer Blazer',
-        price: 3499,
-        image: '/api/placeholder/400/500',
-        colors: ['color-black', 'color-blue']
-      },
-      {
-        name: 'Formal Shoes',
-        price: 2199,
-        image: '/api/placeholder/400/500',
-        colors: ['color-black', 'color-beige']
-      }
+      { id: 2, name: "Classic White Shirt", price: 1199, image: "/api/placeholder/400/500", colors: ["White", "Blue", "Black"] },
+      { id: 3, name: "Slim Fit Trousers", price: 1599, image: "/api/placeholder/400/500", colors: ["Black", "Beige"] },
+      { id: 4, name: "Designer Blazer", price: 3499, image: "/api/placeholder/400/500", colors: ["Black", "Blue"] },
+      { id: 5, name: "Formal Shoes", price: 2199, image: "/api/placeholder/400/500", colors: ["Black", "Beige"] }
     ]
   };
 
-  // Review statistics
-  const reviewStats = [
-    { stars: 5, count: 96, percentage: 75 },
-    { stars: 4, count: 19, percentage: 15 },
-    { stars: 3, count: 6, percentage: 5 },
-    { stars: 2, count: 4, percentage: 3 },
-    { stars: 1, count: 3, percentage: 2 }
-  ];
+  // Simulate fetching product data
+  useEffect(() => {
+    // In a real app, fetch product by ID from an API
+    setProduct(productData);
+    setLoading(false);
+  }, [id]);
 
-  // Handle search overlay
-  const openSearchOverlay = () => {
-    setIsSearchOpen(true);
-    setTimeout(() => {
-      document.getElementById('searchInput')?.focus();
-    }, 100);
-  };
-
-  const closeSearchOverlay = () => {
-    setIsSearchOpen(false);
-    setSearchQuery('');
-  };
-
-  // Handle thumbnail click
-  const handleThumbnailClick = (index) => {
-    setMainImage(product.images[index]);
-  };
-
-  // Handle size selection
-  const handleSizeSelect = (size) => {
-    setSelectedSize(size);
-  };
-
-  // Handle color selection
-  const handleColorSelect = (color) => {
-    setSelectedColor(color);
-  };
-
-  // Handle quantity change
+  // Handle quantity changes
   const decreaseQuantity = () => {
     if (quantity > 1) {
       setQuantity(quantity - 1);
@@ -176,155 +138,56 @@ const ProductPage = () => {
     }
   };
 
-  const handleQuantityChange = (e) => {
-    const value = parseInt(e.target.value);
-    if (value >= 1 && value <= 10) {
-      setQuantity(value);
-    }
-  };
-
   // Handle add to cart
-  const handleAddToCart = (e) => {
-    e.preventDefault();
+  const handleAddToCart = () => {
+    // In a real app, add product to cart
     alert(`Added to cart: ${product.name}\nSize: ${selectedSize}\nColor: ${selectedColor}\nQuantity: ${quantity}`);
-    
-    // In a real application, you would dispatch an action to add the item to the cart
-    // For demo purposes, just update the cart count in the UI
-    const cartCount = document.querySelector('.cart-count');
-    if (cartCount) {
-      cartCount.textContent = parseInt(cartCount.textContent || '0') + 1;
-    }
+    setCartCount(cartCount + 1);
   };
 
   // Handle buy now
   const handleBuyNow = () => {
-    // In a real application, you might add the item to cart and redirect
+    // In a real app, you would store current product selection in cart/context
+    // and then redirect to checkout
     navigate('/checkout');
   };
 
-  // Handle tab switching
-  const handleTabChange = (tab) => {
-    setActiveTab(tab);
-  };
+  // Render loading state
+  if (loading) {
+    return <div className="loading">Loading product details...</div>;
+  }
 
-  // Handle escape key for search overlay
-  useEffect(() => {
-    const handleEscKey = (e) => {
-      if (e.key === 'Escape' && isSearchOpen) {
-        closeSearchOverlay();
-      }
-    };
+  // Render 404 if product not found
+  if (!product) {
+    return <div className="not-found">Product not found</div>;
+  }
 
-    document.addEventListener('keydown', handleEscKey);
-    return () => {
-      document.removeEventListener('keydown', handleEscKey);
-    };
-  }, [isSearchOpen]);
-
-  // Function to render stars for ratings
-  const renderStars = (rating) => {
-    const stars = [];
-    const fullStars = Math.floor(rating);
-    const hasHalfStar = rating % 1 !== 0;
-
-    for (let i = 0; i < fullStars; i++) {
-      stars.push(<i key={`full-${i}`} className="fas fa-star"></i>);
-    }
-
-    if (hasHalfStar) {
-      stars.push(<i key="half" className="fas fa-star-half-alt"></i>);
-    }
-
-    const emptyStars = 5 - stars.length;
-    for (let i = 0; i < emptyStars; i++) {
-      stars.push(<i key={`empty-${i}`} className="far fa-star"></i>);
-    }
-
-    return stars;
-  };
-
+  // Render product page
   return (
     <div className="product-page">
-      {/* Search Overlay */}
-      <div className={`search-overlay ${isSearchOpen ? 'active' : ''}`}>
-        <div className="search-close" onClick={closeSearchOverlay}>
-          <i className="fas fa-times"></i>
-        </div>
-        <div className="search-container">
-          <form>
-            <input 
-              type="text" 
-              className="search-input" 
-              id="searchInput"
-              placeholder="Search for products..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </form>
-        </div>
-        <div className="search-results">
-          {/* Search results would be displayed here */}
-        </div>
-      </div>
-
-      {/* Header */}
-      <header>
-        <div className="logo">
-          <Link to="/">Apna Collection</Link>
-        </div>
-        <nav>
-          <ul className="nav-links">
-            <li><Link to="/">Home</Link></li>
-            <li><Link to="/shop" className="active">Shop</Link></li>
-            <li><Link to="/aboutus">About Us</Link></li>
-            <li><Link to="/offers">Offers</Link></li>
-            <li><Link to="/contact">Contact</Link></li>
-          </ul>
-          <div className="nav-icons">
-            <div className="icon" onClick={openSearchOverlay}>
-              <i className="fas fa-search"></i>
-            </div>
-            <div className="icon">
-              <Link to="/cart">
-                <i className="fas fa-shopping-bag"></i>
-              </Link>
-              <span className="cart-count">3</span>
-            </div>
-            <div className="icon">
-              <Link to="/login">
-                <i className="fas fa-user"></i>
-              </Link>
-            </div>
-          </div>
-        </nav>
-      </header>
-
       {/* Breadcrumb */}
       <div className="breadcrumb">
         <div className="breadcrumb-links">
           <Link to="/">Home</Link>
-          <span className="breadcrumb-separator">&#8250;</span>
+          <span className="breadcrumb-separator">›</span>
           <Link to="/shop">Shop</Link>
-          <span className="breadcrumb-separator">&#8250;</span>
-          <Link to="/shop/formal-shirts">Formal Shirts</Link>
-          <span className="breadcrumb-separator">&#8250;</span>
+          <span className="breadcrumb-separator">›</span>
           <span>{product.name}</span>
         </div>
       </div>
 
-      {/* Product Detail Section */}
       <div className="product-container">
         {/* Product Gallery */}
         <div className="product-gallery">
           <div className="main-image">
-            <img src={mainImage} alt={product.name} id="mainImage" />
+            <img src={product.images[selectedImage]} alt={product.name} />
           </div>
           <div className="image-thumbnails">
             {product.images.map((image, index) => (
               <div 
-                key={index}
-                className={`thumbnail ${image === mainImage ? 'active' : ''}`}
-                onClick={() => handleThumbnailClick(index)}
+                key={index} 
+                className={`thumbnail ${selectedImage === index ? 'active' : ''}`} 
+                onClick={() => setSelectedImage(index)}
               >
                 <img src={image} alt={`${product.name} - View ${index + 1}`} />
               </div>
@@ -335,22 +198,31 @@ const ProductPage = () => {
         {/* Product Info */}
         <div className="product-info">
           <div className="product-header">
-            <span className="product-tag">{product.tag}</span>
+            {product.isNew && <span className="product-tag">New Arrival</span>}
             <h1 className="product-title">{product.name}</h1>
             <div className="product-price">
               ₹{product.price.toLocaleString()} 
               <span className="price-original">₹{product.originalPrice.toLocaleString()}</span> 
-              <span className="price-discount">{product.discount}% OFF</span>
+              <span className="price-discount">{product.discount} OFF</span>
             </div>
             <div className="product-rating">
               <div className="rating-stars">
-                {renderStars(product.rating)}
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <i 
+                    key={star} 
+                    className={
+                      star <= Math.floor(product.rating) 
+                        ? "fas fa-star" 
+                        : star <= product.rating 
+                          ? "fas fa-star-half-alt" 
+                          : "far fa-star"
+                    }
+                  ></i>
+                ))}
               </div>
               <span className="rating-count">{product.rating}/5 ({product.reviewCount} reviews)</span>
             </div>
-            <p className="product-description">
-              {product.description}
-            </p>
+            <p className="product-description">{product.description}</p>
           </div>
 
           <div className="product-options">
@@ -359,9 +231,9 @@ const ProductPage = () => {
               <div className="size-options">
                 {product.sizes.map((size) => (
                   <div 
-                    key={size}
-                    className={`size-option ${size === selectedSize ? 'active' : ''}`}
-                    onClick={() => handleSizeSelect(size)}
+                    key={size} 
+                    className={`size-option ${selectedSize === size ? 'active' : ''}`}
+                    onClick={() => setSelectedSize(size)}
                   >
                     {size}
                   </div>
@@ -375,10 +247,10 @@ const ProductPage = () => {
               <div className="color-options">
                 {product.colors.map((color) => (
                   <div 
-                    key={color.name}
-                    className={`color-option ${color.class} ${color.name === selectedColor ? 'active' : ''}`}
-                    data-color={color.name}
-                    onClick={() => handleColorSelect(color.name)}
+                    key={color} 
+                    className={`color-option color-${color.toLowerCase()} ${selectedColor === color ? 'active' : ''}`}
+                    data-color={color}
+                    onClick={() => setSelectedColor(color)}
                   ></div>
                 ))}
               </div>
@@ -395,7 +267,12 @@ const ProductPage = () => {
                     min="1" 
                     max="10" 
                     className="quantity-input"
-                    onChange={handleQuantityChange}
+                    onChange={(e) => {
+                      const value = parseInt(e.target.value);
+                      if (value >= 1 && value <= 10) {
+                        setQuantity(value);
+                      }
+                    }}
                   />
                   <button className="quantity-btn" onClick={increaseQuantity}>+</button>
                 </div>
@@ -434,20 +311,20 @@ const ProductPage = () => {
       <div className="additional-info">
         <div className="tabs">
           <div 
-            className={`tab ${activeTab === 'details' ? 'active' : ''}`}
-            onClick={() => handleTabChange('details')}
+            className={`tab ${activeTab === 'details' ? 'active' : ''}`} 
+            onClick={() => setActiveTab('details')}
           >
             Product Details
           </div>
           <div 
-            className={`tab ${activeTab === 'care' ? 'active' : ''}`}
-            onClick={() => handleTabChange('care')}
+            className={`tab ${activeTab === 'care' ? 'active' : ''}`} 
+            onClick={() => setActiveTab('care')}
           >
             Care Instructions
           </div>
           <div 
-            className={`tab ${activeTab === 'reviews' ? 'active' : ''}`}
-            onClick={() => handleTabChange('reviews')}
+            className={`tab ${activeTab === 'reviews' ? 'active' : ''}`} 
+            onClick={() => setActiveTab('reviews')}
           >
             Customer Reviews
           </div>
@@ -463,7 +340,7 @@ const ProductPage = () => {
                 </div>
                 <div className="feature-text">
                   <div className="feature-title">{feature.title}</div>
-                  <div className="feature-desc">{feature.desc}</div>
+                  <div className="feature-desc">{feature.description}</div>
                 </div>
               </div>
             ))}
@@ -471,7 +348,7 @@ const ProductPage = () => {
 
           <table className="product-spec-table">
             <tbody>
-              {product.specs.map((spec, index) => (
+              {product.specifications.map((spec, index) => (
                 <tr key={index}>
                   <td><strong>{spec.label}:</strong></td>
                   <td>{spec.value}</td>
@@ -500,11 +377,9 @@ const ProductPage = () => {
           <div className="care-tips">
             <h4>Additional Care Tips:</h4>
             <ul>
-              <li>Turn the shirt inside out before washing to protect the buttons and surface of the fabric</li>
-              <li>Always unbutton the shirt completely before washing</li>
-              <li>Remove collar stays before washing</li>
-              <li>For best results, iron while slightly damp</li>
-              <li>Hang on a quality hanger when not in use to maintain the shape</li>
+              {product.careTips.map((tip, index) => (
+                <li key={index}>{tip}</li>
+              ))}
             </ul>
           </div>
         </div>
@@ -515,22 +390,33 @@ const ProductPage = () => {
             <div className="review-total">
               <div className="review-average">{product.rating}</div>
               <div className="rating-stars">
-                {renderStars(product.rating)}
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <i 
+                    key={star} 
+                    className={
+                      star <= Math.floor(product.rating) 
+                        ? "fas fa-star" 
+                        : star <= product.rating 
+                          ? "fas fa-star-half-alt" 
+                          : "far fa-star"
+                    }
+                  ></i>
+                ))}
               </div>
               <div>Based on {product.reviewCount} reviews</div>
             </div>
             
             <div className="review-distribution">
-              {reviewStats.map((stat) => (
-                <div className="review-bar" key={stat.stars}>
-                  <div className="review-stars">{stat.stars} <i className="fas fa-star"></i></div>
+              {product.ratingDistribution.map((dist) => (
+                <div className="review-bar" key={dist.rating}>
+                  <div className="review-stars">{dist.rating} <i className="fas fa-star"></i></div>
                   <div className="review-progress">
                     <div 
                       className="review-progress-fill" 
-                      style={{ width: `${stat.percentage}%` }}
+                      style={{ width: `${dist.percentage}%` }}
                     ></div>
                   </div>
-                  <div className="review-count">{stat.count}</div>
+                  <div className="review-count">{dist.count}</div>
                 </div>
               ))}
             </div>
@@ -551,11 +437,20 @@ const ProductPage = () => {
                   </div>
                 </div>
                 <div className="review-rating">
-                  {renderStars(review.rating)}
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <i 
+                      key={star} 
+                      className={
+                        star <= Math.floor(review.rating) 
+                          ? "fas fa-star" 
+                          : star <= review.rating 
+                            ? "fas fa-star-half-alt" 
+                            : "far fa-star"
+                      }
+                    ></i>
+                  ))}
                 </div>
-                <div className="review-text">
-                  {review.text}
-                </div>
+                <div className="review-text">{review.text}</div>
                 {review.photos.length > 0 && (
                   <div className="review-photos">
                     {review.photos.map((photo, photoIndex) => (
@@ -575,65 +470,29 @@ const ProductPage = () => {
       <div className="related-products">
         <h2 className="related-title">You May Also Like</h2>
         <div className="related-grid">
-          {product.relatedProducts.map((item, index) => (
-            <div className="related-item" key={index}>
-              <div className="related-img">
-                <img src={item.image} alt={item.name} />
-              </div>
-              <div className="related-info">
-                <h3 className="related-name">{item.name}</h3>
-                <div className="related-price">₹{item.price.toLocaleString()}</div>
-                <div className="related-colors">
-                  {item.colors.map((color, colorIndex) => (
-                    <div key={colorIndex} className={`related-color ${color}`}></div>
-                  ))}
+          {product.relatedProducts.map((relatedProduct) => (
+            <div className="related-item" key={relatedProduct.id}>
+              <Link to={`/product/${relatedProduct.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                <div className="related-img">
+                  <img src={relatedProduct.image} alt={relatedProduct.name} />
                 </div>
-              </div>
+                <div className="related-info">
+                  <h3 className="related-name">{relatedProduct.name}</h3>
+                  <div className="related-price">₹{relatedProduct.price.toLocaleString()}</div>
+                  <div className="related-colors">
+                    {relatedProduct.colors.map((color, colorIndex) => (
+                      <div 
+                        key={colorIndex} 
+                        className={`related-color color-${color.toLowerCase()}`}
+                      ></div>
+                    ))}
+                  </div>
+                </div>
+              </Link>
             </div>
           ))}
         </div>
       </div>
-
-      {/* Footer */}
-      <footer>
-        <div className="footer-container">
-          <div className="footer-about">
-            <div className="footer-logo">Apna Collection</div>
-            <p>Premium men's clothing store in Sehore offering the latest fashion trends with quality fabrics and exceptional service.</p>
-          </div>
-          <div className="footer-links">
-            <h3>Quick Links</h3>
-            <ul>
-              <li><Link to="/">Home</Link></li>
-              <li><Link to="/shop">Shop</Link></li>
-              <li><Link to="/shop/new-arrivals">New Arrivals</Link></li>
-              <li><Link to="/shop/best-sellers">Best Sellers</Link></li>
-              <li><Link to="/offers">Special Offers</Link></li>
-            </ul>
-          </div>
-          <div className="footer-links">
-            <h3>Contact Us</h3>
-            <ul>
-              <li>Shop No. D1, Shri Giriraj Shopping Complex,</li>
-              <li>Infront of Tyagi Building, Englishpura,</li>
-              <li>Sehore, Madhya Pradesh 466001</li>
-              <li>Phone: 1234567890</li>
-              <li>Email: info@apnacollection.com</li>
-            </ul>
-          </div>
-          <div className="footer-newsletter">
-            <h3>Newsletter</h3>
-            <p>Subscribe to our newsletter for exclusive offers and updates.</p>
-            <form className="newsletter-form" onSubmit={(e) => e.preventDefault()}>
-              <input type="email" placeholder="Your Email" className="newsletter-input" />
-              <button type="submit" className="newsletter-btn">Subscribe</button>
-            </form>
-          </div>
-        </div>
-        <div className="footer-bottom">
-          <p>&copy; 2025 Apna Collection. All Rights Reserved.</p>
-        </div>
-      </footer>
     </div>
   );
 };

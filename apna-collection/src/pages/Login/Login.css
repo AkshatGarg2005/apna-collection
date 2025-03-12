@@ -7,7 +7,6 @@
     align-items: center;
     position: relative;
     overflow: hidden;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
 /* Decorative elements */
@@ -96,7 +95,6 @@
     font-size: 28px;
     font-weight: 700;
     letter-spacing: 1px;
-    margin: 0;
 }
 
 .input-group {
@@ -105,7 +103,7 @@
     transition: transform 0.3s ease;
 }
 
-.input-group.focused {
+.input-group:focus-within {
     transform: translateY(-2px);
 }
 
@@ -270,7 +268,6 @@
     50% { transform: translate(-10px, -15px) rotate(8deg); }
 }
 
-/* Responsive adjustments */
 @media (max-width: 480px) {
     .login-container {
         max-width: 90%;

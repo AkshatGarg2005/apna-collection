@@ -1,16 +1,10 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import Header from '../../components/Header';
-import Footer from '../../components/Footer';
-import SearchOverlay from '../../components/SearchOverlay';
 import './AboutUs.css';
 
 const AboutUs = () => {
   return (
-    <div className="aboutus-container">
-      <SearchOverlay />
-      <Header />
-      
+    <div className="about-us-page">
       {/* Main About Section */}
       <section className="about-section">
         <div className="container">
@@ -21,19 +15,19 @@ const AboutUs = () => {
           
           <div className="about-cards">
             <div className="about-card">
-              <i className="fas fa-medal fa-3x about-card-icon"></i>
+              <i className="fas fa-medal fa-3x" style={{marginBottom: '20px', color: '#c59b6d'}}></i>
               <h3>Premium Quality</h3>
               <p>We source the finest fabrics and materials to create clothing that not only looks good but is built to last. Each piece undergoes rigorous quality checks before reaching our customers.</p>
             </div>
             
             <div className="about-card">
-              <i className="fas fa-tags fa-3x about-card-icon"></i>
+              <i className="fas fa-tags fa-3x" style={{marginBottom: '20px', color: '#c59b6d'}}></i>
               <h3>Affordability</h3>
               <p>We believe that quality fashion shouldn't come with an exorbitant price tag. Our direct-sourcing model allows us to offer premium clothing at prices that won't break the bank.</p>
             </div>
             
             <div className="about-card">
-              <i className="fas fa-map-marker-alt fa-3x about-card-icon"></i>
+              <i className="fas fa-map-marker-alt fa-3x" style={{marginBottom: '20px', color: '#c59b6d'}}></i>
               <h3>Local Charm</h3>
               <p>Rooted in Sehore's rich cultural heritage, our designs incorporate elements that celebrate local craftsmanship while embracing contemporary global trends.</p>
             </div>
@@ -45,7 +39,7 @@ const AboutUs = () => {
       <section className="container">
         <div className="story-section">
           <div className="story-image">
-            <img src="/images/store.jpg" alt="Apna Collection Store" />
+            <img src="/api/placeholder/600/400" alt="Apna Collection Store" />
           </div>
           <div className="story-content">
             <h2>Our Story</h2>
@@ -66,7 +60,7 @@ const AboutUs = () => {
           
           <div className="team-grid">
             <div className="team-member">
-              <img src="/images/sumit.jpeg" alt="Team Member" />
+              <img src="/api/placeholder/400/500" alt="Team Member" />
               <div className="team-member-info">
                 <h3>Sumit Bhaiya</h3>
                 <p>Founder</p>
@@ -74,7 +68,7 @@ const AboutUs = () => {
             </div>
             
             <div className="team-member">
-              <img src="/images/sachin.jpeg" alt="Team Member" />
+              <img src="/api/placeholder/400/500" alt="Team Member" />
               <div className="team-member-info">
                 <h3>Sachin Bhaiya</h3>
                 <p>Founder</p>
@@ -117,23 +111,13 @@ const AboutUs = () => {
           </div>
           
           <div className="social-icons">
-            <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" title="Facebook">
-              <i className="fab fa-facebook-f"></i>
-            </a>
-            <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" title="Instagram">
-              <i className="fab fa-instagram"></i>
-            </a>
-            <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" title="Twitter">
-              <i className="fab fa-twitter"></i>
-            </a>
-            <a href="https://whatsapp.com" target="_blank" rel="noopener noreferrer" title="WhatsApp">
-              <i className="fab fa-whatsapp"></i>
-            </a>
+            <a href="#" title="Facebook"><i className="fab fa-facebook-f"></i></a>
+            <a href="#" title="Instagram"><i className="fab fa-instagram"></i></a>
+            <a href="#" title="Twitter"><i className="fab fa-twitter"></i></a>
+            <a href="#" title="WhatsApp"><i className="fab fa-whatsapp"></i></a>
           </div>
         </div>
       </section>
-      
-      <Footer />
     </div>
   );
 };

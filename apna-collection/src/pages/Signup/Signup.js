@@ -1,60 +1,31 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import './Signup.css';
 
 const Signup = () => {
-  // State for form fields
-  const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-    terms: false
-  });
-
-  // Password strength state
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState({
     strength: 0,
-    message: '',
-    color: ''
+    text: '',
+    color: '#eee'
   });
-
-  // Notification state
-  const [notification, setNotification] = useState({
-    message: '',
-    visible: false
-  });
-
-  // References to input elements for animation
-  const inputRefs = {
-    firstName: useRef(),
-    lastName: useRef(),
-    email: useRef(),
-    password: useRef(),
-    confirmPassword: useRef()
-  };
-
+  const [notification, setNotification] = useState({ message: '', show: false });
   const navigate = useNavigate();
 
-  // Handle input changes
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setFormData(prevData => ({
-      ...prevData,
-      [name]: type === 'checkbox' ? checked : value
-    }));
-
-    // Check password strength if password field is being updated
-    if (name === 'password') {
-      checkPasswordStrength(value);
+  // Calculate password strength
+  useEffect(() => {
+    if (!password) {
+      setPasswordStrength({ strength: 0, text: '', color: '#eee' });
+      return;
     }
-  };
 
-  // Password strength checker
-  const checkPasswordStrength = (password) => {
     let strength = 0;
-    let message = '';
+    let text = '';
     let color = '';
 
     if (password.length >= 8) {
@@ -73,117 +44,81 @@ const Signup = () => {
       strength += 25;
     }
     
-    // Determine message and color based on strength
     if (strength <= 25) {
       color = '#ff4d4d';
-      message = 'Weak password';
+      text = 'Weak password';
     } else if (strength <= 50) {
       color = '#ffa64d';
-      message = 'Moderate password';
+      text = 'Moderate password';
     } else if (strength <= 75) {
       color = '#ffee4d';
-      message = 'Good password';
+      text = 'Good password';
     } else {
       color = '#4dff4d';
-      message = 'Strong password';
+      text = 'Strong password';
     }
 
-    setPasswordStrength({ strength, message, color });
-  };
+    setPasswordStrength({ strength, text, color });
+  }, [password]);
 
-  // Show notification
-  const showNotification = (message) => {
-    setNotification({
-      message,
-      visible: true
-    });
-    
-    // Hide notification after 3 seconds
-    setTimeout(() => {
-      setNotification(prev => ({
-        ...prev,
-        visible: false
-      }));
-    }, 3000);
-  };
-
-  // Form submission handler
+  // Handle form submission
   const handleSubmit = (e) => {
     e.preventDefault();
     
     // Validation
-    if (!formData.firstName || !formData.lastName || !formData.email || !formData.password) {
+    if (!firstName || !lastName || !email || !password || !confirmPassword) {
       showNotification('Please fill in all required fields');
       return;
     }
     
-    if (formData.password !== formData.confirmPassword) {
+    if (password !== confirmPassword) {
       showNotification('Passwords do not match');
       return;
     }
     
-    if (!formData.terms) {
+    if (!termsAccepted) {
       showNotification('Please agree to the Terms of Service');
       return;
     }
     
-    // Simulate account creation
-    showNotification('Account created successfully! Redirecting to login...');
+    // Simulate sign up (would connect to backend in real application)
+    showNotification('Account created successfully! Redirecting...');
     
     // Clear form
-    setFormData({
-      firstName: '',
-      lastName: '',
-      email: '',
-      password: '',
-      confirmPassword: '',
-      terms: false
-    });
+    setFirstName('');
+    setLastName('');
+    setEmail('');
+    setPassword('');
+    setConfirmPassword('');
+    setTermsAccepted(false);
     
-    // In a real app, you would likely make an API call here to create the user
-
-    // Redirect to login page after 3 seconds
+    // In a real app, you would create an account here
+    // then redirect on success
     setTimeout(() => {
       navigate('/login');
+    }, 2000);
+  };
+
+  // Notification helper
+  const showNotification = (message) => {
+    setNotification({ message, show: true });
+    
+    setTimeout(() => {
+      setNotification({ message: '', show: false });
     }, 3000);
   };
 
-  // Setup input field focus effects
-  useEffect(() => {
-    // Function to handle focus and blur events
-    const setupInputEffects = () => {
-      // For each input ref
-      Object.entries(inputRefs).forEach(([key, ref]) => {
-        if (ref.current) {
-          // Focus event
-          ref.current.addEventListener('focus', () => {
-            ref.current.parentElement.style.transition = 'transform 0.3s ease';
-            ref.current.parentElement.style.transform = 'translateY(-2px)';
-          });
-          
-          // Blur event
-          ref.current.addEventListener('blur', () => {
-            ref.current.parentElement.style.transform = 'translateY(0)';
-          });
-        }
-      });
-    };
-    
-    setupInputEffects();
-    
-    // Cleanup function to remove event listeners
-    return () => {
-      Object.entries(inputRefs).forEach(([key, ref]) => {
-        if (ref.current) {
-          ref.current.removeEventListener('focus', () => {});
-          ref.current.removeEventListener('blur', () => {});
-        }
-      });
-    };
-  }, []);
+  // Handle login link click
+  const handleLoginClick = (e) => {
+    e.preventDefault();
+    showNotification('Redirecting to login page...');
+    setTimeout(() => {
+      navigate('/login');
+    }, 1000);
+  };
 
   return (
-    <>
+    <div className="signup-page">
       {/* Background pattern */}
       <div className="pattern"></div>
       
@@ -199,7 +134,7 @@ const Signup = () => {
 
       <div className="signup-container">
         <div className="logo">
-          <Link to="/" style={{textDecoration: 'none', color: 'inherit'}}>
+          <Link to="/" style={{ textDecoration: 'none', color: 'inherit' }}>
             <h1>Apna Collection</h1>
           </Link>
         </div>
@@ -211,11 +146,9 @@ const Signup = () => {
               <input 
                 type="text" 
                 id="first-name" 
-                name="firstName"
-                value={formData.firstName}
-                onChange={handleChange}
-                ref={inputRefs.firstName}
-                required
+                required 
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
               />
               <div className="icon">👤</div>
             </div>
@@ -224,11 +157,9 @@ const Signup = () => {
               <input 
                 type="text" 
                 id="last-name" 
-                name="lastName"
-                value={formData.lastName}
-                onChange={handleChange}
-                ref={inputRefs.lastName}
-                required
+                required 
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
               />
               <div className="icon">👤</div>
             </div>
@@ -239,11 +170,9 @@ const Signup = () => {
             <input 
               type="email" 
               id="email" 
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              ref={inputRefs.email}
-              required
+              required 
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
             />
             <div className="icon">✉️</div>
           </div>
@@ -253,25 +182,25 @@ const Signup = () => {
             <input 
               type="password" 
               id="password" 
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              ref={inputRefs.password}
-              required
+              required 
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
             />
             <div className="icon">🔒</div>
             <div className="password-strength">
               <div 
                 className="strength-meter" 
-                style={{
+                style={{ 
                   width: `${passwordStrength.strength}%`,
                   backgroundColor: passwordStrength.color
                 }}
               ></div>
             </div>
-            <div className="password-info" style={{display: formData.password ? 'block' : 'none'}}>
-              {passwordStrength.message}
-            </div>
+            {password && (
+              <div className="password-info">
+                {passwordStrength.text}
+              </div>
+            )}
           </div>
           
           <div className="input-group">
@@ -279,11 +208,9 @@ const Signup = () => {
             <input 
               type="password" 
               id="confirm-password" 
-              name="confirmPassword"
-              value={formData.confirmPassword}
-              onChange={handleChange}
-              ref={inputRefs.confirmPassword}
-              required
+              required 
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
             />
             <div className="icon">🔒</div>
           </div>
@@ -292,28 +219,29 @@ const Signup = () => {
             <input 
               type="checkbox" 
               id="terms" 
-              name="terms"
-              checked={formData.terms}
-              onChange={handleChange}
               required
+              checked={termsAccepted}
+              onChange={(e) => setTermsAccepted(e.target.checked)}
             />
-            <label htmlFor="terms">I agree to the <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a></label>
+            <label htmlFor="terms">
+              I agree to the <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>
+            </label>
           </div>
           
           <button type="submit" className="signup-button">Create Account</button>
           
           <div className="footer">
-            Already have an account? <Link to="/login">Login</Link>
+            Already have an account? <a href="#" onClick={handleLoginClick}>Login</a>
           </div>
         </form>
       </div>
 
       <div className="brand-element">Premium Men's Fashion • Est. 2023</div>
 
-      <div className={`notification ${notification.visible ? 'show' : ''}`}>
+      <div className={`notification ${notification.show ? 'show' : ''}`}>
         {notification.message}
       </div>
-    </>
+    </div>
   );
 };
 
