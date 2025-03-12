@@ -115,7 +115,7 @@ function App() {
             <Route path="/order-confirmation" element={<OrderConfirmation />} />
             <Route path="/orders" element={<Orders />} />
             <Route path="/contact" element={<Contact />} />
-            <Route path="/offers" element={<Offers />} />
+            <Route path="/offers" element={<Offers addToCart={addToCart} />} />
             <Route path="/search" element={<Search addToCart={addToCart} />} />
           </Routes>
         </main>

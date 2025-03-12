@@ -1,0 +1,497 @@
+/* Import fonts */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
+
+.offers-page {
+  font-family: 'Poppins', sans-serif;
+}
+
+/* Offers Section Styles */
+.offers-section {
+  padding: 50px;
+  background-color: #E1D9D2;
+}
+
+.offers-title {
+  text-align: center;
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+  letter-spacing: 1px;
+  font-weight: 600;
+}
+
+.offers-subtitle {
+  text-align: center;
+  color: #555;
+  margin-bottom: 3rem;
+  font-size: 1.1rem;
+}
+
+.offers-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 30px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.offer-card {
+  background-color: #FFFFFF;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.offer-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+.offer-image {
+  height: 250px;
+  overflow: hidden;
+  position: relative;
+}
+
+.offer-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.5s ease;
+}
+
+.offer-card:hover .offer-image img {
+  transform: scale(1.05);
+}
+
+.discount-badge {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background-color: #E1D9D2;
+  color: #333;
+  font-weight: 600;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.limited-badge {
+  position: absolute;
+  top: 15px;
+  left: 15px;
+  background-color: #333;
+  color: #FFFFFF;
+  font-size: 0.8rem;
+  font-weight: 500;
+  padding: 5px 10px;
+  border-radius: 4px;
+}
+
+.offer-content {
+  padding: 20px;
+}
+
+.offer-name {
+  font-size: 1.2rem;
+  margin-bottom: 10px;
+  font-weight: 600;
+}
+
+.offer-price {
+  display: flex;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.original-price {
+  text-decoration: line-through;
+  color: #999;
+  margin-right: 10px;
+  font-size: 0.95rem;
+}
+
+.current-price {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #c59b6d;
+}
+
+.offer-description {
+  color: #666;
+  margin-bottom: 20px;
+  font-size: 0.9rem;
+}
+
+.shop-now-btn {
+  display: inline-block;
+  padding: 10px 25px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  border: 1px solid #333;
+  background-color: transparent;
+  color: #333;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  width: 100%;
+  text-align: center;
+}
+
+.shop-now-btn:hover {
+  background-color: #333;
+  color: #E1D9D2;
+}
+
+/* Improved Seasonal Banner */
+.seasonal-banner {
+  background-color: #FFFFFF;
+  border-radius: 12px;
+  overflow: hidden;
+  margin: 50px auto;
+  display: flex;
+  max-width: 1200px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+  position: relative;
+}
+
+.banner-content {
+  padding: 50px;
+  flex: 1;
+  position: relative;
+  z-index: 2;
+  background: linear-gradient(135deg, rgba(255,255,255,1) 0%, rgba(255,255,255,0.9) 60%, rgba(255,255,255,0.8) 100%);
+}
+
+.banner-title {
+  font-size: 2.5rem;
+  margin-bottom: 20px;
+  font-weight: 700;
+  color: #333;
+  position: relative;
+  display: inline-block;
+}
+
+.banner-title:after {
+  content: '';
+  position: absolute;
+  width: 60px;
+  height: 3px;
+  background-color: #c59b6d;
+  bottom: -10px;
+  left: 0;
+}
+
+.banner-text {
+  color: #555;
+  margin-bottom: 30px;
+  font-size: 1.1rem;
+  max-width: 90%;
+  line-height: 1.7;
+}
+
+.banner-image {
+  flex: 1.2;
+  min-height: 350px;
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+  position: relative;
+}
+
+.banner-badge {
+  position: absolute;
+  top: 30px;
+  right: 30px;
+  background-color: #c59b6d;
+  color: white;
+  font-size: 1.2rem;
+  font-weight: 600;
+  padding: 15px 20px;
+  border-radius: 50%;
+  width: 100px;
+  height: 100px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  line-height: 1.2;
+  transform: rotate(10deg);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  z-index: 3;
+}
+
+.banner-shop-now-btn {
+  display: inline-block;
+  padding: 12px 30px;
+  font-size: 1rem;
+  font-weight: 600;
+  background-color: #333;
+  color: #FFFFFF;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  z-index: 1;
+}
+
+.banner-shop-now-btn:before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  transition: all 0.6s ease;
+  z-index: -1;
+}
+
+.banner-shop-now-btn:hover:before {
+  left: 100%;
+}
+
+.banner-shop-now-btn:hover {
+  background-color: #c59b6d;
+  transform: translateY(-3px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+/* Improved Newsletter Section */
+.newsletter-section {
+  background: linear-gradient(135deg, #f8f4f1 0%, #FFFFFF 100%);
+  padding: 60px;
+  text-align: center;
+  margin: 50px auto;
+  max-width: 1200px;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+  position: relative;
+  overflow: hidden;
+}
+
+.newsletter-section:before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 8px;
+  background: linear-gradient(90deg, #c59b6d, #e4d2bc);
+}
+
+.newsletter-title {
+  font-size: 2.2rem;
+  margin-bottom: 20px;
+  font-weight: 600;
+  color: #333;
+  position: relative;
+  display: inline-block;
+}
+
+.newsletter-title:after {
+  content: '';
+  position: absolute;
+  width: 50px;
+  height: 3px;
+  background-color: #c59b6d;
+  bottom: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.newsletter-text {
+  color: #555;
+  margin-bottom: 30px;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+  font-size: 1.05rem;
+  line-height: 1.7;
+}
+
+.subscription-message {
+  padding: 10px;
+  margin-bottom: 20px;
+  border-radius: 4px;
+  font-size: 0.95rem;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.subscription-message.success {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+  border-left: 4px solid #2e7d32;
+}
+
+.subscription-message.error {
+  background-color: #ffebee;
+  color: #c62828;
+  border-left: 4px solid #c62828;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.newsletter-form {
+  display: flex;
+  max-width: 550px;
+  margin: 0 auto;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+  border-radius: 50px;
+  overflow: hidden;
+}
+
+.newsletter-input {
+  flex: 1;
+  padding: 16px 25px;
+  border: none;
+  background-color: #FFFFFF;
+  font-size: 1rem;
+  color: #333;
+}
+
+.newsletter-input:focus {
+  outline: none;
+}
+
+.newsletter-button {
+  padding: 16px 30px;
+  background-color: #333;
+  color: #FFFFFF;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 1rem;
+  letter-spacing: 0.5px;
+  transition: all 0.3s ease;
+}
+
+.newsletter-button:hover {
+  background-color: #c59b6d;
+}
+
+.newsletter-perks {
+  display: flex;
+  justify-content: center;
+  gap: 40px;
+  margin-top: 40px;
+}
+
+.newsletter-perk {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 160px;
+}
+
+.perk-icon {
+  font-size: 2rem;
+  color: #c59b6d;
+  margin-bottom: 15px;
+}
+
+.perk-text {
+  font-size: 0.9rem;
+  color: #666;
+  text-align: center;
+}
+
+/* Responsive Media Queries */
+@media (max-width: 1200px) {
+  .offers-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .newsletter-perks {
+    gap: 20px;
+  }
+}
+
+@media (max-width: 992px) {
+  .offers-section {
+    padding: 30px;
+  }
+  
+  .seasonal-banner {
+    flex-direction: column;
+  }
+  
+  .banner-content {
+    padding: 40px;
+  }
+  
+  .banner-image {
+    min-height: 250px;
+  }
+  
+  .banner-badge {
+    top: 20px;
+    right: 20px;
+    width: 80px;
+    height: 80px;
+    font-size: 1rem;
+  }
+  
+  .newsletter-section {
+    padding: 40px 30px;
+  }
+  
+  .newsletter-perks {
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 768px) {
+  .offers-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .offers-section, .newsletter-section {
+    padding: 30px 20px;
+  }
+  
+  .newsletter-form {
+    flex-direction: column;
+    border-radius: 8px;
+  }
+  
+  .newsletter-input, .newsletter-button {
+    width: 100%;
+    border-radius: 0;
+  }
+  
+  .newsletter-perks {
+    flex-direction: column;
+    align-items: center;
+    gap: 30px;
+  }
+}
+
+@media (max-width: 480px) {
+  .offers-title {
+    font-size: 2rem;
+  }
+  
+  .newsletter-title {
+    font-size: 1.8rem;
+  }
+  
+  .banner-title {
+    font-size: 2rem;
+  }
+  
+  .banner-content {
+    padding: 30px 20px;
+  }
+}
