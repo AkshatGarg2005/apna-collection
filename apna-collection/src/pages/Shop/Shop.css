@@ -1,9 +1,14 @@
 /* Shop Page Styles */
 .shop-container {
+  width: 100%;
+  padding: 50px 0;
+  background-color: #E1D9D2;
+}
+
+.shop-inner {
   max-width: 1400px;
   margin: 0 auto;
-  padding: 50px 20px;
-  background-color: #E1D9D2;
+  padding: 0 20px;
 }
 
 .shop-header {
@@ -379,7 +384,7 @@
 
 @media (max-width: 768px) {
   .shop-container {
-    padding: 30px 20px;
+    padding: 30px 0;
   }
   
   .shop-title {

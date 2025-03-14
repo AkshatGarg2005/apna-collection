@@ -274,117 +274,119 @@ const Shop = () => {
 
   return (
     <main className="shop-container">
-      <div className="shop-header">
-        <h1 className="shop-title">Shop by Category</h1>
-        <p className="shop-description">
-          Discover our premium collection of men's clothing, crafted with the finest materials for the modern Indian gentleman. 
-          From traditional to contemporary, we have styles for every occasion.
-        </p>
-      </div>
-      
-      <div className="shop-layout">
-        {/* Category Sidebar */}
-        <aside className="category-sidebar">
-          <h2 className="sidebar-title">Categories</h2>
-          <ul className="category-list">
-            <li className="category-item">
-              <button 
-                className={`category-button ${currentCategory === 'all' ? 'active' : ''}`} 
-                onClick={() => filterProducts('all')}
-              >
-                <i className="fas fa-th category-icon"></i>All Products
-              </button>
-            </li>
-            <li className="category-item">
-              <button 
-                className={`category-button ${currentCategory === 'shirts' ? 'active' : ''}`} 
-                onClick={() => filterProducts('shirts')}
-              >
-                <i className="fas fa-tshirt category-icon"></i>Shirts
-              </button>
-            </li>
-            <li className="category-item">
-              <button 
-                className={`category-button ${currentCategory === 'jeans' ? 'active' : ''}`} 
-                onClick={() => filterProducts('jeans')}
-              >
-                <i className="fas fa-stream category-icon"></i>Jeans
-              </button>
-            </li>
-            <li className="category-item">
-              <button 
-                className={`category-button ${currentCategory === 'kurta' ? 'active' : ''}`} 
-                onClick={() => filterProducts('kurta')}
-              >
-                <i className="fas fa-vest-patches category-icon"></i>Kurta
-              </button>
-            </li>
-            <li className="category-item">
-              <button 
-                className={`category-button ${currentCategory === 'tshirt' ? 'active' : ''}`} 
-                onClick={() => filterProducts('tshirt')}
-              >
-                <i className="fas fa-tshirt category-icon"></i>T-shirt
-              </button>
-            </li>
-            <li className="category-item">
-              <button 
-                className={`category-button ${currentCategory === 'undergarments' ? 'active' : ''}`} 
-                onClick={() => filterProducts('undergarments')}
-              >
-                <i className="fas fa-underwear category-icon"></i>Undergarments
-              </button>
-            </li>
-          </ul>
-        </aside>
+      <div className="shop-inner">
+        <div className="shop-header">
+          <h1 className="shop-title">Shop by Category</h1>
+          <p className="shop-description">
+            Discover our premium collection of men's clothing, crafted with the finest materials for the modern Indian gentleman. 
+            From traditional to contemporary, we have styles for every occasion.
+          </p>
+        </div>
         
-        {/* Products Grid */}
-        <section className="products-grid-container">
-          <div className="products-header">
-            <h2 className="products-title">
-              {currentCategory === 'all' ? 'All Products' : capitalizeFirstLetter(currentCategory)}
-            </h2>
-            <span className="products-count">{filteredProducts.length} items</span>
-          </div>
+        <div className="shop-layout">
+          {/* Category Sidebar */}
+          <aside className="category-sidebar">
+            <h2 className="sidebar-title">Categories</h2>
+            <ul className="category-list">
+              <li className="category-item">
+                <button 
+                  className={`category-button ${currentCategory === 'all' ? 'active' : ''}`} 
+                  onClick={() => filterProducts('all')}
+                >
+                  <i className="fas fa-th category-icon"></i>All Products
+                </button>
+              </li>
+              <li className="category-item">
+                <button 
+                  className={`category-button ${currentCategory === 'shirts' ? 'active' : ''}`} 
+                  onClick={() => filterProducts('shirts')}
+                >
+                  <i className="fas fa-tshirt category-icon"></i>Shirts
+                </button>
+              </li>
+              <li className="category-item">
+                <button 
+                  className={`category-button ${currentCategory === 'jeans' ? 'active' : ''}`} 
+                  onClick={() => filterProducts('jeans')}
+                >
+                  <i className="fas fa-stream category-icon"></i>Jeans
+                </button>
+              </li>
+              <li className="category-item">
+                <button 
+                  className={`category-button ${currentCategory === 'kurta' ? 'active' : ''}`} 
+                  onClick={() => filterProducts('kurta')}
+                >
+                  <i className="fas fa-vest-patches category-icon"></i>Kurta
+                </button>
+              </li>
+              <li className="category-item">
+                <button 
+                  className={`category-button ${currentCategory === 'tshirt' ? 'active' : ''}`} 
+                  onClick={() => filterProducts('tshirt')}
+                >
+                  <i className="fas fa-tshirt category-icon"></i>T-shirt
+                </button>
+              </li>
+              <li className="category-item">
+                <button 
+                  className={`category-button ${currentCategory === 'undergarments' ? 'active' : ''}`} 
+                  onClick={() => filterProducts('undergarments')}
+                >
+                  <i className="fas fa-underwear category-icon"></i>Undergarments
+                </button>
+              </li>
+            </ul>
+          </aside>
           
-          {filteredProducts.length === 0 ? (
-            <div className="no-products">
-              <p className="no-products-message">No products found in this category.</p>
+          {/* Products Grid */}
+          <section className="products-grid-container">
+            <div className="products-header">
+              <h2 className="products-title">
+                {currentCategory === 'all' ? 'All Products' : capitalizeFirstLetter(currentCategory)}
+              </h2>
+              <span className="products-count">{filteredProducts.length} items</span>
             </div>
-          ) : (
-            <div className="products-grid">
-              {filteredProducts.map(product => (
-                <div className="product-card" key={product.id}>
-                  <Link to={`/product/${product.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                    <div className="product-image">
-                      <img src={product.image} alt={product.name} />
-                      {product.isNew && <span className="product-badge">New</span>}
-                    </div>
-                    <div className="product-info">
-                      <h3 className="product-name">{product.name}</h3>
-                      <p className="product-category">{capitalizeFirstLetter(product.category)}</p>
-                      <p className="product-price">₹{product.price.toLocaleString()}</p>
-                      <div className="product-actions">
-                        <button 
-                          className="add-to-cart"
-                          onClick={(e) => handleAddToCart(e, product.id)}
-                        >
-                          Add to Cart
-                        </button>
-                        <div className="product-favorite">
-                          <i 
-                            className="far fa-heart"
-                            onClick={(e) => handleToggleFavorite(e, product.id)}
-                          ></i>
+            
+            {filteredProducts.length === 0 ? (
+              <div className="no-products">
+                <p className="no-products-message">No products found in this category.</p>
+              </div>
+            ) : (
+              <div className="products-grid">
+                {filteredProducts.map(product => (
+                  <div className="product-card" key={product.id}>
+                    <Link to={`/product/${product.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                      <div className="product-image">
+                        <img src={product.image} alt={product.name} />
+                        {product.isNew && <span className="product-badge">New</span>}
+                      </div>
+                      <div className="product-info">
+                        <h3 className="product-name">{product.name}</h3>
+                        <p className="product-category">{capitalizeFirstLetter(product.category)}</p>
+                        <p className="product-price">₹{product.price.toLocaleString()}</p>
+                        <div className="product-actions">
+                          <button 
+                            className="add-to-cart"
+                            onClick={(e) => handleAddToCart(e, product.id)}
+                          >
+                            Add to Cart
+                          </button>
+                          <div className="product-favorite">
+                            <i 
+                              className="far fa-heart"
+                              onClick={(e) => handleToggleFavorite(e, product.id)}
+                            ></i>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </Link>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
+                    </Link>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        </div>
       </div>
     </main>
   );
