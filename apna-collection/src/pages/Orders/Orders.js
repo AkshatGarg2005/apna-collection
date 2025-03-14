@@ -1,8 +1,28 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import './Orders.css';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { 
+  faSearch, 
+  faBoxOpen, 
+  faTimes, 
+  faTruck, 
+  faCheckCircle, 
+  faSpinner,
+  faBox,
+  faHome,
+  faShoppingCart,
+  faTimesCircle,
+  faCircle,
+  faCalendarAlt,
+  faArrowRight,
+  faInfoCircle,
+  faFilter,
+  faTag
+} from '@fortawesome/free-solid-svg-icons';
 
 const Orders = () => {
+  const navigate = useNavigate();
   // State for orders, filters, search, and modal
   const [orders, setOrders] = useState([
     // Sample orders data
@@ -113,36 +133,55 @@ const Orders = () => {
   const [activeFilter, setActiveFilter] = useState('All Orders');
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredOrders, setFilteredOrders] = useState([]);
-  const [modalOrder, setModalOrder] = useState(null);
+  const [showTrackingModal, setShowTrackingModal] = useState(false);
+  const [trackingOrder, setTrackingOrder] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  
+  // Refs for animation
+  const orderRefs = useRef({});
+  
+  // Simulate loading
+  useEffect(() => {
+    setTimeout(() => {
+      setIsLoading(false);
+    }, 800);
+  }, []);
   
   // Filter orders when activeFilter or searchTerm changes
   useEffect(() => {
     let result = [...orders];
     
-    // Apply filter
-    if (activeFilter !== 'All Orders') {
-      if (activeFilter === 'Recent') {
-        // Get the two most recent orders
-        result = result.slice(0, 2);
-      } else {
-        result = result.filter(order => 
-          order.status === activeFilter
-        );
+    // Apply filter with a small delay to show animation
+    setIsLoading(true);
+    
+    setTimeout(() => {
+      if (activeFilter !== 'All Orders') {
+        if (activeFilter === 'Recent') {
+          // Get the two most recent orders
+          result = result.slice(0, 2);
+        } else {
+          result = result.filter(order => 
+            order.status === activeFilter
+          );
+        }
       }
-    }
-    
-    // Apply search
-    if (searchTerm.trim() !== '') {
-      result = result.filter(order => {
-        const matchesId = order.id.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesProduct = order.items.some(item => 
-          item.name.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-        return matchesId || matchesProduct;
-      });
-    }
-    
-    setFilteredOrders(result);
+      
+      // Apply search
+      if (searchTerm.trim() !== '') {
+        result = result.filter(order => {
+          const matchesId = order.id.toLowerCase().includes(searchTerm.toLowerCase());
+          const matchesProduct = order.items.some(item => 
+            item.name.toLowerCase().includes(searchTerm.toLowerCase())
+          );
+          return matchesId || matchesProduct;
+        });
+      }
+      
+      setFilteredOrders(result);
+      setIsLoading(false);
+    }, 300);
   }, [activeFilter, searchTerm, orders]);
   
   // Handle filter button click
@@ -153,6 +192,50 @@ const Orders = () => {
   // Handle search input change
   const handleSearchChange = (e) => {
     setSearchTerm(e.target.value);
+  };
+  
+  // Track order handler
+  const handleTrackOrder = (orderId) => {
+    const order = orders.find(o => o.id === orderId);
+    if (order) {
+      setTrackingOrder(order);
+      setShowTrackingModal(true);
+      document.body.style.overflow = 'hidden'; // Prevent background scrolling
+    }
+  };
+  
+  // Cancel order handler
+  const handleCancelOrder = (orderId) => {
+    if (window.confirm(`Are you sure you want to cancel order #${orderId}?`)) {
+      // In a real app, this would make an API call to cancel the order
+      setOrders(orders.map(order => 
+        order.id === orderId 
+          ? {...order, status: 'Cancelled'} 
+          : order
+      ));
+      showToastNotification('Order cancelled successfully');
+    }
+  };
+  
+  // Order again handler
+  const handleOrderAgain = (items) => {
+    // In a real app, this would add the items to cart and redirect to cart page
+    showToastNotification(`Added ${items.length} items to your cart`);
+  };
+
+  // Show toast notification
+  const showToastNotification = (message) => {
+    setToastMessage(message);
+    setShowToast(true);
+    setTimeout(() => {
+      setShowToast(false);
+    }, 3000);
+  };
+
+  // Close tracking modal
+  const closeTrackingModal = () => {
+    setShowTrackingModal(false);
+    document.body.style.overflow = ''; // Restore scrolling
   };
 
   // Format currency
@@ -165,101 +248,378 @@ const Orders = () => {
     return status.toLowerCase();
   };
   
+  // Get status icon
+  const getStatusIcon = (status) => {
+    switch(status) {
+      case 'Delivered':
+        return faCheckCircle;
+      case 'Shipped':
+        return faTruck;
+      case 'Processing':
+        return faSpinner;
+      case 'Cancelled':
+        return faTimesCircle;
+      default:
+        return faCircle;
+    }
+  };
+  
+  // Skeleton loading component
+  const OrderSkeleton = () => (
+    <div className="order-card skeleton">
+      <div className="order-header skeleton-header">
+        <div className="skeleton-bar skeleton-short"></div>
+        <div className="skeleton-info">
+          <div className="skeleton-bar skeleton-medium"></div>
+          <div className="skeleton-bar skeleton-short"></div>
+        </div>
+      </div>
+      <div className="order-item skeleton-item">
+        <div className="skeleton-image"></div>
+        <div className="skeleton-details">
+          <div className="skeleton-bar skeleton-medium"></div>
+          <div className="skeleton-bar skeleton-long"></div>
+          <div className="skeleton-bar skeleton-short"></div>
+        </div>
+      </div>
+      <div className="order-actions skeleton-actions">
+        <div className="skeleton-bar skeleton-btn"></div>
+        <div className="skeleton-bar skeleton-btn"></div>
+      </div>
+    </div>
+  );
+  
   return (
     <div className="orders-container">
       <h1 className="page-title">My Orders</h1>
-      
+
       <div className="orders-layout">
-        {/* Filter Buttons */}
+        {/* Filter Section with Icon */}
         <div className="filter-section">
+          <div className="filter-header">
+            <FontAwesomeIcon icon={faFilter} />
+            <span>Filters</span>
+          </div>
+          
           <button 
             className={`filter-btn ${activeFilter === 'All Orders' ? 'active' : ''}`}
             onClick={() => handleFilterClick('All Orders')}
           >
+            <span className="filter-icon">
+              <FontAwesomeIcon icon={faBoxOpen} />
+            </span>
             All Orders
           </button>
           <button 
             className={`filter-btn ${activeFilter === 'Recent' ? 'active' : ''}`}
             onClick={() => handleFilterClick('Recent')}
           >
+            <span className="filter-icon">
+              <FontAwesomeIcon icon={faCalendarAlt} />
+            </span>
             Recent
           </button>
           <button 
             className={`filter-btn ${activeFilter === 'Delivered' ? 'active' : ''}`}
             onClick={() => handleFilterClick('Delivered')}
           >
+            <span className="filter-icon">
+              <FontAwesomeIcon icon={faCheckCircle} />
+            </span>
             Delivered
           </button>
           <button 
             className={`filter-btn ${activeFilter === 'Processing' ? 'active' : ''}`}
             onClick={() => handleFilterClick('Processing')}
           >
+            <span className="filter-icon">
+              <FontAwesomeIcon icon={faSpinner} />
+            </span>
             Processing
           </button>
           <button 
             className={`filter-btn ${activeFilter === 'Cancelled' ? 'active' : ''}`}
             onClick={() => handleFilterClick('Cancelled')}
           >
+            <span className="filter-icon">
+              <FontAwesomeIcon icon={faTimesCircle} />
+            </span>
             Cancelled
           </button>
+          
+          <div className="filter-help">
+            <FontAwesomeIcon icon={faInfoCircle} />
+            <span>Filter orders by status or date to find what you're looking for.</span>
+          </div>
         </div>
         
         {/* Orders and Search Content */}
         <div className="orders-content">
-          {/* Search Box */}
-          <div className="search-box">
-            <i className="fas fa-search"></i>
+          {/* Search Box with Icon */}
+          <div className="search-wrapper">
+            <div className="search-icon">
+              <FontAwesomeIcon icon={faSearch} />
+            </div>
             <input
               type="text"
-              placeholder="Search orders by ID, product..."
+              className="search-input"
+              placeholder="Search by order ID or product name..."
               value={searchTerm}
               onChange={handleSearchChange}
             />
+            {searchTerm && (
+              <button className="search-clear" onClick={() => setSearchTerm('')}>
+                <FontAwesomeIcon icon={faTimes} />
+              </button>
+            )}
           </div>
+          
+          {/* Order Summary */}
+          {!isLoading && filteredOrders.length > 0 && (
+            <div className="order-summary">
+              <div className="summary-item">
+                <span className="summary-label">Orders</span>
+                <span className="summary-value">{filteredOrders.length}</span>
+              </div>
+              <div className="summary-item">
+                <span className="summary-label">Total Items</span>
+                <span className="summary-value">
+                  {filteredOrders.reduce((total, order) => total + order.items.length, 0)}
+                </span>
+              </div>
+              <div className="summary-item">
+                <span className="summary-label">Total Value</span>
+                <span className="summary-value">
+                  {formatPrice(filteredOrders.reduce((total, order) => total + order.total, 0))}
+                </span>
+              </div>
+            </div>
+          )}
           
           {/* Orders List */}
           <div className="orders-list">
-            {filteredOrders.length > 0 ? (
+            {isLoading ? (
+              // Show skeleton loading UI
+              <>
+                <OrderSkeleton />
+                <OrderSkeleton />
+              </>
+            ) : filteredOrders.length > 0 ? (
               filteredOrders.map(order => (
                 <div className="order-card" key={order.id}>
                   <div className="order-header">
-                    <div className="order-id">Order #{order.id}</div>
-                    <div className="order-info">
-                      <div className="order-date">Ordered on {order.date}</div>
+                    <div className="order-id-section">
+                      <div className="order-id">
+                        <FontAwesomeIcon icon={faTag} className="order-icon" />
+                        Order #{order.id}
+                      </div>
                       <div className={`order-status ${getStatusClass(order.status)}`}>
-                        {order.status}
+                        <FontAwesomeIcon icon={getStatusIcon(order.status)} />
+                        <span>{order.status}</span>
+                      </div>
+                    </div>
+                    <div className="order-info">
+                      <div className="order-date">
+                        <FontAwesomeIcon icon={faCalendarAlt} className="order-date-icon" />
+                        {order.date}
+                      </div>
+                      <div className="order-payment">
+                        <span className="payment-method">{order.payment.method}</span>
+                        <span className={`payment-status ${order.payment.status.toLowerCase()}`}>
+                          {order.payment.status}
+                        </span>
                       </div>
                     </div>
                   </div>
                   
-                  {order.items.map(item => (
-                    <div className="order-item" key={item.id}>
-                      <div className="item-image">
-                        <img src={item.image} alt={item.name} />
-                      </div>
-                      <div className="item-details">
-                        <h3 className="item-name">{item.name}</h3>
-                        <div className="item-meta">
-                          <span>Size: {item.size}</span>
-                          <span>Color: {item.color}</span>
-                          <span>Qty: {item.quantity}</span>
+                  <div className="order-items-container">
+                    {order.items.map(item => (
+                      <div className="order-item" key={item.id}>
+                        <div className="item-image">
+                          <img src={item.image} alt={item.name} />
+                          <div className="image-overlay">
+                            <span className="item-quantity">×{item.quantity}</span>
+                          </div>
                         </div>
-                        <div className="item-price">{formatPrice(item.price)}</div>
+                        <div className="item-details">
+                          <h3 className="item-name">{item.name}</h3>
+                          <div className="item-meta">
+                            <span className="meta-item">Size: {item.size}</span>
+                            <span className="meta-item">
+                              <span className="color-dot" style={{ backgroundColor: item.color.toLowerCase() === 'dark blue' ? '#1a2b5e' : 
+                                                                  item.color.toLowerCase() === 'white' ? '#fff' :
+                                                                  item.color.toLowerCase() === 'maroon' ? '#800000' :
+                                                                  item.color.toLowerCase() === 'navy blue' ? '#000080' :
+                                                                  item.color.toLowerCase() === 'brown' ? '#8B4513' :
+                                                                  item.color.toLowerCase() === 'black' ? '#000' : '#ccc' }}></span>
+                              {item.color}
+                            </span>
+                          </div>
+                          <div className="item-price">
+                            {formatPrice(item.price)}
+                          </div>
+                        </div>
                       </div>
+                    ))}
+                    
+                    <div className="order-total">
+                      <span className="total-label">Total:</span>
+                      <span className="total-value">{formatPrice(order.total)}</span>
                     </div>
-                  ))}
+                  </div>
+                  
+                  {/* Order Actions */}
+                  <div className="order-actions">
+                    {order.status !== 'Delivered' && order.status !== 'Cancelled' && (
+                      <button 
+                        className="action-btn cancel-btn"
+                        onClick={() => handleCancelOrder(order.id)}
+                      >
+                        <FontAwesomeIcon icon={faTimesCircle} />
+                        Cancel Order
+                      </button>
+                    )}
+                    
+                    {order.status !== 'Cancelled' && (
+                      <button 
+                        className="action-btn track-btn"
+                        onClick={() => handleTrackOrder(order.id)}
+                      >
+                        <FontAwesomeIcon icon={faTruck} />
+                        Track Order
+                      </button>
+                    )}
+                    
+                    <button 
+                      className="action-btn order-again-btn"
+                      onClick={() => handleOrderAgain(order.items)}
+                    >
+                      <FontAwesomeIcon icon={faShoppingCart} />
+                      Order Again
+                    </button>
+                  </div>
                 </div>
               ))
             ) : (
               <div className="empty-orders">
-                <i className="fas fa-box-open"></i>
+                <FontAwesomeIcon icon={faBoxOpen} size="3x" />
                 <h3>No orders found</h3>
                 <p>We couldn't find any orders matching your criteria.</p>
-                <Link to="/shop" className="shop-link">Continue Shopping</Link>
+                <Link to="/shop" className="shop-link">
+                  Continue Shopping
+                  <FontAwesomeIcon icon={faArrowRight} className="shop-link-icon" />
+                </Link>
               </div>
             )}
           </div>
         </div>
+      </div>
+      
+      {/* Order Tracking Modal */}
+      {showTrackingModal && trackingOrder && (
+        <div className="tracking-modal-overlay" onClick={closeTrackingModal}>
+          <div className="tracking-modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-close" onClick={closeTrackingModal}>
+              <FontAwesomeIcon icon={faTimes} />
+            </div>
+            <div className="modal-header">
+              <h2>Track Your Order</h2>
+              <p>Order #{trackingOrder.id}</p>
+            </div>
+            <div className="modal-body">
+              <div className="tracking-timeline">
+                <div className="tracking-steps">
+                  <div className={`tracking-step ${trackingOrder.status !== 'Cancelled' ? 'completed' : ''}`}>
+                    <div className="step-icon">
+                      <FontAwesomeIcon icon={faCheckCircle} />
+                    </div>
+                    <div className="step-label">Order Placed</div>
+                    <div className="step-date">10 Feb, 2025</div>
+                  </div>
+                  <div className={`tracking-step ${['Processing', 'Shipped', 'Delivered'].includes(trackingOrder.status) ? 'completed' : ''}`}>
+                    <div className="step-icon">
+                      <FontAwesomeIcon icon={faSpinner} />
+                    </div>
+                    <div className="step-label">Processing</div>
+                    <div className="step-date">12 Feb, 2025</div>
+                  </div>
+                  <div className={`tracking-step ${['Shipped', 'Delivered'].includes(trackingOrder.status) ? 'completed' : ''}`}>
+                    <div className="step-icon">
+                      <FontAwesomeIcon icon={faBox} />
+                    </div>
+                    <div className="step-label">Shipped</div>
+                    <div className="step-date">13 Feb, 2025</div>
+                  </div>
+                  <div className={`tracking-step ${trackingOrder.status === 'Delivered' ? 'completed' : trackingOrder.status === 'Shipped' ? 'active' : ''}`}>
+                    <div className="step-icon">
+                      <FontAwesomeIcon icon={faTruck} />
+                    </div>
+                    <div className="step-label">Out for Delivery</div>
+                    <div className="step-date">14 Feb, 2025</div>
+                  </div>
+                  <div className={`tracking-step ${trackingOrder.status === 'Delivered' ? 'completed' : ''}`}>
+                    <div className="step-icon">
+                      <FontAwesomeIcon icon={faHome} />
+                    </div>
+                    <div className="step-label">Delivered</div>
+                    <div className="step-date">15 Feb, 2025</div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="delivery-details">
+                <h3>Estimated Delivery</h3>
+                <p className="delivery-date">
+                  {trackingOrder.status === 'Delivered' 
+                    ? 'Delivered on ' + trackingOrder.date 
+                    : trackingOrder.status === 'Cancelled'
+                    ? 'Order Cancelled'
+                    : 'Expected by March 15, 2025'}
+                </p>
+                <div className="delivery-address">
+                  <h4>Delivery Address</h4>
+                  <p>123 Example Street, Sehore</p>
+                  <p>Madhya Pradesh, 466001</p>
+                </div>
+                
+                <div className="track-items-preview">
+                  <h4>Order Items</h4>
+                  <div className="track-items-grid">
+                    {trackingOrder.items.map(item => (
+                      <div className="track-item" key={item.id}>
+                        <img src={item.image} alt={item.name} />
+                        <span className="track-item-quantity">×{item.quantity}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button 
+                className="modal-btn contact-btn"
+                onClick={() => {
+                  closeTrackingModal();
+                  navigate('/contact');
+                }}
+              >
+                <FontAwesomeIcon icon={faInfoCircle} />
+                Contact Support
+              </button>
+              <button className="modal-btn close-btn" onClick={closeTrackingModal}>
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Toast Notification */}
+      <div className={`toast-message ${showToast ? 'show' : ''}`}>
+        <div className="toast-icon">
+          <FontAwesomeIcon icon={faCheckCircle} />
+        </div>
+        <div className="toast-text">{toastMessage}</div>
       </div>
     </div>
   );
