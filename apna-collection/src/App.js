@@ -18,6 +18,7 @@ import Orders from './pages/Orders/Orders';
 import Contact from './pages/Contact/Contact';
 import Offers from './pages/Offers/Offers';
 import Search from './pages/Search/Search';
+import UserDash from './pages/UserDash/UserDash';
 
 // ScrollToTop component to scroll to top on route change
 const ScrollToTop = () => {
@@ -166,6 +167,7 @@ function App() {
             <Route path="/contact" element={<Contact />} />
             <Route path="/offers" element={<Offers addToCart={addToCart} />} />
             <Route path="/search" element={<Search addToCart={addToCart} />} />
+            <Route path="/account" element={<UserDash />} />
           </Routes>
         </main>
         <Footer />
