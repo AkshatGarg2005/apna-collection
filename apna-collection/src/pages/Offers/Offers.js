@@ -3,12 +3,12 @@ import { Link } from 'react-router-dom';
 import './OffersPage.css';
 
 const Offers = ({ addToCart }) => {
-  // Sample offer data
+  // Updated offer data with only shirts, jeans, kurta, t-shirts, and undergarments
   const offerData = [
     {
       id: 101,
-      title: "Premium Linen Shirts",
-      description: "Breathable and stylish linen shirts perfect for summer outings.",
+      title: "Premium Formal Shirts",
+      description: "Breathable and stylish formal shirts perfect for professional settings.",
       originalPrice: 3999,
       currentPrice: 2799,
       discount: 30,
@@ -17,27 +17,27 @@ const Offers = ({ addToCart }) => {
     },
     {
       id: 102,
-      title: "Tailored Formal Suit",
-      description: "Elegant suit set with premium fabric and perfect fitting.",
-      originalPrice: 12999,
-      currentPrice: 9999,
-      discount: 25,
-      image: "https://images.unsplash.com/photo-1594938298603-c8148c4dae35?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1160&q=80",
-      limited: false
-    },
-    {
-      id: 103,
-      title: "Designer Denim Collection",
+      title: "Designer Denim Jeans",
       description: "Premium quality denim jeans with modern cuts and styles.",
       originalPrice: 2599,
       currentPrice: 1999,
       discount: 20,
       image: "https://images.unsplash.com/photo-1542272604-787c3835535d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1026&q=80",
+      limited: false
+    },
+    {
+      id: 103,
+      title: "Traditional Kurta Collection",
+      description: "Elegant kurtas made from premium cotton fabric with traditional designs.",
+      originalPrice: 2999,
+      currentPrice: 2399,
+      discount: 20,
+      image: "https://images.unsplash.com/photo-1610366398516-46da9dec5931?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=987&q=80",
       limited: true
     },
     {
       id: 104,
-      title: "Casual T-Shirt Bundle",
+      title: "Classic T-Shirt Bundle",
       description: "Set of 3 premium cotton t-shirts in essential colors.",
       originalPrice: 1499,
       currentPrice: 999,
@@ -47,22 +47,22 @@ const Offers = ({ addToCart }) => {
     },
     {
       id: 105,
-      title: "Leather Belt Collection",
-      description: "Handcrafted genuine leather belts with elegant buckles.",
-      originalPrice: 1999,
-      currentPrice: 1599,
-      discount: 15,
-      image: "https://images.unsplash.com/photo-1624222247344-550fb60583dc?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1170&q=80",
+      title: "Premium Undergarments",
+      description: "Soft and comfortable undergarments made with breathable cotton.",
+      originalPrice: 1299,
+      currentPrice: 999,
+      discount: 25,
+      image: "https://images.unsplash.com/photo-1517438476312-10d79c077509?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=987&q=80",
       limited: false
     },
     {
       id: 106,
-      title: "Seasonal Jackets",
-      description: "Stylish and functional jackets perfect for transitional weather.",
-      originalPrice: 4999,
-      currentPrice: 3499,
+      title: "Casual Shirts",
+      description: "Stylish and comfortable casual shirts perfect for everyday wear.",
+      originalPrice: 2499,
+      currentPrice: 1799,
       discount: 30,
-      image: "https://images.unsplash.com/photo-1551028719-00167b16eac5?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1035&q=80",
+      image: "https://images.unsplash.com/photo-1596755094514-f87e34085b2c?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=988&q=80",
       limited: true
     }
   ];
@@ -105,7 +105,7 @@ const Offers = ({ addToCart }) => {
       {/* Offers Section */}
       <section className="offers-section">
         <h1 className="offers-title">SPECIAL OFFERS</h1>
-        <p className="offers-subtitle">Exclusive deals for the modern gentleman</p>
+        <p className="offers-subtitle">Exclusive deals on our essential clothing collection</p>
         
         <div className="offers-grid">
           {offerData.map((offer) => (
@@ -138,8 +138,8 @@ const Offers = ({ addToCart }) => {
           <div className="banner-content">
             <h2 className="banner-title">End of Season Sale</h2>
             <p className="banner-text">
-              Upgrade your wardrobe with premium clothing at unbeatable prices. 
-              Our collection features the finest materials and craftsmanship for the modern gentleman.
+              Upgrade your wardrobe with our essential clothing collection at unbeatable prices. 
+              Shop shirts, jeans, kurtas, t-shirts, and undergarments with the finest materials and craftsmanship.
             </p>
             <Link to="/shop" className="banner-shop-now-btn">Explore Collection</Link>
           </div>
