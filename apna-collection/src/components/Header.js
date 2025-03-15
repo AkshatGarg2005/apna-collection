@@ -1,13 +1,16 @@
 // src/components/Header.js
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import './Header.css';
 import SearchOverlay from './SearchOverlay';
+import NotificationsCenter from './Notifications/NotificationsCenter';
+import { subscribeToUnreadCount } from '../services/notifications';
 
 const Header = ({ toggleSearch }) => {
   const [searchOpen, setSearchOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const location = useLocation();
   const { currentUser, logout } = useAuth();
   const { cart } = useCart();
@@ -16,6 +19,17 @@ const Header = ({ toggleSearch }) => {
   const isActive = (path) => {
     return location.pathname === path;
   };
+
+  // Subscribe to unread notifications count
+  useEffect(() => {
+    if (!currentUser) return;
+    
+    const unsubscribe = subscribeToUnreadCount(currentUser.uid, (count) => {
+      setUnreadCount(count);
+    });
+    
+    return () => unsubscribe();
+  }, [currentUser]);
 
   const handleSearchToggle = () => {
     if (toggleSearch) {
@@ -27,7 +41,7 @@ const Header = ({ toggleSearch }) => {
 
   const handleLogout = async () => {
     await logout();
-    // Redirect or show message if needed
+    // Redirect handled by auth context
   };
 
   return (
@@ -50,6 +64,11 @@ const Header = ({ toggleSearch }) => {
             <div className="icon" onClick={handleSearchToggle}>
               <i className="fas fa-search"></i>
             </div>
+            
+            {currentUser && (
+              <NotificationsCenter />
+            )}
+            
             <div className="icon">
               <Link to="/cart">
                 <i className="fas fa-shopping-bag"></i>
@@ -65,9 +84,17 @@ const Header = ({ toggleSearch }) => {
                   </div>
                 </Link>
                 <div className="user-dropdown">
-                  <div className="dropdown-username">{currentUser.displayName}</div>
+                  <div className="dropdown-username">
+                    {currentUser.displayName || currentUser.email}
+                  </div>
                   <Link to="/account">My Account</Link>
                   <Link to="/orders">My Orders</Link>
+                  {unreadCount > 0 && (
+                    <Link to="/notifications" className="notification-link">
+                      Notifications
+                      <span className="dropdown-notification-badge">{unreadCount}</span>
+                    </Link>
+                  )}
                   <button onClick={handleLogout}>Logout</button>
                 </div>
               </div>

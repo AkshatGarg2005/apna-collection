@@ -11,14 +11,92 @@ import {
   where, 
   orderBy, 
   limit, 
-  serverTimestamp 
+  serverTimestamp,
+  onSnapshot 
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { uploadImage } from './cloudinary';
 
 const productsCollection = collection(db, 'products');
 
-// Get all products
+// Set up real-time listener for all products
+export const subscribeToProducts = (callback) => {
+  const q = query(productsCollection, orderBy('updatedAt', 'desc'));
+  
+  return onSnapshot(q, (snapshot) => {
+    const products = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+    callback(products);
+  }, (error) => {
+    console.error('Error getting real-time products:', error);
+    callback([]);
+  });
+};
+
+// Set up real-time listener for products by category
+export const subscribeToProductsByCategory = (category, callback) => {
+  const q = query(
+    productsCollection, 
+    where('category', '==', category),
+    orderBy('updatedAt', 'desc')
+  );
+  
+  return onSnapshot(q, (snapshot) => {
+    const products = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+    callback(products);
+  }, (error) => {
+    console.error(`Error getting real-time ${category} products:`, error);
+    callback([]);
+  });
+};
+
+// Set up real-time listener for a single product
+export const subscribeToProduct = (productId, callback) => {
+  const productRef = doc(db, 'products', productId);
+  
+  return onSnapshot(productRef, (snapshot) => {
+    if (snapshot.exists()) {
+      const product = {
+        id: snapshot.id,
+        ...snapshot.data()
+      };
+      callback(product);
+    } else {
+      callback(null);
+    }
+  }, (error) => {
+    console.error('Error getting real-time product:', error);
+    callback(null);
+  });
+};
+
+// Get new arrivals with real-time updates
+export const subscribeToNewArrivals = (limit = 4, callback) => {
+  const q = query(
+    productsCollection,
+    where('isNew', '==', true),
+    orderBy('createdAt', 'desc'),
+    limit(limit)
+  );
+  
+  return onSnapshot(q, (snapshot) => {
+    const products = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+    callback(products);
+  }, (error) => {
+    console.error('Error getting real-time new arrivals:', error);
+    callback([]);
+  });
+};
+
+// Get all products (non-realtime, for fallback)
 export const getAllProducts = async () => {
   try {
     const snapshot = await getDocs(productsCollection);
@@ -32,7 +110,7 @@ export const getAllProducts = async () => {
   }
 };
 
-// Get products by category
+// Get products by category (non-realtime, for fallback)
 export const getProductsByCategory = async (category) => {
   try {
     const q = query(
@@ -51,7 +129,7 @@ export const getProductsByCategory = async (category) => {
   }
 };
 
-// Get a single product by ID
+// Get a single product by ID (non-realtime, for fallback)
 export const getProductById = async (productId) => {
   try {
     const docRef = doc(db, 'products', productId);
@@ -71,11 +149,10 @@ export const getProductById = async (productId) => {
   }
 };
 
-// Search products by name or description
+// Search products 
 export const searchProducts = async (searchTerm) => {
   try {
     // NOTE: Firestore doesn't support native text search
-    // Fetching all products then filtering client-side
     // For a production app, consider using Algolia or ElasticSearch
     const snapshot = await getDocs(productsCollection);
     const allProducts = snapshot.docs.map(doc => ({
@@ -95,126 +172,31 @@ export const searchProducts = async (searchTerm) => {
   }
 };
 
-// Add a new product
-export const addProduct = async (productData, imageFile) => {
+// Check if product has sufficient stock
+export const checkProductStock = async (productId, quantity) => {
   try {
-    let imageUrl = '';
-    let imagePublicId = '';
-    
-    // Upload image to Cloudinary if provided
-    if (imageFile) {
-      const uploadResult = await uploadImage(imageFile);
-      if (uploadResult.success) {
-        imageUrl = uploadResult.url;
-        imagePublicId = uploadResult.publicId;
-      } else {
-        throw new Error('Image upload failed');
-      }
+    const product = await getProductById(productId);
+    if (!product) {
+      return {
+        success: false,
+        message: 'Product not found'
+      };
     }
     
-    // Create product in Firestore
-    const docRef = await addDoc(productsCollection, {
-      ...productData,
-      image: imageUrl,
-      imagePublicId: imagePublicId,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
-    });
+    if (product.stock < quantity) {
+      return {
+        success: false,
+        message: `Only ${product.stock} items available`,
+        availableStock: product.stock
+      };
+    }
     
     return {
-      id: docRef.id,
-      ...productData,
-      image: imageUrl,
-      imagePublicId: imagePublicId
+      success: true,
+      availableStock: product.stock
     };
   } catch (error) {
-    console.error('Error adding product:', error);
-    throw error;
-  }
-};
-
-// Update an existing product
-export const updateProduct = async (productId, productData, imageFile) => {
-  try {
-    const productRef = doc(db, 'products', productId);
-    
-    // Get current product to check if image needs to be updated
-    const currentProduct = await getDoc(productRef);
-    if (!currentProduct.exists()) {
-      throw new Error('Product not found');
-    }
-    
-    let updateData = {
-      ...productData,
-      updatedAt: serverTimestamp()
-    };
-    
-    // Upload new image to Cloudinary if provided
-    if (imageFile) {
-      const uploadResult = await uploadImage(imageFile);
-      if (uploadResult.success) {
-        updateData.image = uploadResult.url;
-        updateData.imagePublicId = uploadResult.publicId;
-      } else {
-        throw new Error('Image upload failed');
-      }
-    }
-    
-    // Update product in Firestore
-    await updateDoc(productRef, updateData);
-    
-    return {
-      id: productId,
-      ...updateData
-    };
-  } catch (error) {
-    console.error('Error updating product:', error);
-    throw error;
-  }
-};
-
-// Delete a product
-export const deleteProduct = async (productId) => {
-  try {
-    // Get product info to delete the associated image
-    const productRef = doc(db, 'products', productId);
-    const product = await getDoc(productRef);
-    
-    if (!product.exists()) {
-      throw new Error('Product not found');
-    }
-    
-    // Delete from Firestore
-    await deleteDoc(productRef);
-    
-    // Note about deleting the image from Cloudinary:
-    // For security, Cloudinary image deletion should be handled
-    // through a server or cloud function, not directly from the client.
-    
-    return { success: true };
-  } catch (error) {
-    console.error('Error deleting product:', error);
-    throw error;
-  }
-};
-
-// Get featured or new products
-export const getFeaturedProducts = async (limit = 4) => {
-  try {
-    const q = query(
-      productsCollection,
-      where('isNew', '==', true),
-      orderBy('createdAt', 'desc'),
-      limit(limit)
-    );
-    
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }));
-  } catch (error) {
-    console.error('Error getting featured products:', error);
+    console.error('Error checking product stock:', error);
     throw error;
   }
 };
