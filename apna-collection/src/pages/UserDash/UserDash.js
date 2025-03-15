@@ -1,111 +1,102 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { useCart } from '../../context/CartContext'; // Added CartContext import
+import { useCart } from '../../context/CartContext';
 import './UserDash.css';
 
-// Mock data for demonstration
-const mockUser = {
-  name: "Akshat Garg",
-  email: "akshat.garg@example.com",
-  phone: "+91 98765 43210",
-  joinDate: "January 15, 2024",
-  addresses: [
-    {
-      id: 1,
-      type: "Home",
-      address: "42, Sunshine Apartments, Juhu Beach Road",
-      city: "Mumbai",
-      state: "Maharashtra",
-      pincode: "400049",
-      isDefault: true
-    },
-    {
-      id: 2,
-      type: "Office",
-      address: "B-204, Infinity Tech Park, Sector 21",
-      city: "Gurugram",
-      state: "Haryana",
-      pincode: "122001",
-      isDefault: false
-    }
-  ],
-  paymentMethods: [
-    {
-      id: 1,
-      type: "Credit Card",
-      name: "HDFC Bank",
-      number: "●●●● ●●●● ●●●● 4321",
-      expiry: "05/26",
-      isDefault: true
-    },
-    {
-      id: 2,
-      type: "UPI",
-      name: "Google Pay",
-      number: "arjun@upi",
-      expiry: null,
-      isDefault: false
-    }
-  ],
-  recentOrders: [
-    {
-      id: "ORD48756",
-      date: "March 8, 2025",
-      total: 4298,
-      status: "Delivered",
-      items: [
-        { name: "Premium Cotton Shirt", color: "White", size: "M", quantity: 1 },
-        { name: "Slim Fit Trousers", color: "Navy Blue", size: "32", quantity: 1 }
-      ]
-    },
-    {
-      id: "ORD48621",
-      date: "February 22, 2025",
-      total: 3499,
-      status: "Delivered",
-      items: [
-        { name: "Designer Blazer", color: "Black", size: "L", quantity: 1 }
-      ]
-    },
-    {
-      id: "ORD48512",
-      date: "February 10, 2025",
-      total: 2399,
-      status: "Returned",
-      items: [
-        { name: "Silk Blend Kurta", color: "Maroon", size: "XL", quantity: 1 }
-      ]
-    }
-  ],
-  wishlist: [
-    {
-      id: 101,
-      name: "Italian Leather Belt",
-      price: 1899,
-      image: "/api/placeholder/400/500"
-    },
-    {
-      id: 102,
-      name: "Premium Wool Sweater",
-      price: 2499,
-      image: "/api/placeholder/400/500"
-    },
-    {
-      id: 103,
-      name: "Designer Sunglasses",
-      price: 3299,
-      image: "/api/placeholder/400/500"
-    }
-  ]
-};
-
 const UserDash = () => {
-  const { currentUser, userProfile } = useAuth();
-  const { addToCart } = useCart(); // Get addToCart from context
+  const navigate = useNavigate();
+  const { currentUser, userProfile, updateUserProfile, logout } = useAuth();
+  const { addToCart } = useCart();
   const [activeSection, setActiveSection] = useState('overview');
-  const [user] = useState(mockUser);
   const [animateIn, setAnimateIn] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [updateSuccess, setUpdateSuccess] = useState(false);
+  
+  // Form states for profile update
+  const [profileForm, setProfileForm] = useState({
+    displayName: '',
+    phone: '',
+    birthdate: ''
+  });
+  
+  // Password form states
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+
+  // Mock data for sections that don't have real data yet
+  const mockData = {
+    recentOrders: [
+      {
+        id: "ORD48756",
+        date: "March 8, 2025",
+        total: 4298,
+        status: "Delivered",
+        items: [
+          { name: "Premium Cotton Shirt", color: "White", size: "M", quantity: 1 },
+          { name: "Slim Fit Trousers", color: "Navy Blue", size: "32", quantity: 1 }
+        ]
+      },
+      {
+        id: "ORD48621",
+        date: "February 22, 2025",
+        total: 3499,
+        status: "Delivered",
+        items: [
+          { name: "Designer Blazer", color: "Black", size: "L", quantity: 1 }
+        ]
+      },
+      {
+        id: "ORD48512",
+        date: "February 10, 2025",
+        total: 2399,
+        status: "Returned",
+        items: [
+          { name: "Silk Blend Kurta", color: "Maroon", size: "XL", quantity: 1 }
+        ]
+      }
+    ],
+    wishlist: [
+      {
+        id: 101,
+        name: "Italian Leather Belt",
+        price: 1899,
+        image: "/api/placeholder/400/500"
+      },
+      {
+        id: 102,
+        name: "Premium Wool Sweater",
+        price: 2499,
+        image: "/api/placeholder/400/500"
+      },
+      {
+        id: 103,
+        name: "Designer Sunglasses",
+        price: 3299,
+        image: "/api/placeholder/400/500"
+      }
+    ]
+  };
+
+  // Initialize form data when user profile is loaded
+  useEffect(() => {
+    if (userProfile) {
+      setProfileForm({
+        displayName: userProfile.displayName || currentUser?.displayName || '',
+        phone: userProfile.phone || '',
+        birthdate: userProfile.birthdate || ''
+      });
+    } else if (currentUser) {
+      setProfileForm({
+        displayName: currentUser.displayName || '',
+        phone: '',
+        birthdate: ''
+      });
+    }
+  }, [userProfile, currentUser]);
   
   useEffect(() => {
     // Trigger animation after component mounts
@@ -122,7 +113,97 @@ const UserDash = () => {
     }, 100);
   }, [activeSection]);
 
-  // Add function to handle adding item from wishlist to cart
+  // Calculate user join date
+  const formatJoinDate = () => {
+    if (userProfile?.createdAt) {
+      // If we have a Firestore timestamp
+      const date = userProfile.createdAt.toDate ? 
+                  userProfile.createdAt.toDate() : 
+                  new Date(userProfile.createdAt);
+      return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    } else if (currentUser?.metadata?.creationTime) {
+      // Fallback to Firebase auth creation time
+      return new Date(currentUser.metadata.creationTime)
+        .toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    }
+    return 'Recently';
+  };
+
+  // Format price to Indian Rupee format
+  const formatPrice = (price) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      maximumFractionDigits: 0
+    }).format(price);
+  };
+
+  // Handle profile form changes
+  const handleProfileChange = (e) => {
+    const { name, value } = e.target;
+    setProfileForm(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  // Handle password form changes
+  const handlePasswordChange = (e) => {
+    const { id, value } = e.target;
+    setPasswordForm(prev => ({
+      ...prev,
+      [id]: value
+    }));
+  };
+
+  // Handle profile update submission
+  const handleProfileSubmit = async (e) => {
+    e.preventDefault();
+    setIsUpdating(true);
+    setUpdateSuccess(false);
+    
+    try {
+      await updateUserProfile(profileForm);
+      setUpdateSuccess(true);
+      setTimeout(() => setUpdateSuccess(false), 3000);
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      alert('Failed to update profile. Please try again.');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  // Handle password update submission
+  const handlePasswordSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      alert("New passwords don't match");
+      return;
+    }
+    
+    setIsUpdating(true);
+    
+    try {
+      // Implement password update functionality
+      alert('Password update functionality not implemented in this demo');
+      
+      // Reset form
+      setPasswordForm({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+      });
+    } catch (error) {
+      console.error('Error updating password:', error);
+      alert('Failed to update password. Please try again.');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  // Handle adding item from wishlist to cart
   const handleAddToCartFromWishlist = (item) => {
     const productToAdd = {
       id: item.id,
@@ -138,14 +219,18 @@ const UserDash = () => {
     alert(`${item.name} added to cart!`);
   };
 
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      maximumFractionDigits: 0
-    }).format(price);
+  // Handle logout
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate('/login');
+    } catch (error) {
+      console.error('Error logging out:', error);
+      alert('Failed to log out. Please try again.');
+    }
   };
 
+  // Render the overview section
   const renderOverview = () => (
     <div className="dashboard-overview">
       <div className="dashboard-section">
@@ -156,7 +241,7 @@ const UserDash = () => {
           </button>
         </div>
         <div className="order-cards">
-          {user.recentOrders.slice(0, 2).map(order => (
+          {mockData.recentOrders.slice(0, 2).map(order => (
             <div className="order-card" key={order.id}>
               <div className="order-header">
                 <div>
@@ -195,21 +280,21 @@ const UserDash = () => {
           <div className="profile-preview">
             <div className="avatar">
               <div className="avatar-placeholder">
-                {user.name.split(' ').map(n => n[0]).join('')}
+                {(userProfile?.displayName || currentUser?.displayName || 'U').charAt(0).toUpperCase()}
               </div>
             </div>
             <div className="profile-details">
               <div className="profile-detail">
                 <span className="detail-label">Email</span>
-                <span className="detail-value">{user.email}</span>
+                <span className="detail-value">{currentUser?.email || 'Not provided'}</span>
               </div>
               <div className="profile-detail">
                 <span className="detail-label">Phone</span>
-                <span className="detail-value">{user.phone}</span>
+                <span className="detail-value">{userProfile?.phone || 'Not provided'}</span>
               </div>
               <div className="profile-detail">
                 <span className="detail-label">Member Since</span>
-                <span className="detail-value">{user.joinDate}</span>
+                <span className="detail-value">{formatJoinDate()}</span>
               </div>
             </div>
           </div>
@@ -223,7 +308,7 @@ const UserDash = () => {
             </button>
           </div>
           <div className="wishlist-preview">
-            {user.wishlist.slice(0, 2).map(item => (
+            {mockData.wishlist.slice(0, 2).map(item => (
               <div className="wishlist-item" key={item.id}>
                 <div className="wishlist-item-image">
                   <img src={item.image} alt={item.name} />
@@ -251,16 +336,22 @@ const UserDash = () => {
             <button className="edit-btn" onClick={() => setActiveSection('addresses')}>Manage</button>
           </div>
           <div className="address-preview">
-            {user.addresses.filter(addr => addr.isDefault).map(address => (
-              <div className="address-card" key={address.id}>
-                <div className="address-type">{address.type}</div>
-                <div className="address-details">
-                  <p>{address.address}</p>
-                  <p>{address.city}, {address.state} - {address.pincode}</p>
-                </div>
-                <div className="default-badge">Default</div>
-              </div>
-            ))}
+            {userProfile?.addresses && userProfile.addresses.length > 0 ? (
+              userProfile.addresses
+                .filter(addr => addr.isDefault)
+                .map(address => (
+                  <div className="address-card" key={address.id}>
+                    <div className="address-type">{address.type}</div>
+                    <div className="address-details">
+                      <p>{address.address}</p>
+                      <p>{address.city}, {address.state} - {address.pincode}</p>
+                    </div>
+                    <div className="default-badge">Default</div>
+                  </div>
+                ))
+            ) : (
+              <p>No addresses saved yet. Add your first address from the Addresses section.</p>
+            )}
           </div>
         </div>
 
@@ -270,23 +361,30 @@ const UserDash = () => {
             <button className="edit-btn" onClick={() => setActiveSection('payments')}>Manage</button>
           </div>
           <div className="payment-preview">
-            {user.paymentMethods.filter(pm => pm.isDefault).map(payment => (
-              <div className="payment-card" key={payment.id}>
-                <div className="payment-type">{payment.type}</div>
-                <div className="payment-details">
-                  <p className="payment-name">{payment.name}</p>
-                  <p className="payment-number">{payment.number}</p>
-                  {payment.expiry && <p className="payment-expiry">Expires: {payment.expiry}</p>}
-                </div>
-                <div className="default-badge">Default</div>
-              </div>
-            ))}
+            {userProfile?.paymentMethods && userProfile.paymentMethods.length > 0 ? (
+              userProfile.paymentMethods
+                .filter(pm => pm.isDefault)
+                .map(payment => (
+                  <div className="payment-card" key={payment.id}>
+                    <div className="payment-type">{payment.type}</div>
+                    <div className="payment-details">
+                      <p className="payment-name">{payment.name}</p>
+                      <p className="payment-number">{payment.number}</p>
+                      {payment.expiry && <p className="payment-expiry">Expires: {payment.expiry}</p>}
+                    </div>
+                    <div className="default-badge">Default</div>
+                  </div>
+                ))
+            ) : (
+              <p>No payment methods saved yet. Add your first payment method from the Payment Methods section.</p>
+            )}
           </div>
         </div>
       </div>
     </div>
   );
 
+  // Render the orders section
   const renderOrders = () => (
     <div className="dashboard-orders">
       <div className="dashboard-section">
@@ -294,107 +392,179 @@ const UserDash = () => {
           <h3>Order History</h3>
         </div>
         <div className="order-list">
-          {user.recentOrders.map(order => (
-            <div className="order-card" key={order.id}>
-              <div className="order-header">
-                <div>
-                  <span className="order-id">{order.id}</span>
-                  <span className={`order-status status-${order.status.toLowerCase()}`}>{order.status}</span>
-                </div>
-                <span className="order-date">{order.date}</span>
-              </div>
-              <div className="order-items">
-                {order.items.map((item, index) => (
-                  <div className="order-item" key={index}>
-                    <span className="item-name">{item.name}</span>
-                    <span className="item-details">
-                      {item.color}, Size: {item.size}, Qty: {item.quantity}
-                    </span>
+          {mockData.recentOrders.length > 0 ? (
+            mockData.recentOrders.map(order => (
+              <div className="order-card" key={order.id}>
+                <div className="order-header">
+                  <div>
+                    <span className="order-id">{order.id}</span>
+                    <span className={`order-status status-${order.status.toLowerCase()}`}>{order.status}</span>
                   </div>
-                ))}
-              </div>
-              <div className="order-footer">
-                <span className="order-total">{formatPrice(order.total)}</span>
-                <div className="order-actions">
-                  <Link to={`/orders/${order.id}`} className="view-details-btn">
-                    View Details
-                  </Link>
-                  {order.status === "Delivered" && (
-                    <button className="reorder-btn">
-                      Reorder
-                    </button>
-                  )}
+                  <span className="order-date">{order.date}</span>
+                </div>
+                <div className="order-items">
+                  {order.items.map((item, index) => (
+                    <div className="order-item" key={index}>
+                      <span className="item-name">{item.name}</span>
+                      <span className="item-details">
+                        {item.color}, Size: {item.size}, Qty: {item.quantity}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <div className="order-footer">
+                  <span className="order-total">{formatPrice(order.total)}</span>
+                  <div className="order-actions">
+                    <Link to={`/orders/${order.id}`} className="view-details-btn">
+                      View Details
+                    </Link>
+                    {order.status === "Delivered" && (
+                      <button className="reorder-btn">
+                        Reorder
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))
+          ) : (
+            <p>You haven't placed any orders yet.</p>
+          )}
         </div>
       </div>
     </div>
   );
 
+  // Render the profile section
   const renderProfile = () => (
     <div className="dashboard-profile">
       <div className="dashboard-section">
         <div className="section-header">
           <h3>Profile Information</h3>
         </div>
-        <div className="profile-form">
+        {updateSuccess && (
+          <div style={{ 
+            backgroundColor: "#e8f5e9", 
+            color: "#2e7d32", 
+            padding: "15px", 
+            borderRadius: "8px", 
+            marginBottom: "20px",
+            textAlign: "center"
+          }}>
+            Profile updated successfully!
+          </div>
+        )}
+        <form onSubmit={handleProfileSubmit} className="profile-form">
           <div className="form-row">
             <div className="form-group">
-              <label htmlFor="name">Full Name</label>
-              <input type="text" id="name" defaultValue={user.name} />
+              <label htmlFor="displayName">Full Name</label>
+              <input 
+                type="text" 
+                id="displayName"
+                name="displayName"
+                value={profileForm.displayName} 
+                onChange={handleProfileChange}
+              />
             </div>
             <div className="form-group">
               <label htmlFor="email">Email Address</label>
-              <input type="email" id="email" defaultValue={user.email} />
+              <input 
+                type="email" 
+                id="email" 
+                value={currentUser?.email || ''}
+                disabled={true} // Email can't be changed
+              />
             </div>
           </div>
           <div className="form-row">
             <div className="form-group">
               <label htmlFor="phone">Phone Number</label>
-              <input type="tel" id="phone" defaultValue={user.phone} />
+              <input 
+                type="tel" 
+                id="phone"
+                name="phone"
+                value={profileForm.phone} 
+                onChange={handleProfileChange}
+              />
             </div>
             <div className="form-group">
               <label htmlFor="birthdate">Date of Birth</label>
-              <input type="date" id="birthdate" />
+              <input 
+                type="date" 
+                id="birthdate"
+                name="birthdate"
+                value={profileForm.birthdate} 
+                onChange={handleProfileChange}
+              />
             </div>
           </div>
           <div className="form-actions">
-            <button className="save-btn">Save Changes</button>
+            <button 
+              type="submit" 
+              className="save-btn"
+              disabled={isUpdating}
+            >
+              {isUpdating ? 'Saving...' : 'Save Changes'}
+            </button>
           </div>
-        </div>
+        </form>
       </div>
 
       <div className="dashboard-section">
         <div className="section-header">
           <h3>Change Password</h3>
         </div>
-        <div className="password-form">
+        <form onSubmit={handlePasswordSubmit} className="password-form">
           <div className="form-row">
             <div className="form-group">
-              <label htmlFor="current-password">Current Password</label>
-              <input type="password" id="current-password" />
+              <label htmlFor="currentPassword">Current Password</label>
+              <input 
+                type="password" 
+                id="currentPassword" 
+                value={passwordForm.currentPassword}
+                onChange={handlePasswordChange}
+                required
+              />
             </div>
           </div>
           <div className="form-row">
             <div className="form-group">
-              <label htmlFor="new-password">New Password</label>
-              <input type="password" id="new-password" />
+              <label htmlFor="newPassword">New Password</label>
+              <input 
+                type="password" 
+                id="newPassword" 
+                value={passwordForm.newPassword}
+                onChange={handlePasswordChange}
+                required
+                minLength={6}
+              />
             </div>
             <div className="form-group">
-              <label htmlFor="confirm-password">Confirm New Password</label>
-              <input type="password" id="confirm-password" />
+              <label htmlFor="confirmPassword">Confirm New Password</label>
+              <input 
+                type="password" 
+                id="confirmPassword" 
+                value={passwordForm.confirmPassword}
+                onChange={handlePasswordChange}
+                required
+              />
             </div>
           </div>
           <div className="form-actions">
-            <button className="save-btn">Update Password</button>
+            <button 
+              type="submit" 
+              className="save-btn"
+              disabled={isUpdating}
+            >
+              {isUpdating ? 'Updating...' : 'Update Password'}
+            </button>
           </div>
-        </div>
+        </form>
       </div>
     </div>
   );
 
+  // Render the wishlist section
   const renderWishlist = () => (
     <div className="dashboard-wishlist">
       <div className="dashboard-section">
@@ -402,29 +572,34 @@ const UserDash = () => {
           <h3>My Wishlist</h3>
         </div>
         <div className="wishlist-grid">
-          {user.wishlist.map(item => (
-            <div className="wishlist-item-card" key={item.id}>
-              <div className="wishlist-item-image">
-                <img src={item.image} alt={item.name} />
-                <button className="remove-wishlist-btn">×</button>
+          {mockData.wishlist.length > 0 ? (
+            mockData.wishlist.map(item => (
+              <div className="wishlist-item-card" key={item.id}>
+                <div className="wishlist-item-image">
+                  <img src={item.image} alt={item.name} />
+                  <button className="remove-wishlist-btn">×</button>
+                </div>
+                <div className="wishlist-item-details">
+                  <h4>{item.name}</h4>
+                  <span className="item-price">{formatPrice(item.price)}</span>
+                </div>
+                <button 
+                  className="add-to-cart-btn" 
+                  onClick={() => handleAddToCartFromWishlist(item)}
+                >
+                  Add to Cart
+                </button>
               </div>
-              <div className="wishlist-item-details">
-                <h4>{item.name}</h4>
-                <span className="item-price">{formatPrice(item.price)}</span>
-              </div>
-              <button 
-                className="add-to-cart-btn" 
-                onClick={() => handleAddToCartFromWishlist(item)}
-              >
-                Add to Cart
-              </button>
-            </div>
-          ))}
+            ))
+          ) : (
+            <p>Your wishlist is empty. Browse the shop and add items you like.</p>
+          )}
         </div>
       </div>
     </div>
   );
 
+  // Render the addresses section
   const renderAddresses = () => (
     <div className="dashboard-addresses">
       <div className="dashboard-section">
@@ -433,30 +608,40 @@ const UserDash = () => {
           <button className="add-btn">+ Add New Address</button>
         </div>
         <div className="address-list">
-          {user.addresses.map(address => (
-            <div className="address-card" key={address.id}>
-              <div className="address-type">{address.type}</div>
-              <div className="address-details">
-                <p>{address.address}</p>
-                <p>{address.city}, {address.state} - {address.pincode}</p>
+          {userProfile?.addresses && userProfile.addresses.length > 0 ? (
+            userProfile.addresses.map(address => (
+              <div className="address-card" key={address.id}>
+                <div className="address-type">{address.type}</div>
+                <div className="address-details">
+                  <p>{address.address}</p>
+                  <p>{address.city}, {address.state} - {address.pincode}</p>
+                </div>
+                <div className="address-actions">
+                  <button className="edit-address-btn">Edit</button>
+                  <button className="delete-address-btn">Delete</button>
+                  {!address.isDefault && (
+                    <button className="set-default-btn">Set as Default</button>
+                  )}
+                  {address.isDefault && (
+                    <div className="default-badge">Default</div>
+                  )}
+                </div>
               </div>
-              <div className="address-actions">
-                <button className="edit-address-btn">Edit</button>
-                <button className="delete-address-btn">Delete</button>
-                {!address.isDefault && (
-                  <button className="set-default-btn">Set as Default</button>
-                )}
-                {address.isDefault && (
-                  <div className="default-badge">Default</div>
-                )}
-              </div>
+            ))
+          ) : (
+            <div style={{ textAlign: 'center', padding: '30px 0' }}>
+              <p>You don't have any saved addresses yet.</p>
+              <button className="add-btn" style={{ marginTop: '20px' }}>
+                + Add Your First Address
+              </button>
             </div>
-          ))}
+          )}
         </div>
       </div>
     </div>
   );
 
+  // Render the payments section
   const renderPayments = () => (
     <div className="dashboard-payments">
       <div className="dashboard-section">
@@ -465,29 +650,39 @@ const UserDash = () => {
           <button className="add-btn">+ Add New Payment Method</button>
         </div>
         <div className="payment-list">
-          {user.paymentMethods.map(payment => (
-            <div className="payment-card-large" key={payment.id}>
-              <div className="payment-type">{payment.type}</div>
-              <div className="payment-details">
-                <p className="payment-name">{payment.name}</p>
-                <p className="payment-number">{payment.number}</p>
-                {payment.expiry && <p className="payment-expiry">Expires: {payment.expiry}</p>}
+          {userProfile?.paymentMethods && userProfile.paymentMethods.length > 0 ? (
+            userProfile.paymentMethods.map(payment => (
+              <div className="payment-card-large" key={payment.id}>
+                <div className="payment-type">{payment.type}</div>
+                <div className="payment-details">
+                  <p className="payment-name">{payment.name}</p>
+                  <p className="payment-number">{payment.number}</p>
+                  {payment.expiry && <p className="payment-expiry">Expires: {payment.expiry}</p>}
+                </div>
+                <div className="payment-actions">
+                  {!payment.isDefault ? (
+                    <button className="set-default-btn">Set as Default</button>
+                  ) : (
+                    <div className="default-badge">Default</div>
+                  )}
+                  <button className="delete-payment-btn">Delete</button>
+                </div>
               </div>
-              <div className="payment-actions">
-                {!payment.isDefault ? (
-                  <button className="set-default-btn">Set as Default</button>
-                ) : (
-                  <div className="default-badge">Default</div>
-                )}
-                <button className="delete-payment-btn">Delete</button>
-              </div>
+            ))
+          ) : (
+            <div style={{ textAlign: 'center', padding: '30px 0' }}>
+              <p>You don't have any saved payment methods yet.</p>
+              <button className="add-btn" style={{ marginTop: '20px' }}>
+                + Add Your First Payment Method
+              </button>
             </div>
-          ))}
+          )}
         </div>
       </div>
     </div>
   );
 
+  // Determine which content to render based on active section
   const renderContent = () => {
     switch (activeSection) {
       case 'overview':
@@ -507,6 +702,12 @@ const UserDash = () => {
     }
   };
 
+  // Get first letter of user's name for avatar
+  const getInitial = () => {
+    const name = userProfile?.displayName || currentUser?.displayName || 'U';
+    return name.charAt(0).toUpperCase();
+  };
+
   return (
     <div className="user-dashboard">
       <div className="dashboard-welcome">
@@ -522,10 +723,10 @@ const UserDash = () => {
         <div className="dashboard-sidebar">
           <div className="sidebar-avatar">
             <div className="avatar-circle">
-              {user.name.split(' ').map(n => n[0]).join('')}
+              {getInitial()}
             </div>
-            <span className="user-name">{user.name}</span>
-            <span className="member-since">Member since {user.joinDate}</span>
+            <span className="user-name">{userProfile?.displayName || currentUser?.displayName || 'User'}</span>
+            <span className="member-since">Member since {formatJoinDate()}</span>
           </div>
           <nav className="sidebar-nav">
             <button
@@ -608,7 +809,7 @@ const UserDash = () => {
               <span className="nav-text">Payment Methods</span>
             </button>
             
-            <Link to="/logout" className="nav-item logout">
+            <button onClick={handleLogout} className="nav-item logout">
               <span className="nav-icon">
                 <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" strokeWidth="2" fill="none">
                   <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
@@ -617,7 +818,7 @@ const UserDash = () => {
                 </svg>
               </span>
               <span className="nav-text">Logout</span>
-            </Link>
+            </button>
           </nav>
         </div>
         
