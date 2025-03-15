@@ -12,6 +12,15 @@ const UserDash = () => {
   const [animateIn, setAnimateIn] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [updateSuccess, setUpdateSuccess] = useState(false);
+  const [showAddressForm, setShowAddressForm] = useState(false);
+  const [newAddress, setNewAddress] = useState({
+    type: 'Home',
+    address: '',
+    city: '',
+    state: '',
+    pincode: '',
+    isDefault: false
+  });
   
   // Form states for profile update
   const [profileForm, setProfileForm] = useState({
@@ -227,6 +236,83 @@ const UserDash = () => {
     } catch (error) {
       console.error('Error logging out:', error);
       alert('Failed to log out. Please try again.');
+    }
+  };
+
+  // Show the address form
+  const showAddAddressForm = () => {
+    setShowAddressForm(true);
+  };
+
+  // Handle address form input changes
+  const handleAddressInputChange = (e) => {
+    const { name, value } = e.target;
+    setNewAddress(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  // Handle default address checkbox changes
+  const handleDefaultAddressChange = (e) => {
+    setNewAddress(prev => ({
+      ...prev,
+      isDefault: e.target.checked
+    }));
+  };
+
+  // Handle address form submission
+  const handleAddressSubmit = async (e) => {
+    e.preventDefault();
+    setIsUpdating(true);
+    
+    try {
+      // Create a new address object with a unique ID
+      const newAddressWithId = {
+        ...newAddress,
+        id: Date.now().toString() // Simple way to generate a unique ID
+      };
+      
+      // Get existing addresses or initialize empty array
+      const currentAddresses = userProfile?.addresses || [];
+      
+      // If setting as default, update all other addresses
+      let updatedAddresses;
+      if (newAddressWithId.isDefault) {
+        updatedAddresses = currentAddresses.map(addr => ({
+          ...addr,
+          isDefault: false
+        }));
+      } else {
+        updatedAddresses = [...currentAddresses];
+      }
+      
+      // Add the new address
+      updatedAddresses.push(newAddressWithId);
+      
+      // Update the user profile with new addresses array
+      await updateUserProfile({
+        ...userProfile,
+        addresses: updatedAddresses
+      });
+      
+      // Reset form and hide it
+      setNewAddress({
+        type: 'Home',
+        address: '',
+        city: '',
+        state: '',
+        pincode: '',
+        isDefault: false
+      });
+      setShowAddressForm(false);
+      setUpdateSuccess(true);
+      setTimeout(() => setUpdateSuccess(false), 3000);
+    } catch (error) {
+      console.error('Error adding address:', error);
+      alert('Failed to add address. Please try again.');
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -605,8 +691,140 @@ const UserDash = () => {
       <div className="dashboard-section">
         <div className="section-header">
           <h3>Saved Addresses</h3>
-          <button className="add-btn">+ Add New Address</button>
+          {!showAddressForm && (
+            <button className="add-btn" onClick={showAddAddressForm}>+ Add New Address</button>
+          )}
         </div>
+        
+        {updateSuccess && (
+          <div style={{ 
+            backgroundColor: "#e8f5e9", 
+            color: "#2e7d32", 
+            padding: "15px", 
+            borderRadius: "8px", 
+            marginBottom: "20px",
+            textAlign: "center"
+          }}>
+            Address added successfully!
+          </div>
+        )}
+        
+        {/* Add Address Form */}
+        {showAddressForm && (
+          <div style={{ marginBottom: "30px" }}>
+            <form onSubmit={handleAddressSubmit} className="address-form">
+              <div className="form-row">
+                <div className="form-group">
+                  <label htmlFor="type">Address Type</label>
+                  <select 
+                    id="type"
+                    name="type"
+                    value={newAddress.type}
+                    onChange={handleAddressInputChange}
+                    className="form-control"
+                  >
+                    <option value="Home">Home</option>
+                    <option value="Office">Office</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+              </div>
+              
+              <div className="form-row">
+                <div className="form-group">
+                  <label htmlFor="address">Street Address</label>
+                  <input 
+                    type="text" 
+                    id="address"
+                    name="address"
+                    value={newAddress.address}
+                    onChange={handleAddressInputChange}
+                    required
+                  />
+                </div>
+              </div>
+              
+              <div className="form-row">
+                <div className="form-group">
+                  <label htmlFor="city">City</label>
+                  <input 
+                    type="text" 
+                    id="city"
+                    name="city"
+                    value={newAddress.city}
+                    onChange={handleAddressInputChange}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="state">State</label>
+                  <input 
+                    type="text" 
+                    id="state"
+                    name="state"
+                    value={newAddress.state}
+                    onChange={handleAddressInputChange}
+                    required
+                  />
+                </div>
+              </div>
+              
+              <div className="form-row">
+                <div className="form-group">
+                  <label htmlFor="pincode">Pincode</label>
+                  <input 
+                    type="text" 
+                    id="pincode"
+                    name="pincode"
+                    value={newAddress.pincode}
+                    onChange={handleAddressInputChange}
+                    required
+                  />
+                </div>
+              </div>
+              
+              <div className="form-row" style={{ marginBottom: "20px" }}>
+                <div style={{ display: "flex", alignItems: "center" }}>
+                  <input 
+                    type="checkbox" 
+                    id="isDefault"
+                    name="isDefault"
+                    checked={newAddress.isDefault}
+                    onChange={handleDefaultAddressChange}
+                    style={{ marginRight: "10px" }}
+                  />
+                  <label htmlFor="isDefault">Set as default address</label>
+                </div>
+              </div>
+              
+              <div className="form-actions" style={{ display: "flex", gap: "15px" }}>
+                <button 
+                  type="submit" 
+                  className="save-btn"
+                  disabled={isUpdating}
+                >
+                  {isUpdating ? 'Adding...' : 'Add Address'}
+                </button>
+                <button 
+                  type="button" 
+                  className="btn-secondary"
+                  onClick={() => setShowAddressForm(false)}
+                  style={{
+                    padding: "12px 28px",
+                    borderRadius: "8px",
+                    background: "transparent",
+                    border: "1px solid #E1D9D2",
+                    cursor: "pointer"
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+        
+        {/* Existing code for displaying addresses */}
         <div className="address-list">
           {userProfile?.addresses && userProfile.addresses.length > 0 ? (
             userProfile.addresses.map(address => (
@@ -631,9 +849,11 @@ const UserDash = () => {
           ) : (
             <div style={{ textAlign: 'center', padding: '30px 0' }}>
               <p>You don't have any saved addresses yet.</p>
-              <button className="add-btn" style={{ marginTop: '20px' }}>
-                + Add Your First Address
-              </button>
+              {!showAddressForm && (
+                <button className="add-btn" style={{ marginTop: '20px' }} onClick={showAddAddressForm}>
+                  + Add Your First Address
+                </button>
+              )}
             </div>
           )}
         </div>
