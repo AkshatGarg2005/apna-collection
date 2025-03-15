@@ -6,7 +6,7 @@ import './Checkout.css';
 
 const Checkout = () => {
   const navigate = useNavigate();
-  const { currentUser } = useAuth();
+  const { currentUser, userProfile } = useAuth();
   const { cart, calculateCartTotals, clearCart } = useCart();
   
   // Cart items state - now connected to cart context
@@ -23,30 +23,23 @@ const Checkout = () => {
   }, [cart, navigate]);
   
   // Address states
-  const [addresses, setAddresses] = useState([
-    {
-      id: 1,
-      type: 'Home',
-      icon: 'fas fa-home',
-      name: 'Rahul Sharma',
-      address: '123, Green Valley Apartments',
-      locality: 'Near City Mall, M.G. Road',
-      city: 'Sehore, Madhya Pradesh 466001',
-      phone: '9876543210',
-      isSelected: true
-    },
-    {
-      id: 2,
-      type: 'Office',
-      icon: 'fas fa-briefcase',
-      name: 'Rahul Sharma',
-      address: 'Tech Park, 4th Floor',
-      locality: 'Koramangala, Near Metro Station',
-      city: 'Sehore, Madhya Pradesh 466001',
-      phone: '9876543210',
-      isSelected: false
+  const [addresses, setAddresses] = useState([]);
+  const [selectedAddressId, setSelectedAddressId] = useState('');
+  
+  // Load user addresses
+  useEffect(() => {
+    if (userProfile?.addresses && userProfile.addresses.length > 0) {
+      setAddresses(userProfile.addresses);
+      
+      // Set default address as selected
+      const defaultAddress = userProfile.addresses.find(addr => addr.isDefault);
+      if (defaultAddress) {
+        setSelectedAddressId(defaultAddress.id);
+      } else {
+        setSelectedAddressId(userProfile.addresses[0].id);
+      }
     }
-  ]);
+  }, [userProfile]);
   
   // Form states
   const [contactInfo, setContactInfo] = useState({
@@ -270,10 +263,7 @@ const Checkout = () => {
   
   // Select address
   const selectAddress = (addressId) => {
-    setAddresses(addresses.map(address => ({
-      ...address,
-      isSelected: address.id === addressId
-    })));
+    setSelectedAddressId(addressId);
   };
   
   // Handle contact info changes
@@ -595,7 +585,7 @@ const Checkout = () => {
         day: 'numeric'
       }),
       items: cartItems,
-      shippingAddress: addresses.find(addr => addr.isSelected),
+      shippingAddress: addresses.find(addr => addr.id === selectedAddressId),
       paymentMethod: paymentMethod,
       subtotal: summary.subtotal,
       discount: summary.discount,
@@ -652,8 +642,7 @@ const Checkout = () => {
   
   // Show add address form
   const showAddAddressForm = () => {
-    alert('Add New Address Form would be shown here');
-    // In a real app, you would show a modal or form component
+    navigate('/account');
   };
 
   return (
@@ -756,27 +745,33 @@ const Checkout = () => {
             <h2 className="section-title">Shipping Address</h2>
             
             <div className="address-cards">
-              {addresses.map(address => (
-                <div 
-                  key={address.id} 
-                  className={`address-card ${address.isSelected ? 'selected' : ''}`}
-                  onClick={() => selectAddress(address.id)}
-                >
-                  <div className="address-type">
-                    <i className={`${address.icon} address-icon`}></i> {address.type}
+              {addresses.length > 0 ? (
+                addresses.map(address => (
+                  <div 
+                    key={address.id} 
+                    className={`address-card ${selectedAddressId === address.id ? 'selected' : ''}`}
+                    onClick={() => selectAddress(address.id)}
+                  >
+                    <div className="address-type">
+                      <i className={`${address.type === 'Home' ? 'fas fa-home' : 'fas fa-briefcase'} address-icon`}></i> 
+                      {address.type}
+                    </div>
+                    <div className="address-details">
+                      {userProfile?.displayName || currentUser?.displayName || 'User'}<br />
+                      {address.address}<br />
+                      {address.city}, {address.state} - {address.pincode}<br />
+                      {userProfile?.phone && `Phone: ${userProfile.phone}`}
+                    </div>
                   </div>
-                  <div className="address-details">
-                    {address.name}<br />
-                    {address.address}<br />
-                    {address.locality}<br />
-                    {address.city}<br />
-                    Phone: {address.phone}
-                  </div>
-                  <div className="address-actions">
-                    <div className="address-action">Edit</div>
-                  </div>
+                ))
+              ) : (
+                <div style={{padding: '20px', textAlign: 'center'}}>
+                  <p>No saved addresses found. Please add an address to continue.</p>
+                  <Link to="/account" className="add-address-btn" style={{marginTop: '15px', display: 'inline-block'}}>
+                    Add New Address
+                  </Link>
                 </div>
-              ))}
+              )}
             </div>
             
             <div className="add-address-btn" onClick={showAddAddressForm}>
@@ -1047,7 +1042,7 @@ const Checkout = () => {
             <button 
               className={`place-order-btn ${orderButtonState.isSuccess ? 'success' : ''} ${orderButtonState.isLoading ? 'loading' : ''}`} 
               onClick={handlePlaceOrder}
-              disabled={orderButtonState.isLoading || orderButtonState.isSuccess}
+              disabled={orderButtonState.isLoading || orderButtonState.isSuccess || addresses.length === 0}
             >
               <span className="btn-content">
                 <i className={orderButtonState.icon}></i> 

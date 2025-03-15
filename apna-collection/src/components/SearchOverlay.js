@@ -2,11 +2,20 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './SearchOverlay.css';
 
-const SearchOverlay = ({ isOpen, onClose }) => {
+const SearchOverlay = ({ isOpen, closeSearch, onClose }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const inputRef = useRef(null);
   const navigate = useNavigate();
+
+  // Create a function that will use whichever close prop is provided
+  const handleClose = () => {
+    if (typeof closeSearch === 'function') {
+      closeSearch();
+    } else if (typeof onClose === 'function') {
+      onClose();
+    }
+  };
 
   // Sample product data - replace with actual data later
   const products = [
@@ -64,10 +73,19 @@ const SearchOverlay = ({ isOpen, onClose }) => {
     // More products truncated for brevity
   ];
 
-  // Focus on input when overlay opens
+  // Reset search query when overlay opens
   useEffect(() => {
-    if (isOpen && inputRef.current) {
-      inputRef.current.focus();
+    if (isOpen) {
+      // Clear previous search query when opening
+      setSearchQuery('');
+      setSearchResults([]);
+      
+      // Focus on input
+      setTimeout(() => {
+        if (inputRef.current) {
+          inputRef.current.focus();
+        }
+      }, 100);
     }
   }, [isOpen]);
 
@@ -75,7 +93,7 @@ const SearchOverlay = ({ isOpen, onClose }) => {
   useEffect(() => {
     const handleEscKey = (e) => {
       if (e.key === 'Escape' && isOpen) {
-        onClose();
+        handleClose();
       }
     };
 
@@ -83,11 +101,12 @@ const SearchOverlay = ({ isOpen, onClose }) => {
     return () => {
       document.removeEventListener('keydown', handleEscKey);
     };
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   // Handle search input
   const handleSearchInput = (e) => {
     const query = e.target.value;
+    console.log("Search input:", query); // Debug log
     setSearchQuery(query);
 
     if (query.length < 2) {
@@ -109,7 +128,7 @@ const SearchOverlay = ({ isOpen, onClose }) => {
     e.preventDefault();
     if (searchQuery.trim().length >= 2) {
       navigate(`/search?q=${encodeURIComponent(searchQuery)}`);
-      onClose();
+      handleClose(); // Use our new function that handles either prop
     }
   };
 
@@ -120,7 +139,7 @@ const SearchOverlay = ({ isOpen, onClose }) => {
 
   return (
     <div className={`search-overlay ${isOpen ? 'active' : ''}`}>
-      <div className="search-close" onClick={onClose}>
+      <div className="search-close" onClick={handleClose}>
         <i className="fas fa-times"></i>
       </div>
       <div className="search-container">
@@ -132,6 +151,17 @@ const SearchOverlay = ({ isOpen, onClose }) => {
             value={searchQuery}
             onChange={handleSearchInput}
             ref={inputRef}
+            style={{ 
+              color: '#fff', // Make sure text is visible
+              caretColor: '#fff', // Make cursor visible
+              backgroundColor: 'transparent',
+              border: 'none',
+              width: '100%',
+              padding: '20px',
+              fontSize: '1.8rem',
+              outline: 'none',
+              borderBottom: '2px solid #c59b6d'
+            }}
           />
         </form>
       </div>

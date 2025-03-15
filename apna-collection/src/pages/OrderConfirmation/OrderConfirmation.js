@@ -1,8 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import AddressDisplay from '../../components/AddressDisplay';
+import { useAuth } from '../../context/AuthContext';
 import './OrderConfirmation.css';
 
 const OrderConfirmation = () => {
+  const { currentUser, userProfile } = useAuth();
   const [orderDetails, setOrderDetails] = useState(null);
 
   useEffect(() => {
@@ -14,12 +17,7 @@ const OrderConfirmation = () => {
         orderId: recentOrder.id,
         orderDate: recentOrder.date,
         paymentMethod: getPaymentMethodText(recentOrder.paymentMethod),
-        shippingAddress: {
-          name: recentOrder.shippingAddress.name,
-          addressLine1: recentOrder.shippingAddress.address,
-          addressLine2: `${recentOrder.shippingAddress.locality}, ${recentOrder.shippingAddress.city}`,
-          country: 'India'
-        },
+        shippingAddress: recentOrder.shippingAddress,
         items: recentOrder.items,
         subtotal: recentOrder.subtotal,
         shipping: recentOrder.shipping || 0,
@@ -296,10 +294,14 @@ const OrderConfirmation = () => {
             <div className="info-item">
               <div className="info-label">Shipping Address</div>
               <div className="info-value">
-                {orderDetails.shippingAddress.name}<br />
-                {orderDetails.shippingAddress.addressLine1}<br />
-                {orderDetails.shippingAddress.addressLine2}<br />
-                {orderDetails.shippingAddress.country}
+                {orderDetails.shippingAddress && (
+                  <AddressDisplay 
+                    address={orderDetails.shippingAddress} 
+                    userName={userProfile?.displayName || currentUser?.displayName}
+                    userPhone={userProfile?.phone}
+                    showBadge={false}
+                  />
+                )}
               </div>
             </div>
           </div>

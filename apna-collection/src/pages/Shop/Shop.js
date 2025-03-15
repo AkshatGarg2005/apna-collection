@@ -1,14 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { useCart } from '../../context/CartContext'; // Added CartContext import
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useCart } from '../../context/CartContext';
 import './Shop.css';
 
 const Shop = () => {
-  const [products, setProducts] = useState([]);
-  const [filteredProducts, setFilteredProducts] = useState([]);
-  const [currentCategory, setCurrentCategory] = useState('all');
-  const { addToCart } = useCart(); // Get addToCart from context
-
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { addToCart } = useCart();
+  
   // Sample product data
   const productData = [
     // Shirts
@@ -214,16 +213,48 @@ const Shop = () => {
     }
   ];
 
-  // Initialize products on component mount
+  // Set up state
+  const [products, setProducts] = useState(productData);
+  const [filteredProducts, setFilteredProducts] = useState(productData);
+  const [currentCategory, setCurrentCategory] = useState('all');
+  
+  // Parse the URL parameter whenever location changes
   useEffect(() => {
-    setProducts(productData);
-    setFilteredProducts(productData);
-  }, []);
+    const searchParams = new URLSearchParams(location.search);
+    const categoryParam = searchParams.get('category');
+    
+    if (categoryParam) {
+      // Set the current category state
+      setCurrentCategory(categoryParam);
+      
+      // Filter products based on this category
+      if (categoryParam === 'all') {
+        setFilteredProducts(products);
+      } else {
+        const filtered = products.filter(product => 
+          product.category === categoryParam
+        );
+        setFilteredProducts(filtered);
+      }
+    } else {
+      // If no category param, show all products
+      setCurrentCategory('all');
+      setFilteredProducts(products);
+    }
+  }, [location.search, products]);
 
-  // Function to filter products by category
-  const filterProducts = (category) => {
+  // Function to filter products when category button is clicked
+  const handleCategoryClick = (category) => {
     setCurrentCategory(category);
     
+    // Update the URL to match the selected category
+    if (category === 'all') {
+      navigate('/shop');
+    } else {
+      navigate(`/shop?category=${category}`);
+    }
+    
+    // Filter the products
     if (category === 'all') {
       setFilteredProducts(products);
     } else {
@@ -301,7 +332,7 @@ const Shop = () => {
               <li className="category-item">
                 <button 
                   className={`category-button ${currentCategory === 'all' ? 'active' : ''}`} 
-                  onClick={() => filterProducts('all')}
+                  onClick={() => handleCategoryClick('all')}
                 >
                   <i className="fas fa-th category-icon"></i>All Products
                 </button>
@@ -309,7 +340,7 @@ const Shop = () => {
               <li className="category-item">
                 <button 
                   className={`category-button ${currentCategory === 'shirts' ? 'active' : ''}`} 
-                  onClick={() => filterProducts('shirts')}
+                  onClick={() => handleCategoryClick('shirts')}
                 >
                   <i className="fas fa-tshirt category-icon"></i>Shirts
                 </button>
@@ -317,7 +348,7 @@ const Shop = () => {
               <li className="category-item">
                 <button 
                   className={`category-button ${currentCategory === 'jeans' ? 'active' : ''}`} 
-                  onClick={() => filterProducts('jeans')}
+                  onClick={() => handleCategoryClick('jeans')}
                 >
                   <i className="fas fa-stream category-icon"></i>Jeans
                 </button>
@@ -325,7 +356,7 @@ const Shop = () => {
               <li className="category-item">
                 <button 
                   className={`category-button ${currentCategory === 'kurta' ? 'active' : ''}`} 
-                  onClick={() => filterProducts('kurta')}
+                  onClick={() => handleCategoryClick('kurta')}
                 >
                   <i className="fas fa-vest-patches category-icon"></i>Kurta
                 </button>
@@ -333,7 +364,7 @@ const Shop = () => {
               <li className="category-item">
                 <button 
                   className={`category-button ${currentCategory === 'tshirt' ? 'active' : ''}`} 
-                  onClick={() => filterProducts('tshirt')}
+                  onClick={() => handleCategoryClick('tshirt')}
                 >
                   <i className="fas fa-tshirt category-icon"></i>T-shirt
                 </button>
@@ -341,7 +372,7 @@ const Shop = () => {
               <li className="category-item">
                 <button 
                   className={`category-button ${currentCategory === 'undergarments' ? 'active' : ''}`} 
-                  onClick={() => filterProducts('undergarments')}
+                  onClick={() => handleCategoryClick('undergarments')}
                 >
                   <i className="fas fa-underwear category-icon"></i>Undergarments
                 </button>

@@ -1,8 +1,12 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom'; // Add useNavigate
+import { useCart } from '../../context/CartContext';
 import './OffersPage.css';
 
-const Offers = ({ addToCart }) => {
+const Offers = () => {
+  const { addToCart } = useCart();
+  const navigate = useNavigate(); // Add this hook for navigation
+  
   // Updated offer data with only shirts, jeans, kurta, t-shirts, and undergarments
   const offerData = [
     {
@@ -84,20 +88,26 @@ const Offers = ({ addToCart }) => {
     }
   };
 
-  // Handle shop now button click
+  // Update this function to navigate instead of adding to cart
   const handleShopNow = (offer) => {
-    // Add the first variant of the product to cart
-    const product = {
-      id: offer.id,
-      name: offer.title,
-      price: offer.currentPrice,
-      image: offer.image,
-      quantity: 1,
-      size: 'M', // Default size
-      color: 'Default' // Default color
-    };
+    // Extract the category from the offer title or use a category property
+    // For example, if offer.title is "Premium Formal Shirts", we extract "shirts"
+    let category = '';
     
-    addToCart(product);
+    if (offer.title.toLowerCase().includes('shirt')) {
+      category = 'shirts';
+    } else if (offer.title.toLowerCase().includes('jeans')) {
+      category = 'jeans';
+    } else if (offer.title.toLowerCase().includes('kurta')) {
+      category = 'kurta';
+    } else if (offer.title.toLowerCase().includes('t-shirt')) {
+      category = 'tshirt';
+    } else if (offer.title.toLowerCase().includes('undergarment')) {
+      category = 'undergarments';
+    }
+    
+    // Navigate to shop page with category as a URL parameter
+    navigate(`/shop?category=${category}`);
   };
 
   return (

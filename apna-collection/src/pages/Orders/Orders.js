@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import AddressDisplay from '../../components/AddressDisplay';
 import './Orders.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
@@ -24,7 +25,7 @@ import {
 
 const Orders = () => {
   const navigate = useNavigate();
-  const { currentUser } = useAuth();
+  const { currentUser, userProfile } = useAuth();
   
   // State for orders, filters, search, and modal
   const [orders, setOrders] = useState([]);
@@ -696,11 +697,18 @@ const Orders = () => {
                         year: 'numeric'
                       })}
                 </p>
-                <div className="delivery-address">
-                  <h4>Delivery Address</h4>
-                  <p>{trackingOrder.shippingAddress?.address || '123 Example Street, Sehore'}</p>
-                  <p>{trackingOrder.shippingAddress?.city || 'Madhya Pradesh, 466001'}</p>
-                </div>
+                
+                {trackingOrder.shippingAddress && (
+                  <div className="delivery-address">
+                    <h4>Delivery Address</h4>
+                    <AddressDisplay 
+                      address={trackingOrder.shippingAddress} 
+                      userName={userProfile?.displayName || currentUser?.displayName}
+                      userPhone={userProfile?.phone}
+                      showBadge={false}
+                    />
+                  </div>
+                )}
                 
                 <div className="track-items-preview">
                   <h4>Order Items</h4>

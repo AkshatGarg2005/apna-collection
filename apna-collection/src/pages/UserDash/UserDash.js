@@ -6,7 +6,16 @@ import './UserDash.css';
 
 const UserDash = () => {
   const navigate = useNavigate();
-  const { currentUser, userProfile, updateUserProfile, logout } = useAuth();
+  const { 
+    currentUser, 
+    userProfile, 
+    updateUserProfile, 
+    logout,
+    addAddress,
+    updateAddress,
+    deleteAddress,
+    setDefaultAddress
+  } = useAuth();
   const { addToCart } = useCart();
   const [activeSection, setActiveSection] = useState('overview');
   const [animateIn, setAnimateIn] = useState(false);
@@ -35,6 +44,9 @@ const UserDash = () => {
     newPassword: '',
     confirmPassword: ''
   });
+
+  // State for address editing
+  const [editAddress, setEditAddress] = useState(null);
 
   // Mock data for sections that don't have real data yet
   const mockData = {
@@ -267,52 +279,112 @@ const UserDash = () => {
     setIsUpdating(true);
     
     try {
-      // Create a new address object with a unique ID
-      const newAddressWithId = {
-        ...newAddress,
-        id: Date.now().toString() // Simple way to generate a unique ID
-      };
+      const result = await addAddress(newAddress);
       
-      // Get existing addresses or initialize empty array
-      const currentAddresses = userProfile?.addresses || [];
-      
-      // If setting as default, update all other addresses
-      let updatedAddresses;
-      if (newAddressWithId.isDefault) {
-        updatedAddresses = currentAddresses.map(addr => ({
-          ...addr,
+      if (result.success) {
+        // Reset form and hide it
+        setNewAddress({
+          type: 'Home',
+          address: '',
+          city: '',
+          state: '',
+          pincode: '',
           isDefault: false
-        }));
+        });
+        setShowAddressForm(false);
+        setUpdateSuccess(true);
+        setTimeout(() => setUpdateSuccess(false), 3000);
       } else {
-        updatedAddresses = [...currentAddresses];
+        alert('Failed to add address: ' + result.error);
       }
-      
-      // Add the new address
-      updatedAddresses.push(newAddressWithId);
-      
-      // Update the user profile with new addresses array
-      await updateUserProfile({
-        ...userProfile,
-        addresses: updatedAddresses
-      });
-      
-      // Reset form and hide it
-      setNewAddress({
-        type: 'Home',
-        address: '',
-        city: '',
-        state: '',
-        pincode: '',
-        isDefault: false
-      });
-      setShowAddressForm(false);
-      setUpdateSuccess(true);
-      setTimeout(() => setUpdateSuccess(false), 3000);
     } catch (error) {
       console.error('Error adding address:', error);
       alert('Failed to add address. Please try again.');
     } finally {
       setIsUpdating(false);
+    }
+  };
+
+  // Handle editing an address
+  const handleEditAddress = (address) => {
+    setEditAddress(address);
+    setNewAddress({
+      type: address.type,
+      address: address.address,
+      city: address.city,
+      state: address.state,
+      pincode: address.pincode,
+      isDefault: address.isDefault
+    });
+    setShowAddressForm(true);
+  };
+
+  // Handle updating an address
+  const handleUpdateAddress = async (e) => {
+    e.preventDefault();
+    setIsUpdating(true);
+    
+    try {
+      const result = await updateAddress(editAddress.id, newAddress);
+      
+      if (result.success) {
+        // Reset form and hide it
+        setNewAddress({
+          type: 'Home',
+          address: '',
+          city: '',
+          state: '',
+          pincode: '',
+          isDefault: false
+        });
+        setEditAddress(null);
+        setShowAddressForm(false);
+        setUpdateSuccess(true);
+        setTimeout(() => setUpdateSuccess(false), 3000);
+      } else {
+        alert('Failed to update address: ' + result.error);
+      }
+    } catch (error) {
+      console.error('Error updating address:', error);
+      alert('Failed to update address. Please try again.');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  // Handle deleting an address
+  const handleDeleteAddress = async (addressId) => {
+    if (window.confirm('Are you sure you want to delete this address?')) {
+      try {
+        const result = await deleteAddress(addressId);
+        
+        if (result.success) {
+          setUpdateSuccess(true);
+          setTimeout(() => setUpdateSuccess(false), 3000);
+        } else {
+          alert('Failed to delete address: ' + result.error);
+        }
+      } catch (error) {
+        console.error('Error deleting address:', error);
+        alert('Failed to delete address. Please try again.');
+      }
+    }
+  };
+
+  // Handle setting default address
+  const handleSetDefaultAddress = async (addressId) => {
+    try {
+      const result = await setDefaultAddress(addressId);
+      
+      if (result.success) {
+        setUpdateSuccess(true);
+        setTimeout(() => setUpdateSuccess(false), 3000);
+      } else {
+        alert('Failed to set default address: ' + result.error);
+      }
+    } catch (error) {
+      console.error('Error setting default address:', error);
+      alert('Failed to set default address. Please try again.');
     }
   };
 
@@ -705,14 +777,14 @@ const UserDash = () => {
             marginBottom: "20px",
             textAlign: "center"
           }}>
-            Address added successfully!
+            Address {editAddress ? 'updated' : 'added'} successfully!
           </div>
         )}
         
         {/* Add Address Form */}
         {showAddressForm && (
           <div style={{ marginBottom: "30px" }}>
-            <form onSubmit={handleAddressSubmit} className="address-form">
+            <form onSubmit={editAddress ? handleUpdateAddress : handleAddressSubmit} className="address-form">
               <div className="form-row">
                 <div className="form-group">
                   <label htmlFor="type">Address Type</label>
@@ -803,12 +875,23 @@ const UserDash = () => {
                   className="save-btn"
                   disabled={isUpdating}
                 >
-                  {isUpdating ? 'Adding...' : 'Add Address'}
+                  {isUpdating ? (editAddress ? 'Updating...' : 'Adding...') : (editAddress ? 'Update Address' : 'Add Address')}
                 </button>
                 <button 
                   type="button" 
                   className="btn-secondary"
-                  onClick={() => setShowAddressForm(false)}
+                  onClick={() => {
+                    setShowAddressForm(false);
+                    setEditAddress(null);
+                    setNewAddress({
+                      type: 'Home',
+                      address: '',
+                      city: '',
+                      state: '',
+                      pincode: '',
+                      isDefault: false
+                    });
+                  }}
                   style={{
                     padding: "12px 28px",
                     borderRadius: "8px",
@@ -835,10 +918,12 @@ const UserDash = () => {
                   <p>{address.city}, {address.state} - {address.pincode}</p>
                 </div>
                 <div className="address-actions">
-                  <button className="edit-address-btn">Edit</button>
-                  <button className="delete-address-btn">Delete</button>
+                  <button className="edit-address-btn" onClick={() => handleEditAddress(address)}>Edit</button>
+                  <button className="delete-address-btn" onClick={() => handleDeleteAddress(address.id)}>Delete</button>
                   {!address.isDefault && (
-                    <button className="set-default-btn">Set as Default</button>
+                    <button className="set-default-btn" onClick={() => handleSetDefaultAddress(address.id)}>
+                      Set as Default
+                    </button>
                   )}
                   {address.isDefault && (
                     <div className="default-badge">Default</div>

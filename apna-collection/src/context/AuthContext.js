@@ -108,6 +108,170 @@ export const AuthProvider = ({ children }) => {
     }
   };
   
+  // Address management functions
+  const addAddress = async (newAddress) => {
+    try {
+      if (!currentUser) throw new Error('No authenticated user');
+      
+      // Create a new address with ID
+      const addressWithId = {
+        ...newAddress,
+        id: Date.now().toString(),
+        createdAt: new Date().toISOString()
+      };
+      
+      // Get current addresses
+      const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+      const userData = userDoc.data();
+      const currentAddresses = userData.addresses || [];
+      
+      // If setting as default, update existing addresses
+      let updatedAddresses;
+      if (addressWithId.isDefault) {
+        updatedAddresses = currentAddresses.map(addr => ({
+          ...addr,
+          isDefault: false
+        }));
+      } else {
+        updatedAddresses = [...currentAddresses];
+      }
+      
+      // Add new address
+      updatedAddresses.push(addressWithId);
+      
+      // Update in Firestore
+      await setDoc(
+        doc(db, 'users', currentUser.uid), 
+        { addresses: updatedAddresses }, 
+        { merge: true }
+      );
+      
+      // Update local state
+      setUserProfile(prev => ({
+        ...prev,
+        addresses: updatedAddresses
+      }));
+      
+      return { success: true, address: addressWithId };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  };
+
+  const updateAddress = async (addressId, updatedData) => {
+    try {
+      if (!currentUser) throw new Error('No authenticated user');
+      
+      // Get current addresses
+      const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+      const userData = userDoc.data();
+      const currentAddresses = userData.addresses || [];
+      
+      // Find the address to update
+      const addressIndex = currentAddresses.findIndex(addr => addr.id === addressId);
+      if (addressIndex === -1) throw new Error('Address not found');
+      
+      // Handle default status changes
+      let updatedAddresses = [...currentAddresses];
+      if (updatedData.isDefault) {
+        // If setting as default, update all other addresses
+        updatedAddresses = updatedAddresses.map(addr => ({
+          ...addr,
+          isDefault: false
+        }));
+      }
+      
+      // Update the specific address
+      updatedAddresses[addressIndex] = {
+        ...updatedAddresses[addressIndex],
+        ...updatedData,
+        updatedAt: new Date().toISOString()
+      };
+      
+      // Update in Firestore
+      await setDoc(
+        doc(db, 'users', currentUser.uid), 
+        { addresses: updatedAddresses }, 
+        { merge: true }
+      );
+      
+      // Update local state
+      setUserProfile(prev => ({
+        ...prev,
+        addresses: updatedAddresses
+      }));
+      
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  };
+
+  const deleteAddress = async (addressId) => {
+    try {
+      if (!currentUser) throw new Error('No authenticated user');
+      
+      // Get current addresses
+      const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+      const userData = userDoc.data();
+      const currentAddresses = userData.addresses || [];
+      
+      // Filter out the address to delete
+      const updatedAddresses = currentAddresses.filter(addr => addr.id !== addressId);
+      
+      // Update in Firestore
+      await setDoc(
+        doc(db, 'users', currentUser.uid), 
+        { addresses: updatedAddresses }, 
+        { merge: true }
+      );
+      
+      // Update local state
+      setUserProfile(prev => ({
+        ...prev,
+        addresses: updatedAddresses
+      }));
+      
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  };
+
+  const setDefaultAddress = async (addressId) => {
+    try {
+      if (!currentUser) throw new Error('No authenticated user');
+      
+      // Get current addresses
+      const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+      const userData = userDoc.data();
+      const currentAddresses = userData.addresses || [];
+      
+      // Update default status
+      const updatedAddresses = currentAddresses.map(addr => ({
+        ...addr,
+        isDefault: addr.id === addressId
+      }));
+      
+      // Update in Firestore
+      await setDoc(
+        doc(db, 'users', currentUser.uid), 
+        { addresses: updatedAddresses }, 
+        { merge: true }
+      );
+      
+      // Update local state
+      setUserProfile(prev => ({
+        ...prev,
+        addresses: updatedAddresses
+      }));
+      
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  };
+  
   // Monitor auth state changes
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -133,7 +297,12 @@ export const AuthProvider = ({ children }) => {
     login,
     logout,
     updateUserProfile,
-    loading
+    loading,
+    // Added address management functions
+    addAddress,
+    updateAddress,
+    deleteAddress,
+    setDefaultAddress
   };
   
   return (
