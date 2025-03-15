@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';// Add this import
+import { useAuth } from '../../context/AuthContext';
+import { useCart } from '../../context/CartContext'; // Added CartContext import
 import './UserDash.css';
 
 // Mock data for demonstration
@@ -100,7 +101,8 @@ const mockUser = {
 };
 
 const UserDash = () => {
-  const { currentUser, userProfile } = useAuth(); // Add auth hook
+  const { currentUser, userProfile } = useAuth();
+  const { addToCart } = useCart(); // Get addToCart from context
   const [activeSection, setActiveSection] = useState('overview');
   const [user] = useState(mockUser);
   const [animateIn, setAnimateIn] = useState(false);
@@ -119,6 +121,22 @@ const UserDash = () => {
       setAnimateIn(true);
     }, 100);
   }, [activeSection]);
+
+  // Add function to handle adding item from wishlist to cart
+  const handleAddToCartFromWishlist = (item) => {
+    const productToAdd = {
+      id: item.id,
+      name: item.name,
+      price: item.price,
+      image: item.image,
+      quantity: 1,
+      size: 'M', // Default size
+      color: 'Default' // Default color
+    };
+    
+    addToCart(productToAdd);
+    alert(`${item.name} added to cart!`);
+  };
 
   const formatPrice = (price) => {
     return new Intl.NumberFormat('en-IN', {
@@ -214,7 +232,12 @@ const UserDash = () => {
                   <span className="item-name">{item.name}</span>
                   <span className="item-price">{formatPrice(item.price)}</span>
                 </div>
-                <button className="add-to-cart-btn">Add to Cart</button>
+                <button 
+                  className="add-to-cart-btn" 
+                  onClick={() => handleAddToCartFromWishlist(item)}
+                >
+                  Add to Cart
+                </button>
               </div>
             ))}
           </div>
@@ -389,7 +412,12 @@ const UserDash = () => {
                 <h4>{item.name}</h4>
                 <span className="item-price">{formatPrice(item.price)}</span>
               </div>
-              <button className="add-to-cart-btn">Add to Cart</button>
+              <button 
+                className="add-to-cart-btn" 
+                onClick={() => handleAddToCartFromWishlist(item)}
+              >
+                Add to Cart
+              </button>
             </div>
           ))}
         </div>

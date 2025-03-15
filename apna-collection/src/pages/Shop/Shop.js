@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useCart } from '../../context/CartContext'; // Added CartContext import
 import './Shop.css';
 
 const Shop = () => {
   const [products, setProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [currentCategory, setCurrentCategory] = useState('all');
-  const [cartCount, setCartCount] = useState(3); // Initial cart count from the design
+  const { addToCart } = useCart(); // Get addToCart from context
 
   // Sample product data
   const productData = [
@@ -231,18 +232,27 @@ const Shop = () => {
     }
   };
 
-  // Function to handle adding product to cart
-  const handleAddToCart = (e, productId) => {
+  // Updated handleAddToCart function to use CartContext
+  const handleAddToCart = (e, product) => {
     e.preventDefault();
     e.stopPropagation();
     
-    // In a real app, you would add the product to the cart here
-    setCartCount(prevCount => prevCount + 1);
+    // Create a properly formatted product object for the cart
+    const productToAdd = {
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      image: product.image,
+      quantity: 1,
+      size: 'M', // Default size
+      color: 'Default' // Default color
+    };
     
-    // Get the button reference
-    const button = e.target;
+    // Add to cart using context
+    addToCart(productToAdd);
     
     // Animation effect
+    const button = e.target;
     button.textContent = 'Added!';
     button.style.backgroundColor = '#c59b6d';
     
@@ -368,7 +378,7 @@ const Shop = () => {
                         <div className="product-actions">
                           <button 
                             className="add-to-cart"
-                            onClick={(e) => handleAddToCart(e, product.id)}
+                            onClick={(e) => handleAddToCart(e, product)}
                           >
                             Add to Cart
                           </button>

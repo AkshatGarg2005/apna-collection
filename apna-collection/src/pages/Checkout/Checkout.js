@@ -1,31 +1,26 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
+import { useCart } from '../../context/CartContext';
 import './Checkout.css';
 
 const Checkout = () => {
   const navigate = useNavigate();
+  const { currentUser } = useAuth();
+  const { cart, calculateCartTotals, clearCart } = useCart();
   
-  // Cart items state
-  const [cartItems, setCartItems] = useState([
-    {
-      id: 1,
-      name: 'Premium Cotton Formal Shirt',
-      image: '/api/placeholder/80/100',
-      size: 'M',
-      color: 'White',
-      price: 1299,
-      quantity: 1
-    },
-    {
-      id: 2,
-      name: 'Slim Fit Dress Pants',
-      image: '/api/placeholder/80/100',
-      size: 'L',
-      color: 'Black',
-      price: 1499,
-      quantity: 1
+  // Cart items state - now connected to cart context
+  const [cartItems, setCartItems] = useState([]);
+  
+  // Load cart items when component mounts
+  useEffect(() => {
+    if (cart && cart.length > 0) {
+      setCartItems(cart);
+    } else {
+      // Redirect to cart if cart is empty
+      navigate('/cart');
     }
-  ]);
+  }, [cart, navigate]);
   
   // Address states
   const [addresses, setAddresses] = useState([
@@ -433,77 +428,6 @@ const Checkout = () => {
     }, 5000);
   };
   
-  // Enhanced place order with advanced animation
-  const handlePlaceOrder = () => {
-    // Store the original button width and text for consistency
-    const button = document.querySelector('.place-order-btn');
-    if (button) {
-      // Ensure consistent width during state changes
-      const buttonWidth = button.offsetWidth;
-      button.style.width = `${buttonWidth}px`;
-    }
-    
-    // Add a ripple effect to the button first
-    if (button) {
-      const diameter = Math.max(button.clientWidth, button.clientHeight);
-      const radius = diameter / 2;
-      
-      const ripple = document.createElement('span');
-      ripple.className = 'ripple-effect';
-      ripple.style.width = ripple.style.height = `${diameter}px`;
-      ripple.style.left = `${button.clientWidth / 2 - radius}px`;
-      ripple.style.top = `${button.clientHeight / 2 - radius}px`;
-      
-      button.appendChild(ripple);
-      
-      // Remove ripple after animation
-      setTimeout(() => ripple.remove(), 600);
-    }
-    
-    // Set loading state with progress animation
-    setOrderButtonState({
-      isLoading: true,
-      isSuccess: false,
-      text: 'Processing...',
-      icon: 'fas fa-spinner fa-spin'
-    });
-    
-    // Create a progress indication
-    createProgressAnimation();
-    
-    // Simulate order processing (would be an API call in real app)
-    setTimeout(() => {
-      // Flash summary section
-      const summary = document.querySelector('.checkout-summary .checkout-section');
-      if (summary) {
-        summary.style.transition = 'all 0.5s ease';
-        summary.style.boxShadow = '0 0 30px rgba(197, 155, 109, 0.5)';
-        
-        setTimeout(() => {
-          summary.style.boxShadow = '';
-        }, 800);
-      }
-      
-      // Set success state
-      setOrderButtonState({
-        isLoading: false,
-        isSuccess: true,
-        text: 'Order Placed Successfully!',
-        icon: 'fas fa-check'
-      });
-      
-      // Celebration effects
-      triggerConfettiEffect();
-      createSuccessAnimation();
-      playCelebrativeSound();
-      
-      // Navigate to confirmation page after a delay
-      setTimeout(() => {
-        navigate('/order-confirmation');
-      }, 2200);
-    }, 2500);
-  };
-  
   // Progress animation for order processing
   const createProgressAnimation = () => {
     const container = document.querySelector('.checkout-container');
@@ -622,6 +546,108 @@ const Checkout = () => {
         confettiContainer.remove();
       }, 1000);
     }, 5000);
+  };
+  
+  // Enhanced place order with advanced animation and order saving
+  const handlePlaceOrder = () => {
+    // Store the original button width and text for consistency
+    const button = document.querySelector('.place-order-btn');
+    if (button) {
+      // Ensure consistent width during state changes
+      const buttonWidth = button.offsetWidth;
+      button.style.width = `${buttonWidth}px`;
+    }
+    
+    // Add a ripple effect to the button first
+    if (button) {
+      const diameter = Math.max(button.clientWidth, button.clientHeight);
+      const radius = diameter / 2;
+      
+      const ripple = document.createElement('span');
+      ripple.className = 'ripple-effect';
+      ripple.style.width = ripple.style.height = `${diameter}px`;
+      ripple.style.left = `${button.clientWidth / 2 - radius}px`;
+      ripple.style.top = `${button.clientHeight / 2 - radius}px`;
+      
+      button.appendChild(ripple);
+      
+      // Remove ripple after animation
+      setTimeout(() => ripple.remove(), 600);
+    }
+    
+    // Set loading state with progress animation
+    setOrderButtonState({
+      isLoading: true,
+      isSuccess: false,
+      text: 'Processing...',
+      icon: 'fas fa-spinner fa-spin'
+    });
+    
+    // Create a progress indication
+    createProgressAnimation();
+    
+    // Create order object with all necessary details
+    const order = {
+      id: 'AC' + Math.floor(10000000 + Math.random() * 90000000),
+      date: new Date().toLocaleDateString('en-IN', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      }),
+      items: cartItems,
+      shippingAddress: addresses.find(addr => addr.isSelected),
+      paymentMethod: paymentMethod,
+      subtotal: summary.subtotal,
+      discount: summary.discount,
+      tax: summary.gst,
+      shipping: summary.shipping || 0,
+      total: summary.total,
+      status: 'Processing',
+      userId: currentUser?.uid
+    };
+    
+    // Store order in localStorage for demo purposes
+    // In a real app, you would save this to Firestore
+    const existingOrders = JSON.parse(localStorage.getItem('orders') || '[]');
+    localStorage.setItem('orders', JSON.stringify([...existingOrders, order]));
+    
+    // Store the most recent order for order confirmation page
+    localStorage.setItem('recentOrder', JSON.stringify(order));
+    
+    // Simulate order processing (would be an API call in real app)
+    setTimeout(() => {
+      // Flash summary section
+      const summary = document.querySelector('.checkout-summary .checkout-section');
+      if (summary) {
+        summary.style.transition = 'all 0.5s ease';
+        summary.style.boxShadow = '0 0 30px rgba(197, 155, 109, 0.5)';
+        
+        setTimeout(() => {
+          summary.style.boxShadow = '';
+        }, 800);
+      }
+      
+      // Clear the cart
+      clearCart();
+      
+      // Set success state
+      setOrderButtonState({
+        isLoading: false,
+        isSuccess: true,
+        text: 'Order Placed Successfully!',
+        icon: 'fas fa-check'
+      });
+      
+      // Celebration effects
+      triggerConfettiEffect();
+      createSuccessAnimation();
+      playCelebrativeSound();
+      
+      // Navigate to confirmation page after a delay
+      setTimeout(() => {
+        navigate('/order-confirmation');
+      }, 2200);
+    }, 2500);
   };
   
   // Show add address form

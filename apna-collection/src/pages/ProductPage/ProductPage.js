@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
+import { useCart } from '../../context/CartContext'; // Added CartContext import
 import './ProductPage.css';
 
 const ProductPage = () => {
@@ -12,7 +13,7 @@ const ProductPage = () => {
   const [selectedColor, setSelectedColor] = useState('White');
   const [quantity, setQuantity] = useState(1);
   const [activeTab, setActiveTab] = useState('details');
-  const [cartCount, setCartCount] = useState(3); // Initial cart count
+  const { addToCart } = useCart(); // Get addToCart from context
 
   // Sample product data
   const productData = {
@@ -138,17 +139,40 @@ const ProductPage = () => {
     }
   };
 
-  // Handle add to cart
+  // Updated handleAddToCart function
   const handleAddToCart = () => {
-    // In a real app, add product to cart
+    // Create a properly formatted product object with selected options
+    const productToAdd = {
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      image: product.images[selectedImage],
+      quantity: quantity,
+      size: selectedSize,
+      color: selectedColor
+    };
+    
+    // Add to cart using context
+    addToCart(productToAdd);
+    
+    // Show feedback (this was already in your code)
     alert(`Added to cart: ${product.name}\nSize: ${selectedSize}\nColor: ${selectedColor}\nQuantity: ${quantity}`);
-    setCartCount(cartCount + 1);
   };
 
   // Handle buy now
   const handleBuyNow = () => {
-    // In a real app, you would store current product selection in cart/context
-    // and then redirect to checkout
+    // Add to cart first, then redirect to checkout
+    const productToAdd = {
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      image: product.images[selectedImage],
+      quantity: quantity,
+      size: selectedSize,
+      color: selectedColor
+    };
+    
+    addToCart(productToAdd);
     navigate('/checkout');
   };
 

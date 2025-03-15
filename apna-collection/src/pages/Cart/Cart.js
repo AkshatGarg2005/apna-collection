@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useCart } from '../../context/CartContext'; // Add this import
 
-const Cart = ({ cart, removeFromCart, updateQuantity }) => {
+const Cart = () => {
+  const { cart, removeFromCart, updateCartItemQuantity } = useCart(); // Get data from context
   const [promoCode, setPromoCode] = useState('');
   const [discount, setDiscount] = useState(500);
   const [shippingFee, setShippingFee] = useState(99);
@@ -27,7 +29,7 @@ const Cart = ({ cart, removeFromCart, updateQuantity }) => {
   // Checkout handler with animation
   const handleCheckout = (e) => {
     e.preventDefault();
-    if (cart.length === 0) return;
+    if (!cart || cart.length === 0) return;
     
     setIsCheckingOut(true);
     
@@ -39,7 +41,7 @@ const Cart = ({ cart, removeFromCart, updateQuantity }) => {
 
   // Calculate subtotal
   const calculateSubtotal = () => {
-    return cart.reduce((total, item) => total + (item.price * item.quantity), 0);
+    return cart ? cart.reduce((total, item) => total + (item.price * item.quantity), 0) : 0;
   };
 
   // Format currency
@@ -107,6 +109,11 @@ const Cart = ({ cart, removeFromCart, updateQuantity }) => {
     window.requestAnimationFrame(step);
   };
 
+  // Update function to use updateCartItemQuantity
+  const updateQuantity = (itemId, size, color, newQuantity) => {
+    updateCartItemQuantity(itemId, size, color, newQuantity);
+  };
+
   // Calculate order summary values
   const subtotal = calculateSubtotal();
   const tax = Math.round(subtotal * TAX_RATE);
@@ -114,6 +121,8 @@ const Cart = ({ cart, removeFromCart, updateQuantity }) => {
 
   // Update item subtotals when quantities change
   useEffect(() => {
+    if (!cart) return;
+    
     cart.forEach(item => {
       const itemKey = `${item.id}-${item.size}-${item.color}`;
       const newSubtotal = item.price * item.quantity;
@@ -163,10 +172,12 @@ const Cart = ({ cart, removeFromCart, updateQuantity }) => {
     setDisplayTotal(total);
     
     const initialItemSubtotals = {};
-    cart.forEach(item => {
-      const itemKey = `${item.id}-${item.size}-${item.color}`;
-      initialItemSubtotals[itemKey] = item.price * item.quantity;
-    });
+    if (cart) {
+      cart.forEach(item => {
+        const itemKey = `${item.id}-${item.size}-${item.color}`;
+        initialItemSubtotals[itemKey] = item.price * item.quantity;
+      });
+    }
     
     setDisplayItemSubtotals(initialItemSubtotals);
     itemSubtotalsRef.current = { ...initialItemSubtotals };
@@ -202,7 +213,7 @@ const Cart = ({ cart, removeFromCart, updateQuantity }) => {
         <div className="cart-items" style={{
           backgroundColor: 'transparent'
         }}>
-          {cart.length === 0 ? (
+          {!cart || cart.length === 0 ? (
             <div className="empty-cart" style={{
               textAlign: 'center',
               padding: '80px 0',
@@ -582,15 +593,15 @@ const Cart = ({ cart, removeFromCart, updateQuantity }) => {
               borderRadius: '8px',
               fontSize: '1.1rem',
               fontWeight: 500,
-              cursor: cart.length > 0 ? 'pointer' : 'not-allowed',
+              cursor: cart && cart.length > 0 ? 'pointer' : 'not-allowed',
               transition: 'all 0.3s',
               marginTop: '25px',
               boxShadow: '0 4px 15px rgba(197, 155, 109, 0.2)',
-              opacity: cart.length > 0 ? 1 : 0.7,
+              opacity: cart && cart.length > 0 ? 1 : 0.7,
               position: 'relative',
               overflow: 'hidden'
             }}
-            disabled={cart.length === 0 || isCheckingOut}
+            disabled={!cart || cart.length === 0 || isCheckingOut}
           >
             {isCheckingOut ? (
               <span className="btn-animation-container">

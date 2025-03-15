@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useCart } from '../../context/CartContext'; // Added CartContext import
 import './Search.css';
 // Add FontAwesome stylesheet for icons
 import 'font-awesome/css/font-awesome.min.css';
@@ -209,11 +210,12 @@ const products = [
   }
 ];
 
-const Search = ({ addToCart }) => {
+const Search = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const searchParams = new URLSearchParams(location.search);
   const searchQuery = searchParams.get('q') || '';
+  const { addToCart } = useCart(); // Get addToCart from context
   
   const [searchInput, setSearchInput] = useState(searchQuery);
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -290,15 +292,23 @@ const Search = ({ addToCart }) => {
     }));
   };
   
+  // Updated handleAddToCart function
   const handleAddToCart = (product) => {
     const productToAdd = {
-      ...product,
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      image: product.image,
+      quantity: 1,
       size: "M", // Default size
-      color: "Default", // Default color
-      quantity: 1
+      color: "Default" // Default color
     };
     
+    // Add to cart using context
     addToCart(productToAdd);
+    
+    // Optional: Show feedback to user
+    alert(`${product.name} added to cart!`);
   };
   
   // Helper function to capitalize the first letter

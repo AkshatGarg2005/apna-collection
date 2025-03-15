@@ -114,9 +114,24 @@ export const CartProvider = ({ children }) => {
     setCart(updatedCart);
   };
   
-  // Clear cart
+  // Enhanced clear cart function
   const clearCart = () => {
     setCart([]);
+    localStorage.removeItem('cart'); // Clear local storage
+    
+    // If user is logged in, clear in Firestore as well
+    if (currentUser) {
+      const clearFirestoreCart = async () => {
+        try {
+          const cartRef = doc(db, 'carts', currentUser.uid);
+          await setDoc(cartRef, { items: [] });
+        } catch (error) {
+          console.error('Error clearing cart in Firestore:', error);
+        }
+      };
+      
+      clearFirestoreCart();
+    }
   };
   
   // Calculate cart totals

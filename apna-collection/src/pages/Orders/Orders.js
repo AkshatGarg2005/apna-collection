@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import './Orders.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
@@ -23,113 +24,10 @@ import {
 
 const Orders = () => {
   const navigate = useNavigate();
-  // State for orders, filters, search, and modal
-  const [orders, setOrders] = useState([
-    // Sample orders data
-    {
-      id: 'AC23051587',
-      date: '4 March, 2025',
-      status: 'Delivered',
-      items: [
-        {
-          id: 1,
-          name: 'Premium Cotton Formal Shirt',
-          image: '/api/placeholder/200/200',
-          size: 'L',
-          color: 'White',
-          quantity: 1,
-          price: 1299
-        },
-        {
-          id: 2,
-          name: 'Slim Fit Dark Denim Jeans',
-          image: '/api/placeholder/200/200',
-          size: '32',
-          color: 'Dark Blue',
-          quantity: 1,
-          price: 1899
-        }
-      ],
-      total: 3198,
-      payment: {
-        method: 'UPI',
-        status: 'Paid'
-      }
-    },
-    {
-      id: 'AC23051492',
-      date: '28 February, 2025',
-      status: 'Shipped',
-      items: [
-        {
-          id: 3,
-          name: 'Traditional Silk Kurta',
-          image: '/api/placeholder/200/200',
-          size: 'M',
-          color: 'Maroon',
-          quantity: 1,
-          price: 2999
-        }
-      ],
-      total: 2999,
-      payment: {
-        method: 'Credit Card',
-        status: 'Paid'
-      }
-    },
-    {
-      id: 'AC23051375',
-      date: '15 February, 2025',
-      status: 'Processing',
-      items: [
-        {
-          id: 4,
-          name: 'Designer Blazer',
-          image: '/api/placeholder/200/200',
-          size: '40',
-          color: 'Navy Blue',
-          quantity: 1,
-          price: 3499
-        },
-        {
-          id: 5,
-          name: 'Formal Shoes',
-          image: '/api/placeholder/200/200',
-          size: '9',
-          color: 'Brown',
-          quantity: 1,
-          price: 2199
-        }
-      ],
-      total: 5698,
-      payment: {
-        method: 'Cash on Delivery',
-        status: 'Pending'
-      }
-    },
-    {
-      id: 'AC23051240',
-      date: '10 February, 2025',
-      status: 'Cancelled',
-      items: [
-        {
-          id: 6,
-          name: 'Polo T-shirt',
-          image: '/api/placeholder/200/200',
-          size: 'M',
-          color: 'Black',
-          quantity: 2,
-          price: 1199
-        }
-      ],
-      total: 2398,
-      payment: {
-        method: 'UPI',
-        status: 'Refunded'
-      }
-    }
-  ]);
+  const { currentUser } = useAuth();
   
+  // State for orders, filters, search, and modal
+  const [orders, setOrders] = useState([]);
   const [activeFilter, setActiveFilter] = useState('All Orders');
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredOrders, setFilteredOrders] = useState([]);
@@ -142,12 +40,154 @@ const Orders = () => {
   // Refs for animation
   const orderRefs = useRef({});
   
-  // Simulate loading
+  // Load orders from localStorage or Firestore
   useEffect(() => {
-    setTimeout(() => {
-      setIsLoading(false);
-    }, 800);
-  }, []);
+    const loadOrders = async () => {
+      setIsLoading(true);
+      
+      try {
+        // In a real app, you would fetch from Firestore based on currentUser.uid
+        // For now, we'll use localStorage
+        const savedOrders = JSON.parse(localStorage.getItem('orders') || '[]');
+        
+        // Filter orders for the current user if logged in
+        const userOrders = currentUser 
+          ? savedOrders.filter(order => order.userId === currentUser.uid)
+          : savedOrders;
+        
+        // Sort by date (newest first) - parse the date string properly
+        const sortedOrders = userOrders.sort((a, b) => {
+          const dateA = new Date(a.date.split(',')[0] + a.date.split(',')[1]);
+          const dateB = new Date(b.date.split(',')[0] + b.date.split(',')[1]);
+          return dateB - dateA;
+        });
+        
+        // If no orders found, use sample data
+        if (sortedOrders.length === 0) {
+          setOrders(getSampleOrders());
+        } else {
+          setOrders(sortedOrders);
+        }
+      } catch (error) {
+        console.error('Error loading orders:', error);
+        setOrders(getSampleOrders());
+      }
+      
+      setTimeout(() => {
+        setIsLoading(false);
+      }, 800);
+    };
+    
+    loadOrders();
+  }, [currentUser]);
+  
+  // Sample orders for demo purposes
+  const getSampleOrders = () => {
+    return [
+      {
+        id: 'AC23051587',
+        date: '4 March, 2025',
+        status: 'Delivered',
+        items: [
+          {
+            id: 1,
+            name: 'Premium Cotton Formal Shirt',
+            image: '/api/placeholder/200/200',
+            size: 'L',
+            color: 'White',
+            quantity: 1,
+            price: 1299
+          },
+          {
+            id: 2,
+            name: 'Slim Fit Dark Denim Jeans',
+            image: '/api/placeholder/200/200',
+            size: '32',
+            color: 'Dark Blue',
+            quantity: 1,
+            price: 1899
+          }
+        ],
+        total: 3198,
+        payment: {
+          method: 'UPI',
+          status: 'Paid'
+        }
+      },
+      {
+        id: 'AC23051492',
+        date: '28 February, 2025',
+        status: 'Shipped',
+        items: [
+          {
+            id: 3,
+            name: 'Traditional Silk Kurta',
+            image: '/api/placeholder/200/200',
+            size: 'M',
+            color: 'Maroon',
+            quantity: 1,
+            price: 2999
+          }
+        ],
+        total: 2999,
+        payment: {
+          method: 'Credit Card',
+          status: 'Paid'
+        }
+      },
+      {
+        id: 'AC23051375',
+        date: '15 February, 2025',
+        status: 'Processing',
+        items: [
+          {
+            id: 4,
+            name: 'Designer Blazer',
+            image: '/api/placeholder/200/200',
+            size: '40',
+            color: 'Navy Blue',
+            quantity: 1,
+            price: 3499
+          },
+          {
+            id: 5,
+            name: 'Formal Shoes',
+            image: '/api/placeholder/200/200',
+            size: '9',
+            color: 'Brown',
+            quantity: 1,
+            price: 2199
+          }
+        ],
+        total: 5698,
+        payment: {
+          method: 'Cash on Delivery',
+          status: 'Pending'
+        }
+      },
+      {
+        id: 'AC23051240',
+        date: '10 February, 2025',
+        status: 'Cancelled',
+        items: [
+          {
+            id: 6,
+            name: 'Polo T-shirt',
+            image: '/api/placeholder/200/200',
+            size: 'M',
+            color: 'Black',
+            quantity: 2,
+            price: 1199
+          }
+        ],
+        total: 2398,
+        payment: {
+          method: 'UPI',
+          status: 'Refunded'
+        }
+      }
+    ];
+  };
   
   // Filter orders when activeFilter or searchTerm changes
   useEffect(() => {
@@ -207,20 +247,43 @@ const Orders = () => {
   // Cancel order handler
   const handleCancelOrder = (orderId) => {
     if (window.confirm(`Are you sure you want to cancel order #${orderId}?`)) {
-      // In a real app, this would make an API call to cancel the order
-      setOrders(orders.map(order => 
+      // Update the order in state
+      const updatedOrders = orders.map(order => 
         order.id === orderId 
           ? {...order, status: 'Cancelled'} 
           : order
-      ));
+      );
+      
+      // Update local state
+      setOrders(updatedOrders);
+      
+      // Update in localStorage
+      try {
+        const allOrders = JSON.parse(localStorage.getItem('orders') || '[]');
+        const updatedAllOrders = allOrders.map(order => 
+          order.id === orderId 
+            ? {...order, status: 'Cancelled'} 
+            : order
+        );
+        localStorage.setItem('orders', JSON.stringify(updatedAllOrders));
+      } catch (error) {
+        console.error('Error updating order in localStorage:', error);
+      }
+      
       showToastNotification('Order cancelled successfully');
     }
   };
   
   // Order again handler
   const handleOrderAgain = (items) => {
-    // In a real app, this would add the items to cart and redirect to cart page
+    // In a real app, this would add the items to cart via context
+    // For now, just show a toast
     showToastNotification(`Added ${items.length} items to your cart`);
+    
+    // Redirect to cart page after a short delay
+    setTimeout(() => {
+      navigate('/cart');
+    }, 1500);
   };
 
   // Show toast notification
@@ -261,6 +324,33 @@ const Orders = () => {
         return faTimesCircle;
       default:
         return faCircle;
+    }
+  };
+  
+  // Get payment method display text
+  const getPaymentMethodText = (paymentMethod) => {
+    switch(paymentMethod) {
+      case 'cardPayment':
+        return 'Credit/Debit Card';
+      case 'upiPayment':
+        return 'UPI';
+      case 'netBankingPayment':
+        return 'Net Banking';
+      case 'codPayment':
+        return 'Cash on Delivery';
+      default:
+        return paymentMethod;
+    }
+  };
+  
+  // Get payment status based on order status
+  const getPaymentStatus = (order) => {
+    if (order.status === 'Cancelled') {
+      return 'Refunded';
+    } else if (order.paymentMethod === 'codPayment') {
+      return order.status === 'Delivered' ? 'Paid' : 'Pending';
+    } else {
+      return 'Paid';
     }
   };
   
@@ -413,9 +503,9 @@ const Orders = () => {
                         <FontAwesomeIcon icon={faTag} className="order-icon" />
                         Order #{order.id}
                       </div>
-                      <div className={`order-status ${getStatusClass(order.status)}`}>
-                        <FontAwesomeIcon icon={getStatusIcon(order.status)} />
-                        <span>{order.status}</span>
+                      <div className={`order-status ${getStatusClass(order.status || 'Processing')}`}>
+                        <FontAwesomeIcon icon={getStatusIcon(order.status || 'Processing')} />
+                        <span>{order.status || 'Processing'}</span>
                       </div>
                     </div>
                     <div className="order-info">
@@ -424,9 +514,11 @@ const Orders = () => {
                         {order.date}
                       </div>
                       <div className="order-payment">
-                        <span className="payment-method">{order.payment.method}</span>
-                        <span className={`payment-status ${order.payment.status.toLowerCase()}`}>
-                          {order.payment.status}
+                        <span className="payment-method">
+                          {getPaymentMethodText(order.paymentMethod)}
+                        </span>
+                        <span className={`payment-status ${getPaymentStatus(order).toLowerCase()}`}>
+                          {getPaymentStatus(order)}
                         </span>
                       </div>
                     </div>
@@ -534,35 +626,59 @@ const Orders = () => {
                       <FontAwesomeIcon icon={faCheckCircle} />
                     </div>
                     <div className="step-label">Order Placed</div>
-                    <div className="step-date">10 Feb, 2025</div>
+                    <div className="step-date">{trackingOrder.date}</div>
                   </div>
                   <div className={`tracking-step ${['Processing', 'Shipped', 'Delivered'].includes(trackingOrder.status) ? 'completed' : ''}`}>
                     <div className="step-icon">
                       <FontAwesomeIcon icon={faSpinner} />
                     </div>
                     <div className="step-label">Processing</div>
-                    <div className="step-date">12 Feb, 2025</div>
+                    <div className="step-date">
+                      {new Date(new Date(trackingOrder.date).getTime() + 2 * 24 * 60 * 60 * 1000).toLocaleDateString('en-IN', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric'
+                      })}
+                    </div>
                   </div>
                   <div className={`tracking-step ${['Shipped', 'Delivered'].includes(trackingOrder.status) ? 'completed' : ''}`}>
                     <div className="step-icon">
                       <FontAwesomeIcon icon={faBox} />
                     </div>
                     <div className="step-label">Shipped</div>
-                    <div className="step-date">13 Feb, 2025</div>
+                    <div className="step-date">
+                      {new Date(new Date(trackingOrder.date).getTime() + 3 * 24 * 60 * 60 * 1000).toLocaleDateString('en-IN', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric'
+                      })}
+                    </div>
                   </div>
                   <div className={`tracking-step ${trackingOrder.status === 'Delivered' ? 'completed' : trackingOrder.status === 'Shipped' ? 'active' : ''}`}>
                     <div className="step-icon">
                       <FontAwesomeIcon icon={faTruck} />
                     </div>
                     <div className="step-label">Out for Delivery</div>
-                    <div className="step-date">14 Feb, 2025</div>
+                    <div className="step-date">
+                      {new Date(new Date(trackingOrder.date).getTime() + 4 * 24 * 60 * 60 * 1000).toLocaleDateString('en-IN', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric'
+                      })}
+                    </div>
                   </div>
                   <div className={`tracking-step ${trackingOrder.status === 'Delivered' ? 'completed' : ''}`}>
                     <div className="step-icon">
                       <FontAwesomeIcon icon={faHome} />
                     </div>
                     <div className="step-label">Delivered</div>
-                    <div className="step-date">15 Feb, 2025</div>
+                    <div className="step-date">
+                      {new Date(new Date(trackingOrder.date).getTime() + 5 * 24 * 60 * 60 * 1000).toLocaleDateString('en-IN', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric'
+                      })}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -574,12 +690,16 @@ const Orders = () => {
                     ? 'Delivered on ' + trackingOrder.date 
                     : trackingOrder.status === 'Cancelled'
                     ? 'Order Cancelled'
-                    : 'Expected by March 15, 2025'}
+                    : 'Expected by ' + new Date(new Date(trackingOrder.date).getTime() + 5 * 24 * 60 * 60 * 1000).toLocaleDateString('en-IN', {
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric'
+                      })}
                 </p>
                 <div className="delivery-address">
                   <h4>Delivery Address</h4>
-                  <p>123 Example Street, Sehore</p>
-                  <p>Madhya Pradesh, 466001</p>
+                  <p>{trackingOrder.shippingAddress?.address || '123 Example Street, Sehore'}</p>
+                  <p>{trackingOrder.shippingAddress?.city || 'Madhya Pradesh, 466001'}</p>
                 </div>
                 
                 <div className="track-items-preview">

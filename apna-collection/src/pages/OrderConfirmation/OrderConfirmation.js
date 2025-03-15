@@ -3,65 +3,98 @@ import { Link } from 'react-router-dom';
 import './OrderConfirmation.css';
 
 const OrderConfirmation = () => {
-  const [orderDetails] = useState({
-    orderId: 'AC' + Math.floor(10000000 + Math.random() * 90000000),
-    orderDate: new Date().toLocaleDateString('en-IN', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    }),
-    paymentMethod: 'Credit Card (•••• 4582)',
-    shippingAddress: {
-      name: 'Rahul Sharma',
-      addressLine1: '123 Shivaji Nagar',
-      addressLine2: 'Sehore, Madhya Pradesh 466001',
-      country: 'India'
-    },
-    items: [
-      {
-        id: 1,
-        name: 'Premium Cotton Formal Shirt',
-        price: 1299,
-        quantity: 1,
-        size: 'M',
-        color: 'White',
-        image: '/api/placeholder/80/80'
-      },
-      {
-        id: 2,
-        name: 'Designer Blazer',
-        price: 3499,
-        quantity: 1,
-        size: '40',
-        color: 'Navy Blue',
-        image: '/api/placeholder/80/80'
-      },
-      {
-        id: 3,
-        name: 'Slim Fit Trousers',
-        price: 1599,
-        quantity: 1,
-        size: '32',
-        color: 'Black',
-        image: '/api/placeholder/80/80'
-      }
-    ],
-    subtotal: 6397,
-    shipping: 0,
-    tax: 1151,
-    total: 7548
-  });
+  const [orderDetails, setOrderDetails] = useState(null);
 
   useEffect(() => {
+    // Retrieve the recent order from localStorage
+    const recentOrder = JSON.parse(localStorage.getItem('recentOrder'));
+    if (recentOrder) {
+      // Format data structure to match component expectations
+      setOrderDetails({
+        orderId: recentOrder.id,
+        orderDate: recentOrder.date,
+        paymentMethod: getPaymentMethodText(recentOrder.paymentMethod),
+        shippingAddress: {
+          name: recentOrder.shippingAddress.name,
+          addressLine1: recentOrder.shippingAddress.address,
+          addressLine2: `${recentOrder.shippingAddress.locality}, ${recentOrder.shippingAddress.city}`,
+          country: 'India'
+        },
+        items: recentOrder.items,
+        subtotal: recentOrder.subtotal,
+        shipping: recentOrder.shipping || 0,
+        tax: recentOrder.tax,
+        total: recentOrder.total
+      });
+    } else {
+      // Fallback if no recent order is found
+      setOrderDetails({
+        orderId: 'AC' + Math.floor(10000000 + Math.random() * 90000000),
+        orderDate: new Date().toLocaleDateString('en-IN', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        }),
+        paymentMethod: 'Credit Card (•••• 4582)',
+        shippingAddress: {
+          name: 'Rahul Sharma',
+          addressLine1: '123 Shivaji Nagar',
+          addressLine2: 'Sehore, Madhya Pradesh 466001',
+          country: 'India'
+        },
+        items: [
+          {
+            id: 1,
+            name: 'Premium Cotton Formal Shirt',
+            price: 1299,
+            quantity: 1,
+            size: 'M',
+            color: 'White',
+            image: '/api/placeholder/80/80'
+          },
+          {
+            id: 2,
+            name: 'Designer Blazer',
+            price: 3499,
+            quantity: 1,
+            size: '40',
+            color: 'Navy Blue',
+            image: '/api/placeholder/80/80'
+          }
+        ],
+        subtotal: 4798,
+        shipping: 0,
+        tax: 864,
+        total: 5662
+      });
+    }
+    
     // Scroll to top when component mounts
     window.scrollTo(0, 0);
     
     // Run animations with delays
-    animateElements();
-    
-    // Run confetti effect
-    setTimeout(createConfetti, 1000);
+    setTimeout(() => {
+      animateElements();
+      // Run confetti effect
+      setTimeout(createConfetti, 500);
+    }, 300);
   }, []);
+
+  // Helper function to format payment method text
+  const getPaymentMethodText = (paymentMethod) => {
+    switch(paymentMethod) {
+      case 'cardPayment':
+        return 'Credit/Debit Card';
+      case 'upiPayment':
+        return 'UPI Payment';
+      case 'netBankingPayment':
+        return 'Net Banking';
+      case 'codPayment':
+        return 'Cash on Delivery';
+      default:
+        return paymentMethod;
+    }
+  };
 
   const createConfetti = () => {
     const confettiContainer = document.createElement('div');
@@ -229,11 +262,15 @@ const OrderConfirmation = () => {
     window.print();
   };
 
+  if (!orderDetails) {
+    return <div className="loading-container">Loading order details...</div>;
+  }
+
   return (
     <div className="confirmation-container">
       <div className="confirmation-header">
         <div className="checkmark-circle">
-        <i className="fas fa-check checkmark"></i>
+          <i className="fas fa-check checkmark"></i>
         </div>
         <h1 className="confirmation-title">Order Confirmed!</h1>
         <p className="confirmation-message">Thank you for shopping with Apna Collection. Your order has been successfully placed and is being processed.</p>
@@ -342,6 +379,10 @@ const OrderConfirmation = () => {
         </div>
         
         <div className="action-buttons">
+          <button className="btn-print" onClick={printOrder}>
+            <i className="fas fa-print" style={{ marginRight: '8px' }}></i>
+            Print Order
+          </button>
           <Link to="/shop" className="btn-continue">
             <i className="fas fa-shopping-bag" style={{ marginRight: '8px' }}></i>
             Continue Shopping
