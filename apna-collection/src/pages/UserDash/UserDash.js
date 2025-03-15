@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';// Add this import
 import './UserDash.css';
 
 // Mock data for demonstration
@@ -99,6 +100,7 @@ const mockUser = {
 };
 
 const UserDash = () => {
+  const { currentUser, userProfile } = useAuth(); // Add auth hook
   const [activeSection, setActiveSection] = useState('overview');
   const [user] = useState(mockUser);
   const [animateIn, setAnimateIn] = useState(false);
@@ -480,8 +482,12 @@ const UserDash = () => {
   return (
     <div className="user-dashboard">
       <div className="dashboard-welcome">
-        <h2>Welcome, {user.name}</h2>
+        <h2>Welcome, {userProfile?.displayName || currentUser?.displayName || 'User'}</h2>
         <div className="welcome-date">{new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
+        <div className="account-status">
+          <span className="status-indicator active"></span>
+          <span className="status-text">Signed in as {currentUser?.email}</span>
+        </div>
       </div>
       
       <div className="dashboard-container">

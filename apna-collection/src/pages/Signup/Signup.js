@@ -1,5 +1,7 @@
+// src/pages/Signup/Signup.js
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import './Signup.css';
 
 const Signup = () => {
@@ -16,6 +18,14 @@ const Signup = () => {
   });
   const [notification, setNotification] = useState({ message: '', show: false });
   const navigate = useNavigate();
+  const { signup, currentUser } = useAuth();
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (currentUser) {
+      navigate('/');
+    }
+  }, [currentUser, navigate]);
 
   // Calculate password strength
   useEffect(() => {
@@ -62,7 +72,7 @@ const Signup = () => {
   }, [password]);
 
   // Handle form submission
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     // Validation
@@ -81,22 +91,31 @@ const Signup = () => {
       return;
     }
     
-    // Simulate sign up (would connect to backend in real application)
-    showNotification('Account created successfully! Redirecting...');
-    
-    // Clear form
-    setFirstName('');
-    setLastName('');
-    setEmail('');
-    setPassword('');
-    setConfirmPassword('');
-    setTermsAccepted(false);
-    
-    // In a real app, you would create an account here
-    // then redirect on success
-    setTimeout(() => {
-      navigate('/login');
-    }, 2000);
+    try {
+      const displayName = `${firstName} ${lastName}`;
+      const result = await signup(email, password, displayName);
+      
+      if (result.success) {
+        showNotification('Account created successfully! Redirecting...');
+        
+        // Clear form
+        setFirstName('');
+        setLastName('');
+        setEmail('');
+        setPassword('');
+        setConfirmPassword('');
+        setTermsAccepted(false);
+        
+        // Redirect after short delay
+        setTimeout(() => {
+          navigate('/');
+        }, 1500);
+      } else {
+        showNotification(result.error || 'Signup failed');
+      }
+    } catch (error) {
+      showNotification(error.message || 'Signup failed');
+    }
   };
 
   // Notification helper
@@ -106,15 +125,6 @@ const Signup = () => {
     setTimeout(() => {
       setNotification({ message: '', show: false });
     }, 3000);
-  };
-
-  // Handle login link click
-  const handleLoginClick = (e) => {
-    e.preventDefault();
-    showNotification('Redirecting to login page...');
-    setTimeout(() => {
-      navigate('/login');
-    }, 1000);
   };
 
   return (
@@ -231,7 +241,7 @@ const Signup = () => {
           <button type="submit" className="signup-button">Create Account</button>
           
           <div className="footer">
-            Already have an account? <a href="#" onClick={handleLoginClick}>Login</a>
+            Already have an account? <Link to="/login">Login</Link>
           </div>
         </form>
       </div>

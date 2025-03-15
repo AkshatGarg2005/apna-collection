@@ -1,35 +1,53 @@
+// src/pages/Login/Login.js
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import './Login.css';
 
 const Login = () => {
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [notification, setNotification] = useState({ message: '', show: false });
   const navigate = useNavigate();
+  const { login, currentUser } = useAuth();
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (currentUser) {
+      navigate('/');
+    }
+  }, [currentUser, navigate]);
 
   // Handle form submission
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     // Validation
-    if (!username || !password) {
+    if (!email || !password) {
       showNotification('Please fill in all fields');
       return;
     }
     
-    // Simulate login (would connect to backend in real application)
-    showNotification('Login successful! Redirecting...');
-    
-    // Clear form
-    setUsername('');
-    setPassword('');
-    
-    // In a real app, you would perform authentication here
-    // then redirect on success
-    setTimeout(() => {
-      navigate('/');
-    }, 2000);
+    try {
+      const result = await login(email, password);
+      
+      if (result.success) {
+        showNotification('Login successful! Redirecting...');
+        
+        // Clear form
+        setEmail('');
+        setPassword('');
+        
+        // Redirect after short delay
+        setTimeout(() => {
+          navigate('/');
+        }, 1500);
+      } else {
+        showNotification(result.error || 'Login failed');
+      }
+    } catch (error) {
+      showNotification(error.message || 'Login failed');
+    }
   };
 
   // Notification helper
@@ -45,15 +63,6 @@ const Login = () => {
   const handleForgotPassword = (e) => {
     e.preventDefault();
     showNotification('Password reset feature coming soon');
-  };
-
-  // Handle sign up click
-  const handleSignUp = (e) => {
-    e.preventDefault();
-    showNotification('Redirecting to Sign Up page...');
-    setTimeout(() => {
-      navigate('/signup');
-    }, 1000);
   };
 
   return (
@@ -79,14 +88,14 @@ const Login = () => {
         </div>
         <form id="login-form" onSubmit={handleSubmit}>
           <div className="input-group">
-            <label htmlFor="username">Email or Username</label>
+            <label htmlFor="username">Email</label>
             <input 
-              type="text" 
+              type="email" 
               id="username" 
               required 
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              autoComplete="username" 
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email" 
             />
             <div className="icon">👤</div>
           </div>
@@ -105,7 +114,7 @@ const Login = () => {
           <button type="submit" className="login-button">Login</button>
           <div className="footer">
             <a href="#" onClick={handleForgotPassword}>Forgot Password?</a>
-            <a href="#" onClick={handleSignUp}>Sign Up</a>
+            <Link to="/signup">Sign Up</Link>
           </div>
         </form>
       </div>

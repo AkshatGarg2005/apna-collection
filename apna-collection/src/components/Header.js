@@ -1,24 +1,38 @@
+// src/components/Header.js
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { useCart } from '../context/CartContext';
 import './Header.css';
 import SearchOverlay from './SearchOverlay';
 
-const Header = () => {
+const Header = ({ toggleSearch }) => {
   const [searchOpen, setSearchOpen] = useState(false);
   const location = useLocation();
+  const { currentUser, logout } = useAuth();
+  const { cart } = useCart();
 
   // Check if path is active
   const isActive = (path) => {
     return location.pathname === path;
   };
 
-  const toggleSearch = () => {
-    setSearchOpen(!searchOpen);
+  const handleSearchToggle = () => {
+    if (toggleSearch) {
+      toggleSearch();
+    } else {
+      setSearchOpen(!searchOpen);
+    }
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    // Redirect or show message if needed
   };
 
   return (
     <>
-      <SearchOverlay isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
+      {searchOpen && <SearchOverlay isOpen={searchOpen} onClose={() => setSearchOpen(false)} />}
       
       <header className="header">
         <div className="logo">
@@ -33,20 +47,37 @@ const Header = () => {
             <li><Link to="/contact" className={isActive('/contact') ? 'active' : ''}>Contact</Link></li>
           </ul>
           <div className="nav-icons">
-            <div className="icon" onClick={toggleSearch}>
+            <div className="icon" onClick={handleSearchToggle}>
               <i className="fas fa-search"></i>
             </div>
             <div className="icon">
               <Link to="/cart">
                 <i className="fas fa-shopping-bag"></i>
-                <span className="cart-count">3</span>
+                <span className="cart-count">{cart.length}</span>
               </Link>
             </div>
-            <div className="icon">
-              <Link to="/login">
-                <i className="fas fa-user"></i>
-              </Link>
-            </div>
+            
+            {currentUser ? (
+              <div className="icon user-icon-container">
+                <Link to="/account">
+                  <div className="user-avatar">
+                    {currentUser.displayName ? currentUser.displayName.charAt(0).toUpperCase() : 'U'}
+                  </div>
+                </Link>
+                <div className="user-dropdown">
+                  <div className="dropdown-username">{currentUser.displayName}</div>
+                  <Link to="/account">My Account</Link>
+                  <Link to="/orders">My Orders</Link>
+                  <button onClick={handleLogout}>Logout</button>
+                </div>
+              </div>
+            ) : (
+              <div className="icon">
+                <Link to="/login">
+                  <i className="fas fa-user"></i>
+                </Link>
+              </div>
+            )}
           </div>
         </nav>
       </header>
