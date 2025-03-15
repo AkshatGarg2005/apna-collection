@@ -2,40 +2,44 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { FaEye, FaCheckCircle, FaTimesCircle, FaTruck, FaSearch } from 'react-icons/fa';
-import { collection, getDocs, updateDoc, doc, query, orderBy } from 'firebase/firestore';
+import { collection, getDocs, updateDoc, doc, query, orderBy, onSnapshot, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import DashboardLayout from '../components/layout/DashboardLayout';
+import OrderDetailModal from '../components/orders/OrderDetailModal';
+import { restoreInventory } from '../services/inventoryService';
+import { createOrderStatusNotification } from '../services/notificationsService';
 
 const Orders = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [showModal, setShowModal] = useState(false);
 
-  // Fetch orders from Firestore
+  // Fetch orders from Firestore with real-time updates
   useEffect(() => {
-    const fetchOrders = async () => {
-      try {
-        setLoading(true);
-        const ordersQuery = query(
-          collection(db, 'orders'),
-          orderBy('createdAt', 'desc')
-        );
-        const ordersSnapshot = await getDocs(ordersQuery);
-        const ordersList = ordersSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-        
-        setOrders(ordersList);
-      } catch (error) {
-        console.error('Error fetching orders:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+    const ordersQuery = query(
+      collection(db, 'orders'),
+      orderBy('createdAt', 'desc')
+    );
     
-    fetchOrders();
+    // Set up real-time listener
+    const unsubscribe = onSnapshot(ordersQuery, (snapshot) => {
+      const ordersList = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      
+      setOrders(ordersList);
+      setLoading(false);
+    }, (error) => {
+      console.error("Error fetching orders:", error);
+      setLoading(false);
+    });
+    
+    // Cleanup function
+    return () => unsubscribe();
   }, []);
 
   // Filter orders based on search term and status
@@ -52,18 +56,45 @@ const Orders = () => {
   // Handle order status update
   const handleUpdateStatus = async (orderId, newStatus) => {
     try {
+      const orderToUpdate = orders.find(order => order.id === orderId);
+      
+      // If cancelling the order, restore inventory
+      if (newStatus === 'Cancelled' && orderToUpdate.items && orderToUpdate.items.length > 0) {
+        const restored = await restoreInventory(orderToUpdate.items);
+        if (!restored) {
+          console.warn('Failed to restore inventory for cancelled order');
+          // Continue anyway, but log the issue
+        }
+      }
+      
+      // Update order status in Firestore
       await updateDoc(doc(db, 'orders', orderId), {
-        status: newStatus
+        status: newStatus,
+        statusUpdatedAt: serverTimestamp()
       });
       
-      // Update order status in state
-      setOrders(orders.map(order => 
-        order.id === orderId ? { ...order, status: newStatus } : order
-      ));
+      // Notify the customer about status change
+      if (orderToUpdate.userId) {
+        await createOrderStatusNotification(orderToUpdate.userId, orderToUpdate, newStatus);
+      }
+      
+      // No need to update state manually as we're using onSnapshot
     } catch (error) {
       console.error('Error updating order status:', error);
       alert('Failed to update order status. Please try again.');
     }
+  };
+
+  // Handle view order details
+  const handleViewOrder = (order) => {
+    setSelectedOrder(order);
+    setShowModal(true);
+  };
+
+  // Handle status update from modal
+  const handleStatusUpdateFromModal = (orderId, newStatus) => {
+    // No need to update state manually as we're using onSnapshot
+    setShowModal(false);
   };
 
   // Format date
@@ -154,7 +185,10 @@ const Orders = () => {
                   </OrderColumn>
                   <OrderColumn data-label="Actions">
                     <OrderActions>
-                      <ActionButton className="view">
+                      <ActionButton 
+                        className="view"
+                        onClick={() => handleViewOrder(order)}
+                      >
                         <FaEye /> View
                       </ActionButton>
                       
@@ -204,6 +238,15 @@ const Orders = () => {
             )}
           </OrdersTableBody>
         </OrdersTable>
+      )}
+      
+      {/* Order Detail Modal */}
+      {showModal && selectedOrder && (
+        <OrderDetailModal 
+          order={selectedOrder}
+          onClose={() => setShowModal(false)}
+          onStatusUpdate={handleStatusUpdateFromModal}
+        />
       )}
     </DashboardLayout>
   );

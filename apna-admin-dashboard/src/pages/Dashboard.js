@@ -10,7 +10,16 @@ import {
   FaTruck,
   FaCheckCircle
 } from 'react-icons/fa';
-import { collection, getDocs, query, where, orderBy, limit } from 'firebase/firestore';
+import { 
+  collection, 
+  getDocs, 
+  query, 
+  where, 
+  orderBy, 
+  limit, 
+  onSnapshot,
+  collectionGroup 
+} from 'firebase/firestore';
 import { db } from '../firebase/config';
 import DashboardLayout from '../components/layout/DashboardLayout';
 
@@ -18,6 +27,9 @@ const Dashboard = () => {
   const [stats, setStats] = useState({
     totalOrders: 0,
     pendingOrders: 0,
+    processingOrders: 0,
+    shippedOrders: 0,
+    deliveredOrders: 0,
     totalRevenue: 0,
     totalProducts: 0,
     totalCustomers: 0
@@ -27,68 +39,104 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Set up real-time listeners
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
         
-        // Fetch orders count
-        const ordersQuery = collection(db, 'orders');
-        const ordersSnapshot = await getDocs(ordersQuery);
-        const orders = ordersSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-        
-        // Fetch products count
+        // Set up listeners for products
         const productsQuery = collection(db, 'products');
-        const productsSnapshot = await getDocs(productsQuery);
+        const productsUnsubscribe = onSnapshot(productsQuery, (snapshot) => {
+          const productsCount = snapshot.docs.length;
+          
+          setStats(prev => ({
+            ...prev,
+            totalProducts: productsCount
+          }));
+        });
         
-        // Fetch users count
-        const usersQuery = query(
+        // Set up listeners for customers
+        const customersQuery = query(
           collection(db, 'users'),
           where('role', '==', 'customer')
         );
-        const usersSnapshot = await getDocs(usersQuery);
+        const customersUnsubscribe = onSnapshot(customersQuery, (snapshot) => {
+          const customersCount = snapshot.docs.length;
+          
+          setStats(prev => ({
+            ...prev,
+            totalCustomers: customersCount
+          }));
+        });
         
-        // Calculate revenue from orders
-        const totalRevenue = orders.reduce((acc, order) => {
-          return acc + (order.total || 0);
-        }, 0);
+        // Set up listeners for orders
+        const ordersQuery = collection(db, 'orders');
+        const ordersUnsubscribe = onSnapshot(ordersQuery, (snapshot) => {
+          const orders = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }));
+          
+          // Calculate statistics from orders
+          const totalOrders = orders.length;
+          const pendingOrders = orders.filter(order => order.status === 'Pending' || !order.status).length;
+          const processingOrders = orders.filter(order => order.status === 'Processing' || order.status === 'Accepted').length;
+          const shippedOrders = orders.filter(order => order.status === 'Shipped').length;
+          const deliveredOrders = orders.filter(order => order.status === 'Delivered').length;
+          
+          // Calculate total revenue
+          const totalRevenue = orders.reduce((acc, order) => {
+            return acc + (order.total || 0);
+          }, 0);
+          
+          setStats(prev => ({
+            ...prev,
+            totalOrders,
+            pendingOrders,
+            processingOrders,
+            shippedOrders,
+            deliveredOrders,
+            totalRevenue
+          }));
+        });
         
-        // Count pending orders
-        const pendingOrders = orders.filter(
-          order => order.status === 'Processing' || order.status === 'Pending'
-        ).length;
-        
-        // Get recent orders
+        // Set up listener for recent orders
         const recentOrdersQuery = query(
           collection(db, 'orders'),
           orderBy('createdAt', 'desc'),
           limit(5)
         );
-        const recentOrdersSnapshot = await getDocs(recentOrdersQuery);
-        const recentOrdersData = recentOrdersSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-        
-        setStats({
-          totalOrders: orders.length,
-          pendingOrders,
-          totalRevenue,
-          totalProducts: productsSnapshot.docs.length,
-          totalCustomers: usersSnapshot.docs.length
+        const recentOrdersUnsubscribe = onSnapshot(recentOrdersQuery, (snapshot) => {
+          const recentOrdersData = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }));
+          
+          setRecentOrders(recentOrdersData);
+          setLoading(false);
         });
         
-        setRecentOrders(recentOrdersData);
+        // Return a cleanup function to unsubscribe from all listeners
+        return () => {
+          productsUnsubscribe();
+          customersUnsubscribe();
+          ordersUnsubscribe();
+          recentOrdersUnsubscribe();
+        };
       } catch (error) {
-        console.error('Error fetching dashboard data:', error);
-      } finally {
+        console.error('Error setting up dashboard listeners:', error);
         setLoading(false);
       }
     };
     
-    fetchDashboardData();
+    const unsubscribe = fetchDashboardData();
+    
+    // Clean up function
+    return () => {
+      if (unsubscribe && typeof unsubscribe === 'function') {
+        unsubscribe();
+      }
+    };
   }, []);
 
   // Format date
@@ -177,7 +225,7 @@ const Dashboard = () => {
                 <StatusIconWrapper className="processing">
                   <FaChartLine />
                 </StatusIconWrapper>
-                <StatusValue>8</StatusValue>
+                <StatusValue>{stats.processingOrders}</StatusValue>
                 <StatusLabel>Processing</StatusLabel>
               </OrderStatusCard>
               
@@ -185,7 +233,7 @@ const Dashboard = () => {
                 <StatusIconWrapper className="shipped">
                   <FaTruck />
                 </StatusIconWrapper>
-                <StatusValue>15</StatusValue>
+                <StatusValue>{stats.shippedOrders}</StatusValue>
                 <StatusLabel>Shipped</StatusLabel>
               </OrderStatusCard>
               
@@ -193,7 +241,7 @@ const Dashboard = () => {
                 <StatusIconWrapper className="delivered">
                   <FaCheckCircle />
                 </StatusIconWrapper>
-                <StatusValue>42</StatusValue>
+                <StatusValue>{stats.deliveredOrders}</StatusValue>
                 <StatusLabel>Delivered</StatusLabel>
               </OrderStatusCard>
             </OrderStatusGrid>
@@ -507,6 +555,11 @@ const OrderStatus = styled.span`
   &.processing {
     background-color: rgba(33, 150, 243, 0.15);
     color: #2196f3;
+  }
+  
+  &.accepted {
+    background-color: rgba(156, 39, 176, 0.15);
+    color: #9c27b0;
   }
   
   &.shipped {

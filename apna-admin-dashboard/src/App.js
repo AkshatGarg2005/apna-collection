@@ -9,6 +9,7 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Products from './pages/Products';
 import UploadProduct from './pages/UploadProduct';
+import EditProduct from './pages/EditProduct';
 import Orders from './pages/Orders';
 import Customers from './pages/Customers';
 
@@ -32,6 +33,11 @@ function App() {
             <Route path="/upload" element={
               <AdminRoute>
                 <UploadProduct />
+              </AdminRoute>
+            } />
+            <Route path="/edit-product/:productId" element={
+              <AdminRoute>
+                <EditProduct />
               </AdminRoute>
             } />
             <Route path="/orders" element={

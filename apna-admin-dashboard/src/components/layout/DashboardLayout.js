@@ -12,16 +12,16 @@ import {
   FaUsers,
   FaBars,
   FaTimes,
-  FaUserCircle,
-  FaBell
+  FaUserCircle
 } from 'react-icons/fa';
 import { useAdminAuth } from '../../context/AdminAuthContext';
+import NotificationsCenter from '../notifications/NotificationsCenter';
 
 const DashboardLayout = ({ children, title }) => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const location = useLocation();
   const navigate = useNavigate();
-  const { logout } = useAdminAuth();
+  const { logout, currentAdmin } = useAdminAuth();
 
   const handleLogout = async () => {
     await logout();
@@ -104,12 +104,9 @@ const DashboardLayout = ({ children, title }) => {
           <PageTitle>{title}</PageTitle>
           
           <HeaderRight>
-            <NotificationIcon>
-              <FaBell />
-              <NotificationBadge>3</NotificationBadge>
-            </NotificationIcon>
+            <NotificationsCenter />
             <UserInfo>
-              <UserName>Admin User</UserName>
+              <UserName>{currentAdmin?.email || 'Admin User'}</UserName>
               <UserAvatar>
                 <FaUserCircle />
               </UserAvatar>
@@ -303,30 +300,7 @@ const PageTitle = styled.h1`
 const HeaderRight = styled.div`
   display: flex;
   align-items: center;
-`;
-
-const NotificationIcon = styled.div`
-  position: relative;
-  margin-right: 20px;
-  cursor: pointer;
-  color: #555;
-  font-size: 18px;
-`;
-
-const NotificationBadge = styled.span`
-  position: absolute;
-  top: -8px;
-  right: -8px;
-  background-color: #f44336;
-  color: white;
-  border-radius: 50%;
-  width: 18px;
-  height: 18px;
-  font-size: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 600;
+  gap: 20px;
 `;
 
 const UserInfo = styled.div`

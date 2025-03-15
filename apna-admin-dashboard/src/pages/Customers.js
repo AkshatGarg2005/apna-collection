@@ -2,12 +2,13 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { FaEnvelope, FaPhone, FaShoppingBag, FaSearch, FaMapMarkerAlt, FaTimes, FaCalendarAlt, FaUser } from 'react-icons/fa';
-import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firestore';
+import { collection, getDocs, query, where, doc, getDoc, onSnapshot, orderBy } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import DashboardLayout from '../components/layout/DashboardLayout';
 
 const Customers = () => {
   const [customers, setCustomers] = useState([]);
+  const [customerStats, setCustomerStats] = useState({});
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState(null);
@@ -15,30 +16,49 @@ const Customers = () => {
   const [customerOrders, setCustomerOrders] = useState([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
 
-  // Fetch customers from Firestore
+  // Fetch customers from Firestore with real-time updates
   useEffect(() => {
-    const fetchCustomers = async () => {
-      try {
-        setLoading(true);
-        const customersQuery = query(
-          collection(db, 'users'),
-          where('role', '==', 'customer')
-        );
-        const customersSnapshot = await getDocs(customersQuery);
-        const customersList = customersSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-        
-        setCustomers(customersList);
-      } catch (error) {
-        console.error('Error fetching customers:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+    const customersQuery = query(
+      collection(db, 'users'),
+      where('role', '==', 'customer')
+    );
     
-    fetchCustomers();
+    const unsubscribe = onSnapshot(customersQuery, async (snapshot) => {
+      const customersList = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      
+      setCustomers(customersList);
+      
+      // Fetch order statistics for all customers
+      const ordersQuery = collection(db, 'orders');
+      const ordersSnapshot = await getDocs(ordersQuery);
+      const orders = ordersSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      
+      // Count orders and calculate total spending per customer
+      const stats = {};
+      orders.forEach(order => {
+        if (order.userId) {
+          if (!stats[order.userId]) {
+            stats[order.userId] = { orderCount: 0, totalSpent: 0 };
+          }
+          stats[order.userId].orderCount += 1;
+          stats[order.userId].totalSpent += (order.total || 0);
+        }
+      });
+      
+      setCustomerStats(stats);
+      setLoading(false);
+    }, (error) => {
+      console.error('Error fetching customers:', error);
+      setLoading(false);
+    });
+    
+    return () => unsubscribe();
   }, []);
 
   // Filter customers based on search term
@@ -76,30 +96,46 @@ const Customers = () => {
     setSelectedCustomer(customer);
     setShowModal(true);
     
-    // Fetch customer orders
+    // Fetch customer orders with real-time updates
     try {
       setLoadingOrders(true);
       const ordersQuery = query(
         collection(db, 'orders'),
-        where('userId', '==', customer.id)
+        where('userId', '==', customer.id),
+        orderBy('createdAt', 'desc')
       );
-      const ordersSnapshot = await getDocs(ordersQuery);
-      const ordersList = ordersSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
       
-      setCustomerOrders(ordersList);
+      const unsubscribe = onSnapshot(ordersQuery, (snapshot) => {
+        const ordersList = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        
+        setCustomerOrders(ordersList);
+        setLoadingOrders(false);
+      }, (error) => {
+        console.error('Error fetching customer orders:', error);
+        setCustomerOrders([]);
+        setLoadingOrders(false);
+      });
+      
+      // Store the unsubscribe function to clean up when the modal closes
+      setSelectedCustomer(prev => ({
+        ...prev,
+        unsubscribe
+      }));
     } catch (error) {
-      console.error('Error fetching customer orders:', error);
+      console.error('Error setting up orders listener:', error);
       setCustomerOrders([]);
-    } finally {
       setLoadingOrders(false);
     }
   };
 
   // Close modal
   const closeModal = () => {
+    if (selectedCustomer && selectedCustomer.unsubscribe) {
+      selectedCustomer.unsubscribe();
+    }
     setShowModal(false);
     setSelectedCustomer(null);
     setCustomerOrders([]);
@@ -155,7 +191,7 @@ const Customers = () => {
                       <MetaItem>
                         <MetaLabel>Orders:</MetaLabel>
                         <MetaValue className="orders">
-                          <FaShoppingBag /> 0
+                          <FaShoppingBag /> {customerStats[customer.id]?.orderCount || 0}
                         </MetaValue>
                       </MetaItem>
                     </CustomerMeta>
@@ -167,6 +203,11 @@ const Customers = () => {
                            customer.addresses[0].address}
                         </AddressText>
                       </AddressSection>
+                    )}
+                    {customerStats[customer.id]?.totalSpent > 0 && (
+                      <TotalSpent>
+                        Total Spent: <span>{formatPrice(customerStats[customer.id].totalSpent)}</span>
+                      </TotalSpent>
                     )}
                   </CustomerInfo>
                   <ViewButton onClick={() => handleViewProfile(customer)}>
@@ -210,6 +251,18 @@ const Customers = () => {
                   <ProfileDetail>
                     <FaCalendarAlt /> Joined on {formatDate(selectedCustomer.createdAt)}
                   </ProfileDetail>
+                  {customerStats[selectedCustomer.id]?.orderCount > 0 && (
+                    <ProfileStats>
+                      <StatBox>
+                        <StatNumber>{customerStats[selectedCustomer.id]?.orderCount || 0}</StatNumber>
+                        <StatDescription>Orders</StatDescription>
+                      </StatBox>
+                      <StatBox>
+                        <StatNumber>{formatPrice(customerStats[selectedCustomer.id]?.totalSpent || 0)}</StatNumber>
+                        <StatDescription>Total Spent</StatDescription>
+                      </StatBox>
+                    </ProfileStats>
+                  )}
                 </ProfileInfo>
               </ProfileHeader>
               
@@ -274,7 +327,7 @@ const Customers = () => {
   );
 };
 
-// Existing Styled Components
+// Styled Components
 const CustomersHeader = styled.div`
   display: flex;
   justify-content: space-between;
@@ -477,6 +530,17 @@ const AddressText = styled.div`
   color: #666;
 `;
 
+const TotalSpent = styled.div`
+  margin-bottom: 15px;
+  font-size: 14px;
+  color: #666;
+  
+  span {
+    font-weight: 700;
+    color: #8e44ad;
+  }
+`;
+
 const ViewButton = styled.button`
   background-color: #8e44ad;
   color: white;
@@ -504,7 +568,7 @@ const EmptyMessage = styled.div`
   font-size: 16px;
 `;
 
-// New Styled Components for Modal
+// Modal Styled Components
 const ModalOverlay = styled.div`
   position: fixed;
   top: 0;
@@ -631,6 +695,32 @@ const ProfileDetail = styled.div`
   font-size: 15px;
   color: #666;
   margin-bottom: 8px;
+`;
+
+const ProfileStats = styled.div`
+  display: flex;
+  gap: 15px;
+  margin-top: 15px;
+`;
+
+const StatBox = styled.div`
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  padding: 10px 15px;
+  text-align: center;
+  flex: 1;
+`;
+
+const StatNumber = styled.div`
+  font-size: 18px;
+  font-weight: 700;
+  color: #8e44ad;
+  margin-bottom: 5px;
+`;
+
+const StatDescription = styled.div`
+  font-size: 12px;
+  color: #666;
 `;
 
 const ModalSection = styled.div`

@@ -1,5 +1,6 @@
 // src/pages/Products.js
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { FaEdit, FaTrash, FaPlus, FaSearch } from 'react-icons/fa';
 import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore';
@@ -7,6 +8,7 @@ import { db } from '../firebase/config';
 import DashboardLayout from '../components/layout/DashboardLayout';
 
 const Products = () => {
+  const navigate = useNavigate();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -59,6 +61,11 @@ const Products = () => {
       }
     }
   };
+
+  // Handle edit product
+  const handleEditProduct = (productId) => {
+    navigate(`/edit-product/${productId}`);
+  };
   
   // Format price to Indian Rupee
   const formatPrice = (price) => {
@@ -101,7 +108,7 @@ const Products = () => {
           </CategorySelect>
         </FilterContainer>
         
-        <AddProductButton>
+        <AddProductButton onClick={() => navigate('/upload')}>
           <FaPlus /> Add Product
         </AddProductButton>
       </ProductsHeader>
@@ -128,7 +135,10 @@ const Products = () => {
                   </ProductInfo>
                 </ProductDetails>
                 <ProductActions>
-                  <ActionButton className="edit">
+                  <ActionButton 
+                    className="edit"
+                    onClick={() => handleEditProduct(product.id)}
+                  >
                     <FaEdit /> Edit
                   </ActionButton>
                   <ActionButton 
