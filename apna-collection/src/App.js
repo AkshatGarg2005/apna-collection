@@ -23,7 +23,6 @@ import Contact from './pages/Contact/Contact';
 import Offers from './pages/Offers/Offers';
 import Search from './pages/Search/Search';
 import UserDash from './pages/UserDash/UserDash';
-import AdminDash from './pages/AdminDash/AdminDash';
 import LoginStatusToast from './components/LoginStatusToast';
 
 function App() {
@@ -72,11 +71,6 @@ function App() {
                 <Route path="/account" element={
                   <PrivateRoute>
                     <UserDash />
-                  </PrivateRoute>
-                } />
-                <Route path="/admin" element={
-                  <PrivateRoute>
-                    <AdminDash />
                   </PrivateRoute>
                 } />
               </Routes>
