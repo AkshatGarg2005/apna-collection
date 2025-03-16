@@ -8,7 +8,7 @@ export const useCart = () => useContext(CartContext);
 
 export const CartProvider = ({ children }) => {
   const { currentUser } = useAuth();
-  const [cartItems, setCartItems] = useState([]);
+  const [cart, setCart] = useState([]);
   const [loading, setLoading] = useState(true);
   
   // Load cart from localStorage on initial render
@@ -16,10 +16,10 @@ export const CartProvider = ({ children }) => {
     const storedCart = localStorage.getItem('cart');
     if (storedCart) {
       try {
-        setCartItems(JSON.parse(storedCart));
+        setCart(JSON.parse(storedCart));
       } catch (error) {
         console.error('Error parsing cart data:', error);
-        setCartItems([]);
+        setCart([]);
       }
     }
     setLoading(false);
@@ -27,12 +27,12 @@ export const CartProvider = ({ children }) => {
   
   // Save cart to localStorage when it changes
   useEffect(() => {
-    localStorage.setItem('cart', JSON.stringify(cartItems));
-  }, [cartItems]);
+    localStorage.setItem('cart', JSON.stringify(cart));
+  }, [cart]);
   
   // Add item to cart
   const addToCart = (product) => {
-    setCartItems(prevItems => {
+    setCart(prevItems => {
       // Check if item already exists in cart
       const existingItemIndex = prevItems.findIndex(item => 
         item.id === product.id && 
@@ -53,10 +53,10 @@ export const CartProvider = ({ children }) => {
   };
   
   // Update cart item quantity
-  const updateQuantity = (id, size, color, quantity) => {
+  const updateCartItemQuantity = (id, size, color, quantity) => {
     if (quantity < 1) return;
     
-    setCartItems(prevItems => 
+    setCart(prevItems => 
       prevItems.map(item => 
         (item.id === id && item.size === size && item.color === color) 
           ? { ...item, quantity } 
@@ -67,7 +67,7 @@ export const CartProvider = ({ children }) => {
   
   // Remove item from cart
   const removeFromCart = (id, size, color) => {
-    setCartItems(prevItems => 
+    setCart(prevItems => 
       prevItems.filter(item => 
         !(item.id === id && item.size === size && item.color === color)
       )
@@ -76,22 +76,32 @@ export const CartProvider = ({ children }) => {
   
   // Clear entire cart
   const clearCart = () => {
-    setCartItems([]);
+    setCart([]);
   };
   
   // Calculate subtotal
   const calculateSubtotal = () => {
-    return cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
+    return cart.reduce((total, item) => total + (item.price * item.quantity), 0);
+  };
+  
+  // Get total number of items in cart
+  const getTotalItems = () => {
+    return cart.reduce((total, item) => total + item.quantity, 0);
+  };
+  
+  // Get subtotal (alias for calculateSubtotal for compatibility)
+  const getSubtotal = () => {
+    return calculateSubtotal();
   };
   
   // Check if cart items are in stock
   const checkCartItemsInventory = async () => {
-    if (cartItems.length === 0) {
+    if (cart.length === 0) {
       return { success: true, message: 'Cart is empty' };
     }
     
     try {
-      const result = await checkInventory(cartItems);
+      const result = await checkInventory(cart);
       return result;
     } catch (error) {
       console.error('Error checking cart inventory:', error);
@@ -123,7 +133,7 @@ export const CartProvider = ({ children }) => {
       const completeOrderData = {
         ...orderData,
         userId: currentUser.uid,
-        items: cartItems
+        items: cart
       };
       
       // Process the order
@@ -145,13 +155,15 @@ export const CartProvider = ({ children }) => {
   };
   
   const value = {
-    cartItems,
+    cart, // Renamed from cartItems to cart
     loading,
     addToCart,
-    updateQuantity,
+    updateCartItemQuantity, // Renamed from updateQuantity
     removeFromCart,
     clearCart,
     calculateSubtotal,
+    getSubtotal, // Added alias for compatibility 
+    getTotalItems, // Added for compatibility
     checkout,
     checkCartItemsInventory
   };

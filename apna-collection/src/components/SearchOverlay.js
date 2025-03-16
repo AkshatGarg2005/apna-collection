@@ -106,7 +106,6 @@ const SearchOverlay = ({ isOpen, closeSearch, onClose }) => {
   // Handle search input
   const handleSearchInput = (e) => {
     const query = e.target.value;
-    console.log("Search input:", query); // Debug log
     setSearchQuery(query);
 
     if (query.length < 2) {
@@ -151,16 +150,10 @@ const SearchOverlay = ({ isOpen, closeSearch, onClose }) => {
             value={searchQuery}
             onChange={handleSearchInput}
             ref={inputRef}
+            // Force inline styles to ensure visibility
             style={{ 
-              color: '#fff', // Make sure text is visible
-              caretColor: '#fff', // Make cursor visible
               backgroundColor: 'transparent',
-              border: 'none',
-              width: '100%',
-              padding: '20px',
-              fontSize: '1.8rem',
-              outline: 'none',
-              borderBottom: '2px solid #c59b6d'
+              color: '#ffffff'
             }}
           />
         </form>

@@ -32,12 +32,15 @@
 .search-input {
   width: 100%;
   padding: 20px;
-  background-color: transparent;
+  background-color: transparent !important;
   border: none;
   border-bottom: 2px solid #c59b6d;
-  color: #fff;
+  color: #fff !important;
   font-size: 1.8rem;
   outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+  box-shadow: none !important;
 }
 
 .search-input::placeholder {

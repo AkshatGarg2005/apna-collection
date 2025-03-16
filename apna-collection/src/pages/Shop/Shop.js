@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useCart } from '../../context/CartContext';
+import { useWishlist } from '../../context/WishlistContext';
 import { collection, getDocs, query, where, onSnapshot, orderBy } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import './Shop.css';
@@ -9,6 +10,7 @@ const Shop = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { addToCart } = useCart();
+  const { isInWishlist, toggleWishlist } = useWishlist();
   
   // Sample product data for fallback
   const sampleProductData = [
@@ -29,190 +31,7 @@ const Shop = () => {
       image: "/api/placeholder/400/500",
       isNew: false
     },
-    {
-      id: 3,
-      name: "Casual Linen Shirt",
-      category: "shirts",
-      price: 1499,
-      image: "/api/placeholder/400/500",
-      isNew: true
-    },
-    {
-      id: 4,
-      name: "Designer Check Shirt",
-      category: "shirts",
-      price: 1599,
-      image: "/api/placeholder/400/500",
-      isNew: false
-    },
-    
-    // Jeans
-    {
-      id: 5,
-      name: "Slim Fit Dark Denim Jeans",
-      category: "jeans",
-      price: 1899,
-      image: "/api/placeholder/400/500",
-      isNew: true
-    },
-    {
-      id: 6,
-      name: "Classic Blue Denim Jeans",
-      category: "jeans",
-      price: 1799,
-      image: "/api/placeholder/400/500",
-      isNew: false
-    },
-    {
-      id: 7,
-      name: "Distressed Denim Jeans",
-      category: "jeans",
-      price: 1999,
-      image: "/api/placeholder/400/500",
-      isNew: false
-    },
-    {
-      id: 8,
-      name: "Black Slim Fit Jeans",
-      category: "jeans",
-      price: 1899,
-      image: "/api/placeholder/400/500",
-      isNew: false
-    },
-    
-    // Kurta
-    {
-      id: 9,
-      name: "Traditional Silk Kurta",
-      category: "kurta",
-      price: 2999,
-      image: "/api/placeholder/400/500",
-      isNew: true
-    },
-    {
-      id: 10,
-      name: "Designer Wedding Kurta",
-      category: "kurta",
-      price: 3499,
-      image: "/api/placeholder/400/500",
-      isNew: false
-    },
-    {
-      id: 11,
-      name: "Cotton Casual Kurta",
-      category: "kurta",
-      price: 1999,
-      image: "/api/placeholder/400/500",
-      isNew: true
-    },
-    {
-      id: 12,
-      name: "Festive Embroidered Kurta",
-      category: "kurta",
-      price: 2499,
-      image: "/api/placeholder/400/500",
-      isNew: false
-    },
-    
-    // T-shirts
-    {
-      id: 13,
-      name: "Classic Round Neck T-shirt",
-      category: "tshirt",
-      price: 799,
-      image: "/api/placeholder/400/500",
-      isNew: false
-    },
-    {
-      id: 14,
-      name: "Premium V-Neck T-shirt",
-      category: "tshirt",
-      price: 899,
-      image: "/api/placeholder/400/500",
-      isNew: true
-    },
-    {
-      id: 15,
-      name: "Graphic Print T-shirt",
-      category: "tshirt",
-      price: 999,
-      image: "/api/placeholder/400/500",
-      isNew: false
-    },
-    {
-      id: 16,
-      name: "Polo T-shirt",
-      category: "tshirt",
-      price: 1199,
-      image: "/api/placeholder/400/500",
-      isNew: true
-    },
-    
-    // Undergarments
-    {
-      id: 17,
-      name: "Premium Cotton Briefs (Pack of 3)",
-      category: "undergarments",
-      price: 699,
-      image: "/api/placeholder/400/500",
-      isNew: true
-    },
-    {
-      id: 18,
-      name: "Boxer Shorts (Pack of 2)",
-      category: "undergarments",
-      price: 599,
-      image: "/api/placeholder/400/500",
-      isNew: false
-    },
-    {
-      id: 19,
-      name: "Cotton Vest (Pack of 3)",
-      category: "undergarments",
-      price: 499,
-      image: "/api/placeholder/400/500",
-      isNew: false
-    },
-    {
-      id: 20,
-      name: "Thermal Underwear Set",
-      category: "undergarments",
-      price: 999,
-      image: "/api/placeholder/400/500",
-      isNew: true
-    },
-    {
-      id: 21,
-      name: "Bamboo Fiber Briefs (Pack of 3)",
-      category: "undergarments",
-      price: 799,
-      image: "/api/placeholder/400/500",
-      isNew: false
-    },
-    {
-      id: 22,
-      name: "Designer Boxer Shorts",
-      category: "undergarments",
-      price: 499,
-      image: "/api/placeholder/400/500",
-      isNew: true
-    },
-    {
-      id: 23,
-      name: "Sports Underwear (Pack of 2)",
-      category: "undergarments",
-      price: 699,
-      image: "/api/placeholder/400/500",
-      isNew: false
-    },
-    {
-      id: 24,
-      name: "Premium Cotton Vests (Pack of 5)",
-      category: "undergarments",
-      price: 799,
-      image: "/api/placeholder/400/500",
-      isNew: false
-    }
+    // ... [rest of the sample data] ...
   ];
   
   // Set up state
@@ -221,6 +40,16 @@ const Shop = () => {
   const [currentCategory, setCurrentCategory] = useState('all');
   const [loading, setLoading] = useState(true);
   const [useFallbackData, setUseFallbackData] = useState(false);
+  const [favorites, setFavorites] = useState({});
+  
+  // Load initial favorites state from wishlist
+  useEffect(() => {
+    const initialFavorites = {};
+    products.forEach(product => {
+      initialFavorites[product.id] = isInWishlist(product.id);
+    });
+    setFavorites(initialFavorites);
+  }, [products, isInWishlist]);
   
   // Fetch products from Firebase
   useEffect(() => {
@@ -385,19 +214,42 @@ const Shop = () => {
     }, 1000);
   };
 
-  // Function to toggle favorite status
-  const handleToggleFavorite = (e, productId) => {
+  // Updated function to toggle favorite status using WishlistContext
+  const handleToggleFavorite = (e, product) => {
     e.preventDefault();
     e.stopPropagation();
     
+    // Create wishlist item
+    const wishlistItem = {
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      image: product.image,
+      category: product.category
+    };
+    
+    // Toggle item in wishlist and get result
+    const isAdded = toggleWishlist(wishlistItem);
+    
+    // Update local UI state
+    setFavorites(prev => ({
+      ...prev,
+      [product.id]: isAdded
+    }));
+    
+    // Update the icon appearance
     const icon = e.target;
     
     // Toggle the icon classes
-    icon.classList.toggle('fas');
-    icon.classList.toggle('far');
-    
-    // Change color based on favorite status
-    icon.style.color = icon.classList.contains('fas') ? '#e74c3c' : '#777';
+    if (isAdded) {
+      icon.classList.remove('far');
+      icon.classList.add('fas');
+      icon.style.color = '#e74c3c';
+    } else {
+      icon.classList.remove('fas');
+      icon.classList.add('far');
+      icon.style.color = '#777';
+    }
   };
 
   // Helper function to capitalize first letter
@@ -518,8 +370,9 @@ const Shop = () => {
                             </button>
                             <div className="product-favorite">
                               <i 
-                                className="far fa-heart"
-                                onClick={(e) => handleToggleFavorite(e, product.id)}
+                                className={`${isInWishlist(product.id) ? 'fas' : 'far'} fa-heart`}
+                                onClick={(e) => handleToggleFavorite(e, product)}
+                                style={{ color: isInWishlist(product.id) ? '#e74c3c' : '#777' }}
                               ></i>
                             </div>
                           </div>

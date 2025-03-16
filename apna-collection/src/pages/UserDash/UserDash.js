@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
+import { useWishlist } from '../../context/WishlistContext';
 import './UserDash.css';
 
 const UserDash = () => {
@@ -17,6 +18,7 @@ const UserDash = () => {
     setDefaultAddress
   } = useAuth();
   const { addToCart } = useCart();
+  const { wishlist, removeFromWishlist } = useWishlist();
   const [activeSection, setActiveSection] = useState('overview');
   const [animateIn, setAnimateIn] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -78,26 +80,6 @@ const UserDash = () => {
         items: [
           { name: "Silk Blend Kurta", color: "Maroon", size: "XL", quantity: 1 }
         ]
-      }
-    ],
-    wishlist: [
-      {
-        id: 101,
-        name: "Italian Leather Belt",
-        price: 1899,
-        image: "/api/placeholder/400/500"
-      },
-      {
-        id: 102,
-        name: "Premium Wool Sweater",
-        price: 2499,
-        image: "/api/placeholder/400/500"
-      },
-      {
-        id: 103,
-        name: "Designer Sunglasses",
-        price: 3299,
-        image: "/api/placeholder/400/500"
       }
     ]
   };
@@ -238,6 +220,11 @@ const UserDash = () => {
     
     addToCart(productToAdd);
     alert(`${item.name} added to cart!`);
+  };
+
+  // Handle removing item from wishlist
+  const handleRemoveFromWishlist = (itemId) => {
+    removeFromWishlist(itemId);
   };
 
   // Handle logout
@@ -466,23 +453,27 @@ const UserDash = () => {
             </button>
           </div>
           <div className="wishlist-preview">
-            {mockData.wishlist.slice(0, 2).map(item => (
-              <div className="wishlist-item" key={item.id}>
-                <div className="wishlist-item-image">
-                  <img src={item.image} alt={item.name} />
+            {wishlist.length > 0 ? (
+              wishlist.slice(0, 2).map(item => (
+                <div className="wishlist-item" key={item.id}>
+                  <div className="wishlist-item-image">
+                    <img src={item.image} alt={item.name} />
+                  </div>
+                  <div className="wishlist-item-details">
+                    <span className="item-name">{item.name}</span>
+                    <span className="item-price">{formatPrice(item.price)}</span>
+                  </div>
+                  <button 
+                    className="add-to-cart-btn" 
+                    onClick={() => handleAddToCartFromWishlist(item)}
+                  >
+                    Add to Cart
+                  </button>
                 </div>
-                <div className="wishlist-item-details">
-                  <span className="item-name">{item.name}</span>
-                  <span className="item-price">{formatPrice(item.price)}</span>
-                </div>
-                <button 
-                  className="add-to-cart-btn" 
-                  onClick={() => handleAddToCartFromWishlist(item)}
-                >
-                  Add to Cart
-                </button>
-              </div>
-            ))}
+              ))
+            ) : (
+              <p>Your wishlist is empty. Browse the shop and add items you like.</p>
+            )}
           </div>
         </div>
       </div>
@@ -730,12 +721,17 @@ const UserDash = () => {
           <h3>My Wishlist</h3>
         </div>
         <div className="wishlist-grid">
-          {mockData.wishlist.length > 0 ? (
-            mockData.wishlist.map(item => (
+          {wishlist.length > 0 ? (
+            wishlist.map(item => (
               <div className="wishlist-item-card" key={item.id}>
                 <div className="wishlist-item-image">
                   <img src={item.image} alt={item.name} />
-                  <button className="remove-wishlist-btn">×</button>
+                  <button 
+                    className="remove-wishlist-btn"
+                    onClick={() => handleRemoveFromWishlist(item.id)}
+                  >
+                    ×
+                  </button>
                 </div>
                 <div className="wishlist-item-details">
                   <h4>{item.name}</h4>
@@ -750,7 +746,12 @@ const UserDash = () => {
               </div>
             ))
           ) : (
-            <p>Your wishlist is empty. Browse the shop and add items you like.</p>
+            <div style={{ textAlign: 'center', padding: '30px 0', gridColumn: '1 / -1' }}>
+              <p>Your wishlist is empty. Browse the shop and add items you like.</p>
+              <Link to="/shop" className="add-btn" style={{ marginTop: '20px', display: 'inline-block', textDecoration: 'none' }}>
+                Go to Shop
+              </Link>
+            </div>
           )}
         </div>
       </div>

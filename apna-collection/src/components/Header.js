@@ -165,7 +165,7 @@ const Header = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { currentUser, logout } = useAuth();
-  const { cartItems } = useCart();
+  const { cart } = useCart(); // Changed from cartItems to cart
   
   // UI state
   const [showMobileMenu, setShowMobileMenu] = useState(false);
@@ -176,7 +176,7 @@ const Header = () => {
   const dropdownRef = useRef(null);
   
   // Calculate total number of items in cart
-  const cartItemCount = cartItems?.reduce((total, item) => total + item.quantity, 0) || 0;
+  const cartItemCount = cart?.reduce((total, item) => total + item.quantity, 0) || 0;
 
   // Check if path is active
   const isActive = (path) => {
