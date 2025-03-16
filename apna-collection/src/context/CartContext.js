@@ -1,162 +1,159 @@
-// src/context/CartContext.js
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { useAuth } from './AuthContext';
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
-import { db } from '../firebase/config';
+import { processOrder, checkInventory } from '../services/orders';
 
 const CartContext = createContext();
 
 export const useCart = () => useContext(CartContext);
 
 export const CartProvider = ({ children }) => {
-  const [cart, setCart] = useState([]);
-  const [loading, setLoading] = useState(true);
   const { currentUser } = useAuth();
+  const [cartItems, setCartItems] = useState([]);
+  const [loading, setLoading] = useState(true);
   
-  // Load cart from localStorage or Firestore on component mount or user change
+  // Load cart from localStorage on initial render
   useEffect(() => {
-    const loadCart = async () => {
-      setLoading(true);
-      
+    const storedCart = localStorage.getItem('cart');
+    if (storedCart) {
       try {
-        if (currentUser) {
-          // If user is logged in, try to load cart from Firestore
-          const cartRef = doc(db, 'carts', currentUser.uid);
-          const cartSnap = await getDoc(cartRef);
-          
-          if (cartSnap.exists()) {
-            setCart(cartSnap.data().items || []);
-          } else {
-            // If no cart exists in Firestore, initialize with local cart
-            const localCart = JSON.parse(localStorage.getItem('cart')) || [];
-            if (localCart.length > 0) {
-              // Save local cart to Firestore
-              await setDoc(cartRef, { items: localCart });
-            }
-            setCart(localCart);
-          }
-        } else {
-          // If no user is logged in, load from localStorage
-          const localCart = JSON.parse(localStorage.getItem('cart')) || [];
-          setCart(localCart);
-        }
+        setCartItems(JSON.parse(storedCart));
       } catch (error) {
-        console.error('Error loading cart:', error);
-        // Fallback to localStorage
-        const localCart = JSON.parse(localStorage.getItem('cart')) || [];
-        setCart(localCart);
+        console.error('Error parsing cart data:', error);
+        setCartItems([]);
       }
-      
-      setLoading(false);
-    };
-    
-    loadCart();
-  }, [currentUser]);
+    }
+    setLoading(false);
+  }, []);
   
-  // Save cart to localStorage and Firestore when it changes
+  // Save cart to localStorage when it changes
   useEffect(() => {
-    if (!loading) {
-      // Save to localStorage
-      localStorage.setItem('cart', JSON.stringify(cart));
-      
-      // Save to Firestore if user is logged in
-      if (currentUser) {
-        const saveCart = async () => {
-          try {
-            const cartRef = doc(db, 'carts', currentUser.uid);
-            await setDoc(cartRef, { items: cart });
-          } catch (error) {
-            console.error('Error saving cart to Firestore:', error);
-          }
-        };
-        
-        saveCart();
-      }
-    }
-  }, [cart, currentUser, loading]);
+    localStorage.setItem('cart', JSON.stringify(cartItems));
+  }, [cartItems]);
   
-  // Add to cart function
+  // Add item to cart
   const addToCart = (product) => {
-    // Check if product is already in cart
-    const existingItemIndex = cart.findIndex(item => 
-      item.id === product.id && 
-      item.size === product.size && 
-      item.color === product.color
-    );
-    
-    if (existingItemIndex !== -1) {
-      // If item exists, update quantity
-      const updatedCart = [...cart];
-      updatedCart[existingItemIndex].quantity += product.quantity;
-      setCart(updatedCart);
-    } else {
-      // Add new item to cart
-      setCart([...cart, product]);
-    }
-  };
-  
-  // Remove from cart function
-  const removeFromCart = (itemId, size, color) => {
-    const updatedCart = cart.filter(item => 
-      !(item.id === itemId && item.size === size && item.color === color)
-    );
-    setCart(updatedCart);
+    setCartItems(prevItems => {
+      // Check if item already exists in cart
+      const existingItemIndex = prevItems.findIndex(item => 
+        item.id === product.id && 
+        item.size === product.size && 
+        item.color === product.color
+      );
+      
+      if (existingItemIndex >= 0) {
+        // Update quantity if item exists
+        const updatedItems = [...prevItems];
+        updatedItems[existingItemIndex].quantity += product.quantity;
+        return updatedItems;
+      } else {
+        // Add new item if it doesn't exist
+        return [...prevItems, product];
+      }
+    });
   };
   
   // Update cart item quantity
-  const updateCartItemQuantity = (itemId, size, color, newQuantity) => {
-    const updatedCart = cart.map(item => {
-      if (item.id === itemId && item.size === size && item.color === color) {
-        return { ...item, quantity: newQuantity };
-      }
-      return item;
-    });
-    setCart(updatedCart);
+  const updateQuantity = (id, size, color, quantity) => {
+    if (quantity < 1) return;
+    
+    setCartItems(prevItems => 
+      prevItems.map(item => 
+        (item.id === id && item.size === size && item.color === color) 
+          ? { ...item, quantity } 
+          : item
+      )
+    );
   };
   
-  // Enhanced clear cart function
+  // Remove item from cart
+  const removeFromCart = (id, size, color) => {
+    setCartItems(prevItems => 
+      prevItems.filter(item => 
+        !(item.id === id && item.size === size && item.color === color)
+      )
+    );
+  };
+  
+  // Clear entire cart
   const clearCart = () => {
-    setCart([]);
-    localStorage.removeItem('cart'); // Clear local storage
+    setCartItems([]);
+  };
+  
+  // Calculate subtotal
+  const calculateSubtotal = () => {
+    return cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
+  };
+  
+  // Check if cart items are in stock
+  const checkCartItemsInventory = async () => {
+    if (cartItems.length === 0) {
+      return { success: true, message: 'Cart is empty' };
+    }
     
-    // If user is logged in, clear in Firestore as well
-    if (currentUser) {
-      const clearFirestoreCart = async () => {
-        try {
-          const cartRef = doc(db, 'carts', currentUser.uid);
-          await setDoc(cartRef, { items: [] });
-        } catch (error) {
-          console.error('Error clearing cart in Firestore:', error);
-        }
+    try {
+      const result = await checkInventory(cartItems);
+      return result;
+    } catch (error) {
+      console.error('Error checking cart inventory:', error);
+      return { 
+        success: false, 
+        message: 'Failed to check inventory. Please try again.' 
       };
-      
-      clearFirestoreCart();
     }
   };
   
-  // Calculate cart totals
-  const calculateCartTotals = () => {
-    const subtotal = cart.reduce((total, item) => total + (item.price * item.quantity), 0);
-    const tax = Math.round(subtotal * 0.18); // 18% GST
-    const shipping = subtotal > 999 ? 0 : 99; // Free shipping over ₹999
-    const total = subtotal + tax + shipping;
-    
-    return {
-      subtotal,
-      tax,
-      shipping,
-      total
-    };
+  // Process order checkout
+  const checkout = async (orderData) => {
+    try {
+      // Make sure we're logged in
+      if (!currentUser) {
+        return { 
+          success: false, 
+          message: 'Please log in to complete your order' 
+        };
+      }
+      
+      // Check inventory before proceeding
+      const inventoryCheck = await checkCartItemsInventory();
+      if (!inventoryCheck.success) {
+        return inventoryCheck;
+      }
+      
+      // Add user ID and cart items to order data
+      const completeOrderData = {
+        ...orderData,
+        userId: currentUser.uid,
+        items: cartItems
+      };
+      
+      // Process the order
+      const result = await processOrder(completeOrderData);
+      
+      // Clear cart on successful order
+      if (result.success) {
+        clearCart();
+      }
+      
+      return result;
+    } catch (error) {
+      console.error('Error during checkout:', error);
+      return { 
+        success: false, 
+        message: 'An error occurred during checkout. Please try again.' 
+      };
+    }
   };
   
   const value = {
-    cart,
+    cartItems,
+    loading,
     addToCart,
+    updateQuantity,
     removeFromCart,
-    updateCartItemQuantity,
     clearCart,
-    calculateCartTotals,
-    loading
+    calculateSubtotal,
+    checkout,
+    checkCartItemsInventory
   };
   
   return (
@@ -165,3 +162,5 @@ export const CartProvider = ({ children }) => {
     </CartContext.Provider>
   );
 };
+
+export default CartProvider;

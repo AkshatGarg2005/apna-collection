@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
-import { useCart } from '../../context/CartContext'; // Added CartContext import
+import { useCart } from '../../context/CartContext';
+import { doc, getDoc, collection, query, where, getDocs, limit } from 'firebase/firestore';
+import { db } from '../../firebase/config';
 import './ProductPage.css';
 
 const ProductPage = () => {
@@ -9,27 +11,31 @@ const ProductPage = () => {
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(0);
-  const [selectedSize, setSelectedSize] = useState('M');
-  const [selectedColor, setSelectedColor] = useState('White');
+  const [selectedSize, setSelectedSize] = useState('');
+  const [selectedColor, setSelectedColor] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [activeTab, setActiveTab] = useState('details');
-  const { addToCart } = useCart(); // Get addToCart from context
+  const [relatedProducts, setRelatedProducts] = useState([]);
+  const [useFallbackData, setUseFallbackData] = useState(false);
+  const { addToCart } = useCart();
 
-  // Sample product data
-  const productData = {
-    id: 1,
+  // Sample product data for fallback
+  const sampleProductData = {
+    id: id || '1',
     name: "Premium Cotton Formal Shirt",
     price: 1299,
     originalPrice: 1699,
     discount: "24%",
     rating: 4.5,
     reviewCount: 128,
+    category: "shirts",
     images: [
       "/api/placeholder/600/700",
       "/api/placeholder/600/700",
       "/api/placeholder/600/700",
       "/api/placeholder/600/700"
     ],
+    image: "/api/placeholder/600/700", // For compatibility with both data models
     description: "Elevate your formal attire with our Premium Cotton Formal Shirt. Crafted from high-quality Egyptian cotton, this shirt offers exceptional comfort and a sophisticated appearance. The tailored fit accentuates your silhouette while allowing ease of movement throughout the day. Perfect for office wear, formal events, or pair with jeans for a smart-casual look.",
     sizes: ["S", "M", "L", "XL", "XXL"],
     colors: ["White", "Blue", "Black", "Beige"],
@@ -110,20 +116,135 @@ const ProductPage = () => {
       { rating: 3, count: 6, percentage: 5 },
       { rating: 2, count: 4, percentage: 3 },
       { rating: 1, count: 3, percentage: 2 }
-    ],
-    relatedProducts: [
-      { id: 2, name: "Classic White Shirt", price: 1199, image: "/api/placeholder/400/500", colors: ["White", "Blue", "Black"] },
-      { id: 3, name: "Slim Fit Trousers", price: 1599, image: "/api/placeholder/400/500", colors: ["Black", "Beige"] },
-      { id: 4, name: "Designer Blazer", price: 3499, image: "/api/placeholder/400/500", colors: ["Black", "Blue"] },
-      { id: 5, name: "Formal Shoes", price: 2199, image: "/api/placeholder/400/500", colors: ["Black", "Beige"] }
     ]
   };
+  
+  // Sample related products for fallback
+  const sampleRelatedProducts = [
+    { 
+      id: 'related1', 
+      name: "Classic White Shirt", 
+      price: 1199, 
+      image: "/api/placeholder/400/500", 
+      colors: ["White", "Blue", "Black"] 
+    },
+    { 
+      id: 'related2', 
+      name: "Slim Fit Trousers", 
+      price: 1599, 
+      image: "/api/placeholder/400/500", 
+      colors: ["Black", "Beige"] 
+    },
+    { 
+      id: 'related3', 
+      name: "Designer Blazer", 
+      price: 3499, 
+      image: "/api/placeholder/400/500", 
+      colors: ["Black", "Blue"] 
+    },
+    { 
+      id: 'related4', 
+      name: "Formal Shoes", 
+      price: 2199, 
+      image: "/api/placeholder/400/500", 
+      colors: ["Black", "Beige"] 
+    }
+  ];
 
-  // Simulate fetching product data
+  // Fetch product and related products from Firestore
   useEffect(() => {
-    // In a real app, fetch product by ID from an API
-    setProduct(productData);
-    setLoading(false);
+    const fetchProductData = async () => {
+      try {
+        setLoading(true);
+        
+        // Fetch the product document
+        const productDoc = await getDoc(doc(db, 'products', id));
+        
+        if (!productDoc.exists()) {
+          console.log('Product not found in Firebase, using sample data');
+          setUseFallbackData(true);
+          setProduct(sampleProductData);
+          setRelatedProducts(sampleRelatedProducts);
+          
+          // Set default selected size and color from sample data
+          if (sampleProductData.sizes && sampleProductData.sizes.length > 0) {
+            setSelectedSize(sampleProductData.sizes[0]);
+          }
+          
+          if (sampleProductData.colors && sampleProductData.colors.length > 0) {
+            setSelectedColor(sampleProductData.colors[0]);
+          }
+          
+          setLoading(false);
+          return;
+        }
+        
+        const productData = {
+          id: productDoc.id,
+          ...productDoc.data()
+        };
+        
+        // Set default selected size and color from available options
+        if (productData.sizes && productData.sizes.length > 0) {
+          setSelectedSize(productData.sizes[0]);
+        }
+        
+        if (productData.colors && productData.colors.length > 0) {
+          setSelectedColor(productData.colors[0]);
+        }
+        
+        setProduct(productData);
+        
+        // Fetch related products in the same category
+        if (productData.category) {
+          try {
+            const relatedQuery = query(
+              collection(db, 'products'),
+              where('category', '==', productData.category),
+              where('id', '!=', productData.id),
+              limit(4)
+            );
+            
+            const relatedSnapshot = await getDocs(relatedQuery);
+            const relatedItems = relatedSnapshot.docs.map(doc => ({
+              id: doc.id,
+              ...doc.data()
+            }));
+            
+            if (relatedItems.length > 0) {
+              setRelatedProducts(relatedItems);
+            } else {
+              // If no related products found, use sample related products
+              setRelatedProducts(sampleRelatedProducts);
+            }
+          } catch (error) {
+            console.error('Error fetching related products:', error);
+            setRelatedProducts(sampleRelatedProducts);
+          }
+        }
+        
+        setLoading(false);
+      } catch (error) {
+        console.error('Error fetching product data:', error);
+        // On error, use sample data
+        setUseFallbackData(true);
+        setProduct(sampleProductData);
+        setRelatedProducts(sampleRelatedProducts);
+        
+        // Set default selected size and color from sample data
+        if (sampleProductData.sizes && sampleProductData.sizes.length > 0) {
+          setSelectedSize(sampleProductData.sizes[0]);
+        }
+        
+        if (sampleProductData.colors && sampleProductData.colors.length > 0) {
+          setSelectedColor(sampleProductData.colors[0]);
+        }
+        
+        setLoading(false);
+      }
+    };
+    
+    fetchProductData();
   }, [id]);
 
   // Handle quantity changes
@@ -139,14 +260,21 @@ const ProductPage = () => {
     }
   };
 
-  // Updated handleAddToCart function
+  // Add to cart function
   const handleAddToCart = () => {
+    if (!product) return;
+    
+    // Get the product image (either from selected image index or default image)
+    const productImage = product.images && product.images.length > 0 
+      ? product.images[selectedImage] 
+      : product.image;
+    
     // Create a properly formatted product object with selected options
     const productToAdd = {
       id: product.id,
       name: product.name,
       price: product.price,
-      image: product.images[selectedImage],
+      image: productImage,
       quantity: quantity,
       size: selectedSize,
       color: selectedColor
@@ -155,25 +283,20 @@ const ProductPage = () => {
     // Add to cart using context
     addToCart(productToAdd);
     
-    // Show feedback (this was already in your code)
+    // Show feedback to user
     alert(`Added to cart: ${product.name}\nSize: ${selectedSize}\nColor: ${selectedColor}\nQuantity: ${quantity}`);
   };
 
   // Handle buy now
   const handleBuyNow = () => {
     // Add to cart first, then redirect to checkout
-    const productToAdd = {
-      id: product.id,
-      name: product.name,
-      price: product.price,
-      image: product.images[selectedImage],
-      quantity: quantity,
-      size: selectedSize,
-      color: selectedColor
-    };
-    
-    addToCart(productToAdd);
+    handleAddToCart();
     navigate('/checkout');
+  };
+
+  // Helper function to ensure array exists
+  const ensureArray = (arr, defaultValue = []) => {
+    return Array.isArray(arr) ? arr : defaultValue;
   };
 
   // Render loading state
@@ -186,9 +309,22 @@ const ProductPage = () => {
     return <div className="not-found">Product not found</div>;
   }
 
-  // Render product page
+  // Calculate original price if not provided
+  const originalPrice = product.originalPrice || Math.round(product.price * 1.2);
+  const discount = product.discount || Math.round(((originalPrice - product.price) / originalPrice) * 100) + '%';
+
+  // Ensure images array exists
+  const productImages = product.images || [product.image];
+
   return (
     <div className="product-page">
+      {/* Display notice for sample data */}
+      {useFallbackData && (
+        <div className="data-notice">
+          <p>Currently displaying sample product data. Connect to Firebase for live data.</p>
+        </div>
+      )}
+      
       {/* Breadcrumb */}
       <div className="breadcrumb">
         <div className="breadcrumb-links">
@@ -204,10 +340,10 @@ const ProductPage = () => {
         {/* Product Gallery */}
         <div className="product-gallery">
           <div className="main-image">
-            <img src={product.images[selectedImage]} alt={product.name} />
+            <img src={productImages[selectedImage] || product.image} alt={product.name} />
           </div>
           <div className="image-thumbnails">
-            {product.images.map((image, index) => (
+            {productImages.map((image, index) => (
               <div 
                 key={index} 
                 className={`thumbnail ${selectedImage === index ? 'active' : ''}`} 
@@ -226,8 +362,8 @@ const ProductPage = () => {
             <h1 className="product-title">{product.name}</h1>
             <div className="product-price">
               ₹{product.price.toLocaleString()} 
-              <span className="price-original">₹{product.originalPrice.toLocaleString()}</span> 
-              <span className="price-discount">{product.discount} OFF</span>
+              <span className="price-original">₹{originalPrice.toLocaleString()}</span> 
+              <span className="price-discount">{discount} OFF</span>
             </div>
             <div className="product-rating">
               <div className="rating-stars">
@@ -235,50 +371,54 @@ const ProductPage = () => {
                   <i 
                     key={star} 
                     className={
-                      star <= Math.floor(product.rating) 
+                      star <= Math.floor(product.rating || 4.5) 
                         ? "fas fa-star" 
-                        : star <= product.rating 
+                        : star <= (product.rating || 4.5)
                           ? "fas fa-star-half-alt" 
                           : "far fa-star"
                     }
                   ></i>
                 ))}
               </div>
-              <span className="rating-count">{product.rating}/5 ({product.reviewCount} reviews)</span>
+              <span className="rating-count">{product.rating || 4.5}/5 ({product.reviewCount || 10} reviews)</span>
             </div>
             <p className="product-description">{product.description}</p>
           </div>
 
           <div className="product-options">
-            <div className="option-group">
-              <div className="option-label">Size</div>
-              <div className="size-options">
-                {product.sizes.map((size) => (
-                  <div 
-                    key={size} 
-                    className={`size-option ${selectedSize === size ? 'active' : ''}`}
-                    onClick={() => setSelectedSize(size)}
-                  >
-                    {size}
-                  </div>
-                ))}
+            {product.sizes && product.sizes.length > 0 && (
+              <div className="option-group">
+                <div className="option-label">Size</div>
+                <div className="size-options">
+                  {product.sizes.map((size) => (
+                    <div 
+                      key={size} 
+                      className={`size-option ${selectedSize === size ? 'active' : ''}`}
+                      onClick={() => setSelectedSize(size)}
+                    >
+                      {size}
+                    </div>
+                  ))}
+                </div>
+                <a href="#" className="size-guide">Size Guide</a>
               </div>
-              <a href="#" className="size-guide">Size Guide</a>
-            </div>
+            )}
 
-            <div className="option-group">
-              <div className="option-label">Color</div>
-              <div className="color-options">
-                {product.colors.map((color) => (
-                  <div 
-                    key={color} 
-                    className={`color-option color-${color.toLowerCase()} ${selectedColor === color ? 'active' : ''}`}
-                    data-color={color}
-                    onClick={() => setSelectedColor(color)}
-                  ></div>
-                ))}
+            {product.colors && product.colors.length > 0 && (
+              <div className="option-group">
+                <div className="option-label">Color</div>
+                <div className="color-options">
+                  {product.colors.map((color) => (
+                    <div 
+                      key={color} 
+                      className={`color-option color-${color.toLowerCase()} ${selectedColor === color ? 'active' : ''}`}
+                      data-color={color}
+                      onClick={() => setSelectedColor(color)}
+                    ></div>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             <div className="option-group">
               <div className="option-label">Quantity</div>
@@ -300,7 +440,7 @@ const ProductPage = () => {
                   />
                   <button className="quantity-btn" onClick={increaseQuantity}>+</button>
                 </div>
-                <span className="stock-status">In Stock ({product.stock} items)</span>
+                <span className="stock-status">In Stock ({product.stock || 10} items)</span>
               </div>
             </div>
 
@@ -357,10 +497,16 @@ const ProductPage = () => {
         {/* Product Details Tab */}
         <div className={`tab-content ${activeTab === 'details' ? 'active' : ''}`} id="tab-details">
           <div className="product-features">
-            {product.features.map((feature, index) => (
+            {ensureArray(product.features, [
+              {
+                title: "Premium Quality",
+                description: "Made with high-quality materials for durability and comfort.",
+                icon: "star"
+              }
+            ]).map((feature, index) => (
               <div className="feature-item" key={index}>
                 <div className="feature-icon">
-                  <i className={`fas fa-${feature.icon}`}></i>
+                  <i className={`fas fa-${feature.icon || 'check'}`}></i>
                 </div>
                 <div className="feature-text">
                   <div className="feature-title">{feature.title}</div>
@@ -372,7 +518,11 @@ const ProductPage = () => {
 
           <table className="product-spec-table">
             <tbody>
-              {product.specifications.map((spec, index) => (
+              {ensureArray(product.specifications, [
+                { label: "Material", value: "Premium Materials" },
+                { label: "Pattern", value: "Solid" },
+                { label: "Occasion", value: "Casual, Formal" }
+              ]).map((spec, index) => (
                 <tr key={index}>
                   <td><strong>{spec.label}:</strong></td>
                   <td>{spec.value}</td>
@@ -385,10 +535,16 @@ const ProductPage = () => {
         {/* Care Instructions Tab */}
         <div className={`tab-content ${activeTab === 'care' ? 'active' : ''}`} id="tab-care">
           <h3>Washing & Care Instructions</h3>
-          <p>To maintain the premium quality and appearance of your shirt, please follow these care instructions:</p>
+          <p>To maintain the premium quality and appearance of your item, please follow these care instructions:</p>
           
           <div className="care-instructions">
-            {product.careInstructions.map((instruction, index) => (
+            {ensureArray(product.careInstructions, [
+              { text: "Machine wash cold with similar colors", icon: "tint" },
+              { text: "Do not use bleach", icon: "ban" },
+              { text: "Tumble dry on low heat", icon: "temperature-low" },
+              { text: "Iron on medium heat", icon: "iron" },
+              { text: "Do not dry clean", icon: "minus-circle" }
+            ]).map((instruction, index) => (
               <div className="care-item" key={index}>
                 <div className="care-icon">
                   <i className={`fas fa-${instruction.icon}`}></i>
@@ -401,7 +557,12 @@ const ProductPage = () => {
           <div className="care-tips">
             <h4>Additional Care Tips:</h4>
             <ul>
-              {product.careTips.map((tip, index) => (
+              {ensureArray(product.careTips, [
+                "Turn the garment inside out before washing to protect the surface of the fabric",
+                "Always unbutton completely before washing",
+                "For best results, iron while slightly damp",
+                "Hang on a quality hanger when not in use to maintain the shape"
+              ]).map((tip, index) => (
                 <li key={index}>{tip}</li>
               ))}
             </ul>
@@ -412,26 +573,32 @@ const ProductPage = () => {
         <div className={`tab-content ${activeTab === 'reviews' ? 'active' : ''}`} id="tab-reviews">
           <div className="review-header">
             <div className="review-total">
-              <div className="review-average">{product.rating}</div>
+              <div className="review-average">{product.rating || 4.5}</div>
               <div className="rating-stars">
                 {[1, 2, 3, 4, 5].map((star) => (
                   <i 
                     key={star} 
                     className={
-                      star <= Math.floor(product.rating) 
+                      star <= Math.floor(product.rating || 4.5) 
                         ? "fas fa-star" 
-                        : star <= product.rating 
+                        : star <= (product.rating || 4.5)
                           ? "fas fa-star-half-alt" 
                           : "far fa-star"
                     }
                   ></i>
                 ))}
               </div>
-              <div>Based on {product.reviewCount} reviews</div>
+              <div>Based on {product.reviewCount || 10} reviews</div>
             </div>
             
             <div className="review-distribution">
-              {product.ratingDistribution.map((dist) => (
+              {ensureArray(product.ratingDistribution, [
+                { rating: 5, count: 7, percentage: 70 },
+                { rating: 4, count: 2, percentage: 20 },
+                { rating: 3, count: 1, percentage: 10 },
+                { rating: 2, count: 0, percentage: 0 },
+                { rating: 1, count: 0, percentage: 0 }
+              ]).map((dist) => (
                 <div className="review-bar" key={dist.rating}>
                   <div className="review-stars">{dist.rating} <i className="fas fa-star"></i></div>
                   <div className="review-progress">
@@ -449,7 +616,15 @@ const ProductPage = () => {
           </div>
           
           <div className="review-list">
-            {product.reviews.map((review, index) => (
+            {ensureArray(product.reviews, [
+              {
+                name: "Customer Review",
+                date: new Date().toLocaleDateString(),
+                rating: 5,
+                text: "Great product quality and fit. Very happy with my purchase!",
+                photos: []
+              }
+            ]).map((review, index) => (
               <div className="review-item" key={index}>
                 <div className="review-user">
                   <div className="review-avatar">
@@ -475,7 +650,7 @@ const ProductPage = () => {
                   ))}
                 </div>
                 <div className="review-text">{review.text}</div>
-                {review.photos.length > 0 && (
+                {review.photos && review.photos.length > 0 && (
                   <div className="review-photos">
                     {review.photos.map((photo, photoIndex) => (
                       <div className="review-photo" key={photoIndex}>
@@ -491,32 +666,34 @@ const ProductPage = () => {
       </div>
 
       {/* Related Products */}
-      <div className="related-products">
-        <h2 className="related-title">You May Also Like</h2>
-        <div className="related-grid">
-          {product.relatedProducts.map((relatedProduct) => (
-            <div className="related-item" key={relatedProduct.id}>
-              <Link to={`/product/${relatedProduct.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                <div className="related-img">
-                  <img src={relatedProduct.image} alt={relatedProduct.name} />
-                </div>
-                <div className="related-info">
-                  <h3 className="related-name">{relatedProduct.name}</h3>
-                  <div className="related-price">₹{relatedProduct.price.toLocaleString()}</div>
-                  <div className="related-colors">
-                    {relatedProduct.colors.map((color, colorIndex) => (
-                      <div 
-                        key={colorIndex} 
-                        className={`related-color color-${color.toLowerCase()}`}
-                      ></div>
-                    ))}
+      {relatedProducts.length > 0 && (
+        <div className="related-products">
+          <h2 className="related-title">You May Also Like</h2>
+          <div className="related-grid">
+            {relatedProducts.map((relatedProduct) => (
+              <div className="related-item" key={relatedProduct.id}>
+                <Link to={`/product/${relatedProduct.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                  <div className="related-img">
+                    <img src={relatedProduct.image} alt={relatedProduct.name} />
                   </div>
-                </div>
-              </Link>
-            </div>
-          ))}
+                  <div className="related-info">
+                    <h3 className="related-name">{relatedProduct.name}</h3>
+                    <div className="related-price">₹{relatedProduct.price.toLocaleString()}</div>
+                    <div className="related-colors">
+                      {ensureArray(relatedProduct.colors, ['Default']).map((color, colorIndex) => (
+                        <div 
+                          key={colorIndex} 
+                          className={`related-color color-${color.toLowerCase()}`}
+                        ></div>
+                      ))}
+                    </div>
+                  </div>
+                </Link>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

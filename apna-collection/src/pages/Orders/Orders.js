@@ -1,8 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { 
+  collection, 
+  query, 
+  where, 
+  orderBy, 
+  onSnapshot,
+  doc,
+  updateDoc,
+  serverTimestamp
+} from 'firebase/firestore';
+import { db } from '../../firebase/config';
 import { useAuth } from '../../context/AuthContext';
+import OrderTracker from '../../components/Orders/OrderTracker';
 import AddressDisplay from '../../components/AddressDisplay';
-import './Orders.css';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
   faSearch, 
@@ -22,71 +33,133 @@ import {
   faFilter,
   faTag
 } from '@fortawesome/free-solid-svg-icons';
+import './Orders.css';
 
 const Orders = () => {
   const navigate = useNavigate();
   const { currentUser, userProfile } = useAuth();
   
-  // State for orders, filters, search, and modal
+  // Order state
   const [orders, setOrders] = useState([]);
-  const [activeFilter, setActiveFilter] = useState('All Orders');
-  const [searchTerm, setSearchTerm] = useState('');
   const [filteredOrders, setFilteredOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  
+  // UI state
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [showOrderDetails, setShowOrderDetails] = useState(false);
   const [showTrackingModal, setShowTrackingModal] = useState(false);
   const [trackingOrder, setTrackingOrder] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [activeFilter, setActiveFilter] = useState('All Orders');
+  const [searchTerm, setSearchTerm] = useState('');
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   
-  // Refs for animation
+  // Refs for animations
   const orderRefs = useRef({});
-  
-  // Load orders from localStorage or Firestore
+
+  // Fetch orders from Firebase
   useEffect(() => {
-    const loadOrders = async () => {
-      setIsLoading(true);
+    // Only fetch if user is logged in
+    if (!currentUser) {
+      setOrders([]);
+      setFilteredOrders([]);
+      setLoading(false);
+      return;
+    }
+    
+    setLoading(true);
+    
+    try {
+      // Create query for user's orders
+      const ordersQuery = query(
+        collection(db, 'orders'),
+        where('userId', '==', currentUser.uid),
+        orderBy('createdAt', 'desc')
+      );
       
-      try {
-        // In a real app, you would fetch from Firestore based on currentUser.uid
-        // For now, we'll use localStorage
-        const savedOrders = JSON.parse(localStorage.getItem('orders') || '[]');
+      // Set up real-time listener
+      const unsubscribe = onSnapshot(ordersQuery, (snapshot) => {
+        if (snapshot.empty) {
+          // If no orders found, use sample data
+          setOrders(getSampleOrders());
+          setLoading(false);
+          return;
+        }
         
-        // Filter orders for the current user if logged in
-        const userOrders = currentUser 
-          ? savedOrders.filter(order => order.userId === currentUser.uid)
-          : savedOrders;
-        
-        // Sort by date (newest first) - parse the date string properly
-        const sortedOrders = userOrders.sort((a, b) => {
-          const dateA = new Date(a.date.split(',')[0] + a.date.split(',')[1]);
-          const dateB = new Date(b.date.split(',')[0] + b.date.split(',')[1]);
-          return dateB - dateA;
+        const ordersList = snapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            ...data,
+            // Format createdAt date if available
+            date: data.createdAt?.toDate ? 
+              formatDate(data.createdAt.toDate()) : 
+              new Date().toLocaleDateString('en-IN', {
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric'
+              })
+          };
         });
         
-        // If no orders found, use sample data
-        if (sortedOrders.length === 0) {
-          setOrders(getSampleOrders());
-        } else {
-          setOrders(sortedOrders);
-        }
-      } catch (error) {
-        console.error('Error loading orders:', error);
+        setOrders(ordersList);
+        setLoading(false);
+      }, (error) => {
+        console.error("Error fetching orders:", error);
+        // Fallback to sample data on error
         setOrders(getSampleOrders());
-      }
+        setLoading(false);
+      });
       
-      setTimeout(() => {
-        setIsLoading(false);
-      }, 800);
-    };
-    
-    loadOrders();
+      // Clean up listener on unmount
+      return () => unsubscribe();
+    } catch (error) {
+      console.error("Error setting up orders listener:", error);
+      setOrders(getSampleOrders());
+      setLoading(false);
+    }
   }, [currentUser]);
-  
-  // Sample orders for demo purposes
+
+  // Filter orders when activeFilter or searchTerm changes
+  useEffect(() => {
+    let result = [...orders];
+    
+    // Apply filter
+    if (activeFilter !== 'All Orders') {
+      if (activeFilter === 'Recent') {
+        // Get the two most recent orders
+        result = result.slice(0, 2);
+      } else {
+        result = result.filter(order => order.status === activeFilter);
+      }
+    }
+    
+    // Apply search
+    if (searchTerm.trim() !== '') {
+      result = result.filter(order => {
+        // Search in order ID
+        const idMatch = (order.orderNumber || order.id || '')
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase());
+        
+        // Search in product names
+        const itemMatch = (order.items || []).some(item => 
+          (item.name || '').toLowerCase().includes(searchTerm.toLowerCase())
+        );
+        
+        return idMatch || itemMatch;
+      });
+    }
+    
+    setFilteredOrders(result);
+  }, [activeFilter, searchTerm, orders]);
+
+  // Sample orders for demo purposes or fallback
   const getSampleOrders = () => {
     return [
       {
         id: 'AC23051587',
+        orderNumber: 'OD230412587',
         date: '4 March, 2025',
         status: 'Delivered',
         items: [
@@ -109,14 +182,24 @@ const Orders = () => {
             price: 1899
           }
         ],
-        total: 3198,
-        payment: {
-          method: 'UPI',
-          status: 'Paid'
+        subtotal: 3198,
+        shipping: 0,
+        tax: 160,
+        total: 3358,
+        paymentMethod: 'upiPayment',
+        paymentStatus: 'Paid',
+        shippingAddress: {
+          name: 'John Doe',
+          address: '123 Main Street, Apartment 4B',
+          city: 'Mumbai',
+          state: 'Maharashtra',
+          pincode: '400001',
+          phone: '9876543210'
         }
       },
       {
         id: 'AC23051492',
+        orderNumber: 'OD230412492',
         date: '28 February, 2025',
         status: 'Shipped',
         items: [
@@ -130,14 +213,24 @@ const Orders = () => {
             price: 2999
           }
         ],
-        total: 2999,
-        payment: {
-          method: 'Credit Card',
-          status: 'Paid'
+        subtotal: 2999,
+        shipping: 0,
+        tax: 150,
+        total: 3149,
+        paymentMethod: 'cardPayment',
+        paymentStatus: 'Paid',
+        shippingAddress: {
+          name: 'John Doe',
+          address: '123 Main Street, Apartment 4B',
+          city: 'Mumbai',
+          state: 'Maharashtra',
+          pincode: '400001',
+          phone: '9876543210'
         }
       },
       {
         id: 'AC23051375',
+        orderNumber: 'OD230412375',
         date: '15 February, 2025',
         status: 'Processing',
         items: [
@@ -160,14 +253,24 @@ const Orders = () => {
             price: 2199
           }
         ],
-        total: 5698,
-        payment: {
-          method: 'Cash on Delivery',
-          status: 'Pending'
+        subtotal: 5698,
+        shipping: 0,
+        tax: 285,
+        total: 5983,
+        paymentMethod: 'codPayment',
+        paymentStatus: 'Pending',
+        shippingAddress: {
+          name: 'John Doe',
+          address: '123 Main Street, Apartment 4B',
+          city: 'Mumbai',
+          state: 'Maharashtra',
+          pincode: '400001',
+          phone: '9876543210'
         }
       },
       {
         id: 'AC23051240',
+        orderNumber: 'OD230412240',
         date: '10 February, 2025',
         status: 'Cancelled',
         items: [
@@ -181,61 +284,59 @@ const Orders = () => {
             price: 1199
           }
         ],
-        total: 2398,
-        payment: {
-          method: 'UPI',
-          status: 'Refunded'
+        subtotal: 2398,
+        shipping: 0,
+        tax: 120,
+        total: 2518,
+        paymentMethod: 'upiPayment',
+        paymentStatus: 'Refunded',
+        shippingAddress: {
+          name: 'John Doe',
+          address: '123 Main Street, Apartment 4B',
+          city: 'Mumbai',
+          state: 'Maharashtra',
+          pincode: '400001',
+          phone: '9876543210'
         }
       }
     ];
   };
-  
-  // Filter orders when activeFilter or searchTerm changes
-  useEffect(() => {
-    let result = [...orders];
-    
-    // Apply filter with a small delay to show animation
-    setIsLoading(true);
-    
-    setTimeout(() => {
-      if (activeFilter !== 'All Orders') {
-        if (activeFilter === 'Recent') {
-          // Get the two most recent orders
-          result = result.slice(0, 2);
-        } else {
-          result = result.filter(order => 
-            order.status === activeFilter
-          );
-        }
-      }
-      
-      // Apply search
-      if (searchTerm.trim() !== '') {
-        result = result.filter(order => {
-          const matchesId = order.id.toLowerCase().includes(searchTerm.toLowerCase());
-          const matchesProduct = order.items.some(item => 
-            item.name.toLowerCase().includes(searchTerm.toLowerCase())
-          );
-          return matchesId || matchesProduct;
-        });
-      }
-      
-      setFilteredOrders(result);
-      setIsLoading(false);
-    }, 300);
-  }, [activeFilter, searchTerm, orders]);
-  
-  // Handle filter button click
+
+  // Utility Functions
+  const formatDate = (date) => {
+    return date.toLocaleDateString('en-IN', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    });
+  };
+
+  const formatPrice = (price) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      maximumFractionDigits: 0
+    }).format(price);
+  };
+
+  // Handler Functions
   const handleFilterClick = (filter) => {
     setActiveFilter(filter);
   };
-  
-  // Handle search input change
+
   const handleSearchChange = (e) => {
     setSearchTerm(e.target.value);
   };
-  
-  // Track order handler
+
+  const handleShowOrderDetails = (order) => {
+    setSelectedOrder(order);
+    setShowOrderDetails(true);
+  };
+
+  const handleCloseOrderDetails = () => {
+    setShowOrderDetails(false);
+  };
+
   const handleTrackOrder = (orderId) => {
     const order = orders.find(o => o.id === orderId);
     if (order) {
@@ -244,42 +345,39 @@ const Orders = () => {
       document.body.style.overflow = 'hidden'; // Prevent background scrolling
     }
   };
-  
-  // Cancel order handler
-  const handleCancelOrder = (orderId) => {
-    if (window.confirm(`Are you sure you want to cancel order #${orderId}?`)) {
-      // Update the order in state
-      const updatedOrders = orders.map(order => 
-        order.id === orderId 
-          ? {...order, status: 'Cancelled'} 
-          : order
-      );
+
+  const closeTrackingModal = () => {
+    setShowTrackingModal(false);
+    document.body.style.overflow = ''; // Restore scrolling
+  };
+
+  const handleCancelOrder = async (orderId) => {
+    if (!window.confirm(`Are you sure you want to cancel this order?`)) {
+      return;
+    }
+    
+    try {
+      // Update the order in Firebase
+      const orderRef = doc(db, 'orders', orderId);
+      await updateDoc(orderRef, {
+        status: 'Cancelled',
+        cancelReason: 'Cancelled by customer',
+        cancelledAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
       
-      // Update local state
-      setOrders(updatedOrders);
-      
-      // Update in localStorage
-      try {
-        const allOrders = JSON.parse(localStorage.getItem('orders') || '[]');
-        const updatedAllOrders = allOrders.map(order => 
-          order.id === orderId 
-            ? {...order, status: 'Cancelled'} 
-            : order
-        );
-        localStorage.setItem('orders', JSON.stringify(updatedAllOrders));
-      } catch (error) {
-        console.error('Error updating order in localStorage:', error);
-      }
-      
+      // Show success message
       showToastNotification('Order cancelled successfully');
+    } catch (error) {
+      console.error('Error cancelling order:', error);
+      showToastNotification('Failed to cancel order. Please try again.');
     }
   };
-  
-  // Order again handler
+
   const handleOrderAgain = (items) => {
     // In a real app, this would add the items to cart via context
     // For now, just show a toast
-    showToastNotification(`Added ${items.length} items to your cart`);
+    showToastNotification(`Added ${items.length} ${items.length === 1 ? 'item' : 'items'} to your cart`);
     
     // Redirect to cart page after a short delay
     setTimeout(() => {
@@ -287,7 +385,6 @@ const Orders = () => {
     }, 1500);
   };
 
-  // Show toast notification
   const showToastNotification = (message) => {
     setToastMessage(message);
     setShowToast(true);
@@ -296,39 +393,56 @@ const Orders = () => {
     }, 3000);
   };
 
-  // Close tracking modal
-  const closeTrackingModal = () => {
-    setShowTrackingModal(false);
-    document.body.style.overflow = ''; // Restore scrolling
+  // UI Helper Functions
+  const getStatusDetails = (status) => {
+    switch (status) {
+      case 'Processing':
+        return { 
+          color: '#2196f3', 
+          message: 'Order received and is being processed', 
+          icon: faSpinner 
+        };
+      case 'Accepted':
+        return { 
+          color: '#9c27b0', 
+          message: 'Order confirmed and being prepared for shipment', 
+          icon: faCheckCircle 
+        };
+      case 'Shipped':
+        return { 
+          color: '#ff9800', 
+          message: 'Order has been shipped and is on its way', 
+          icon: faTruck 
+        };
+      case 'Delivered':
+        return { 
+          color: '#4caf50', 
+          message: 'Order has been successfully delivered', 
+          icon: faCheckCircle 
+        };
+      case 'Cancelled':
+        return { 
+          color: '#f44336', 
+          message: 'Order has been cancelled', 
+          icon: faTimesCircle 
+        };
+      default:
+        return { 
+          color: '#2196f3', 
+          message: 'Order is being processed', 
+          icon: faSpinner 
+        };
+    }
   };
 
-  // Format currency
-  const formatPrice = (price) => {
-    return `₹${price.toLocaleString()}`;
-  };
-  
-  // Get status class for styling
   const getStatusClass = (status) => {
     return status.toLowerCase();
   };
-  
-  // Get status icon
+
   const getStatusIcon = (status) => {
-    switch(status) {
-      case 'Delivered':
-        return faCheckCircle;
-      case 'Shipped':
-        return faTruck;
-      case 'Processing':
-        return faSpinner;
-      case 'Cancelled':
-        return faTimesCircle;
-      default:
-        return faCircle;
-    }
+    return getStatusDetails(status).icon;
   };
-  
-  // Get payment method display text
+
   const getPaymentMethodText = (paymentMethod) => {
     switch(paymentMethod) {
       case 'cardPayment':
@@ -340,11 +454,10 @@ const Orders = () => {
       case 'codPayment':
         return 'Cash on Delivery';
       default:
-        return paymentMethod;
+        return paymentMethod || 'Online Payment';
     }
   };
-  
-  // Get payment status based on order status
+
   const getPaymentStatus = (order) => {
     if (order.status === 'Cancelled') {
       return 'Refunded';
@@ -354,7 +467,7 @@ const Orders = () => {
       return 'Paid';
     }
   };
-  
+
   // Skeleton loading component
   const OrderSkeleton = () => (
     <div className="order-card skeleton">
@@ -379,13 +492,13 @@ const Orders = () => {
       </div>
     </div>
   );
-  
+
   return (
     <div className="orders-container">
       <h1 className="page-title">My Orders</h1>
 
       <div className="orders-layout">
-        {/* Filter Section with Icon */}
+        {/* Filter Section */}
         <div className="filter-section">
           <div className="filter-header">
             <FontAwesomeIcon icon={faFilter} />
@@ -429,6 +542,15 @@ const Orders = () => {
             Processing
           </button>
           <button 
+            className={`filter-btn ${activeFilter === 'Shipped' ? 'active' : ''}`}
+            onClick={() => handleFilterClick('Shipped')}
+          >
+            <span className="filter-icon">
+              <FontAwesomeIcon icon={faTruck} />
+            </span>
+            Shipped
+          </button>
+          <button 
             className={`filter-btn ${activeFilter === 'Cancelled' ? 'active' : ''}`}
             onClick={() => handleFilterClick('Cancelled')}
           >
@@ -466,7 +588,7 @@ const Orders = () => {
           </div>
           
           {/* Order Summary */}
-          {!isLoading && filteredOrders.length > 0 && (
+          {!loading && filteredOrders.length > 0 && (
             <div className="order-summary">
               <div className="summary-item">
                 <span className="summary-label">Orders</span>
@@ -475,13 +597,13 @@ const Orders = () => {
               <div className="summary-item">
                 <span className="summary-label">Total Items</span>
                 <span className="summary-value">
-                  {filteredOrders.reduce((total, order) => total + order.items.length, 0)}
+                  {filteredOrders.reduce((total, order) => total + (order.items?.length || 0), 0)}
                 </span>
               </div>
               <div className="summary-item">
                 <span className="summary-label">Total Value</span>
                 <span className="summary-value">
-                  {formatPrice(filteredOrders.reduce((total, order) => total + order.total, 0))}
+                  {formatPrice(filteredOrders.reduce((total, order) => total + (order.total || 0), 0))}
                 </span>
               </div>
             </div>
@@ -489,7 +611,7 @@ const Orders = () => {
           
           {/* Orders List */}
           <div className="orders-list">
-            {isLoading ? (
+            {loading ? (
               // Show skeleton loading UI
               <>
                 <OrderSkeleton />
@@ -497,12 +619,12 @@ const Orders = () => {
               </>
             ) : filteredOrders.length > 0 ? (
               filteredOrders.map(order => (
-                <div className="order-card" key={order.id}>
+                <div className="order-card" key={order.id} ref={el => orderRefs.current[order.id] = el}>
                   <div className="order-header">
                     <div className="order-id-section">
                       <div className="order-id">
                         <FontAwesomeIcon icon={faTag} className="order-icon" />
-                        Order #{order.id}
+                        Order #{order.orderNumber || order.id.slice(0, 8)}
                       </div>
                       <div className={`order-status ${getStatusClass(order.status || 'Processing')}`}>
                         <FontAwesomeIcon icon={getStatusIcon(order.status || 'Processing')} />
@@ -526,8 +648,8 @@ const Orders = () => {
                   </div>
                   
                   <div className="order-items-container">
-                    {order.items.map(item => (
-                      <div className="order-item" key={item.id}>
+                    {(order.items || []).slice(0, 2).map((item, index) => (
+                      <div className="order-item" key={index}>
                         <div className="item-image">
                           <img src={item.image} alt={item.name} />
                           <div className="image-overlay">
@@ -539,12 +661,14 @@ const Orders = () => {
                           <div className="item-meta">
                             <span className="meta-item">Size: {item.size}</span>
                             <span className="meta-item">
-                              <span className="color-dot" style={{ backgroundColor: item.color.toLowerCase() === 'dark blue' ? '#1a2b5e' : 
-                                                                  item.color.toLowerCase() === 'white' ? '#fff' :
-                                                                  item.color.toLowerCase() === 'maroon' ? '#800000' :
-                                                                  item.color.toLowerCase() === 'navy blue' ? '#000080' :
-                                                                  item.color.toLowerCase() === 'brown' ? '#8B4513' :
-                                                                  item.color.toLowerCase() === 'black' ? '#000' : '#ccc' }}></span>
+                              <span className="color-dot" style={{ 
+                                backgroundColor: item.color?.toLowerCase() === 'dark blue' ? '#1a2b5e' : 
+                                                item.color?.toLowerCase() === 'white' ? '#fff' :
+                                                item.color?.toLowerCase() === 'maroon' ? '#800000' :
+                                                item.color?.toLowerCase() === 'navy blue' ? '#000080' :
+                                                item.color?.toLowerCase() === 'brown' ? '#8B4513' :
+                                                item.color?.toLowerCase() === 'black' ? '#000' : '#ccc' 
+                              }}></span>
                               {item.color}
                             </span>
                           </div>
@@ -555,9 +679,15 @@ const Orders = () => {
                       </div>
                     ))}
                     
+                    {(order.items || []).length > 2 && (
+                      <div className="more-items">
+                        +{order.items.length - 2} more {order.items.length - 2 === 1 ? 'item' : 'items'}
+                      </div>
+                    )}
+                    
                     <div className="order-total">
                       <span className="total-label">Total:</span>
-                      <span className="total-value">{formatPrice(order.total)}</span>
+                      <span className="total-value">{formatPrice(order.total || 0)}</span>
                     </div>
                   </div>
                   
@@ -584,8 +714,16 @@ const Orders = () => {
                     )}
                     
                     <button 
+                      className="action-btn view-btn"
+                      onClick={() => handleShowOrderDetails(order)}
+                    >
+                      <FontAwesomeIcon icon={faInfoCircle} />
+                      View Details
+                    </button>
+                    
+                    <button 
                       className="action-btn order-again-btn"
-                      onClick={() => handleOrderAgain(order.items)}
+                      onClick={() => handleOrderAgain(order.items || [])}
                     >
                       <FontAwesomeIcon icon={faShoppingCart} />
                       Order Again
@@ -608,6 +746,135 @@ const Orders = () => {
         </div>
       </div>
       
+      {/* Order Details Modal */}
+      {showOrderDetails && selectedOrder && (
+        <div className="order-details-modal">
+          <div className="modal-overlay" onClick={handleCloseOrderDetails}></div>
+          <div className="modal-content">
+            <div className="modal-header">
+              <h2>Order Details</h2>
+              <button className="close-modal" onClick={handleCloseOrderDetails}>
+                <FontAwesomeIcon icon={faTimes} />
+              </button>
+            </div>
+            
+            <div className="order-details-content">
+              <div className="order-summary">
+                <div className="summary-item">
+                  <div className="summary-label">Order Number:</div>
+                  <div className="summary-value">#{selectedOrder.orderNumber || selectedOrder.id.slice(0, 8)}</div>
+                </div>
+                <div className="summary-item">
+                  <div className="summary-label">Date Placed:</div>
+                  <div className="summary-value">{selectedOrder.date}</div>
+                </div>
+                <div className="summary-item">
+                  <div className="summary-label">Order Status:</div>
+                  <div className="summary-value">
+                    <span
+                      className="status-badge"
+                      style={{ backgroundColor: getStatusDetails(selectedOrder.status || 'Processing').color }}
+                    >
+                      {selectedOrder.status || 'Processing'}
+                    </span>
+                  </div>
+                </div>
+                <div className="summary-item">
+                  <div className="summary-label">Payment Method:</div>
+                  <div className="summary-value">{getPaymentMethodText(selectedOrder.paymentMethod)}</div>
+                </div>
+              </div>
+              
+              <div className="order-status-tracker">
+                <OrderTracker currentStatus={selectedOrder.status || 'Processing'} />
+                <div className="status-message">
+                  {getStatusDetails(selectedOrder.status || 'Processing').message}
+                </div>
+              </div>
+              
+              <div className="order-details-sections">
+                <div className="details-section">
+                  <h3>Items in Your Order</h3>
+                  <div className="all-order-items">
+                    {(selectedOrder.items || []).map((item, index) => (
+                      <div className="order-item" key={index}>
+                        <div className="item-image">
+                          <img src={item.image} alt={item.name} />
+                        </div>
+                        <div className="item-details">
+                          <div className="item-name">{item.name}</div>
+                          <div className="item-meta">
+                            Size: {item.size} | Color: {item.color} | Qty: {item.quantity}
+                          </div>
+                          <div className="item-price">{formatPrice(item.price * item.quantity)}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                
+                <div className="details-section shipping-section">
+                  <h3>Shipping Address</h3>
+                  <div className="address-card">
+                    <div className="address-name">{selectedOrder.shippingAddress?.name}</div>
+                    <div className="address-line">
+                      {selectedOrder.shippingAddress?.address}, 
+                      {selectedOrder.shippingAddress?.city}, 
+                      {selectedOrder.shippingAddress?.state} - 
+                      {selectedOrder.shippingAddress?.pincode}
+                    </div>
+                    <div className="address-phone">
+                      Phone: {selectedOrder.shippingAddress?.phone}
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="details-section price-summary-section">
+                  <h3>Price Details</h3>
+                  <div className="price-summary">
+                    <div className="price-row">
+                      <div className="price-label">Subtotal</div>
+                      <div className="price-value">{formatPrice(selectedOrder.subtotal || 0)}</div>
+                    </div>
+                    <div className="price-row">
+                      <div className="price-label">Shipping</div>
+                      <div className="price-value">
+                        {selectedOrder.shipping === 0 ? 'Free' : formatPrice(selectedOrder.shipping || 0)}
+                      </div>
+                    </div>
+                    <div className="price-row">
+                      <div className="price-label">Tax</div>
+                      <div className="price-value">{formatPrice(selectedOrder.tax || 0)}</div>
+                    </div>
+                    <div className="price-row total">
+                      <div className="price-label">Total</div>
+                      <div className="price-value">{formatPrice(selectedOrder.total || 0)}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="order-actions">
+                {selectedOrder.status !== 'Cancelled' && selectedOrder.status !== 'Delivered' && (
+                  <button 
+                    className="need-help-button"
+                    onClick={() => navigate('/contact')}
+                  >
+                    <FontAwesomeIcon icon={faInfoCircle} /> Need Help?
+                  </button>
+                )}
+                <button 
+                  className="reorder-button"
+                  onClick={() => handleOrderAgain(selectedOrder.items || [])}
+                >
+                  <FontAwesomeIcon icon={faShoppingCart} /> Reorder
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
       {/* Order Tracking Modal */}
       {showTrackingModal && trackingOrder && (
         <div className="tracking-modal-overlay" onClick={closeTrackingModal}>
@@ -617,7 +884,7 @@ const Orders = () => {
             </div>
             <div className="modal-header">
               <h2>Track Your Order</h2>
-              <p>Order #{trackingOrder.id}</p>
+              <p>Order #{trackingOrder.orderNumber || trackingOrder.id.slice(0, 8)}</p>
             </div>
             <div className="modal-body">
               <div className="tracking-timeline">
@@ -635,7 +902,7 @@ const Orders = () => {
                     </div>
                     <div className="step-label">Processing</div>
                     <div className="step-date">
-                      {new Date(new Date(trackingOrder.date).getTime() + 2 * 24 * 60 * 60 * 1000).toLocaleDateString('en-IN', {
+                      {new Date(new Date().getTime() + 2 * 24 * 60 * 60 * 1000).toLocaleDateString('en-IN', {
                         day: 'numeric',
                         month: 'short',
                         year: 'numeric'
@@ -648,7 +915,7 @@ const Orders = () => {
                     </div>
                     <div className="step-label">Shipped</div>
                     <div className="step-date">
-                      {new Date(new Date(trackingOrder.date).getTime() + 3 * 24 * 60 * 60 * 1000).toLocaleDateString('en-IN', {
+                      {new Date(new Date().getTime() + 3 * 24 * 60 * 60 * 1000).toLocaleDateString('en-IN', {
                         day: 'numeric',
                         month: 'short',
                         year: 'numeric'
@@ -661,7 +928,7 @@ const Orders = () => {
                     </div>
                     <div className="step-label">Out for Delivery</div>
                     <div className="step-date">
-                      {new Date(new Date(trackingOrder.date).getTime() + 4 * 24 * 60 * 60 * 1000).toLocaleDateString('en-IN', {
+                      {new Date(new Date().getTime() + 4 * 24 * 60 * 60 * 1000).toLocaleDateString('en-IN', {
                         day: 'numeric',
                         month: 'short',
                         year: 'numeric'
@@ -674,7 +941,7 @@ const Orders = () => {
                     </div>
                     <div className="step-label">Delivered</div>
                     <div className="step-date">
-                      {new Date(new Date(trackingOrder.date).getTime() + 5 * 24 * 60 * 60 * 1000).toLocaleDateString('en-IN', {
+                      {new Date(new Date().getTime() + 5 * 24 * 60 * 60 * 1000).toLocaleDateString('en-IN', {
                         day: 'numeric',
                         month: 'short',
                         year: 'numeric'
@@ -691,7 +958,7 @@ const Orders = () => {
                     ? 'Delivered on ' + trackingOrder.date 
                     : trackingOrder.status === 'Cancelled'
                     ? 'Order Cancelled'
-                    : 'Expected by ' + new Date(new Date(trackingOrder.date).getTime() + 5 * 24 * 60 * 60 * 1000).toLocaleDateString('en-IN', {
+                    : 'Expected by ' + new Date(new Date().getTime() + 5 * 24 * 60 * 60 * 1000).toLocaleDateString('en-IN', {
                         day: 'numeric',
                         month: 'long',
                         year: 'numeric'
@@ -713,8 +980,8 @@ const Orders = () => {
                 <div className="track-items-preview">
                   <h4>Order Items</h4>
                   <div className="track-items-grid">
-                    {trackingOrder.items.map(item => (
-                      <div className="track-item" key={item.id}>
+                    {(trackingOrder.items || []).map((item, index) => (
+                      <div className="track-item" key={index}>
                         <img src={item.image} alt={item.name} />
                         <span className="track-item-quantity">×{item.quantity}</span>
                       </div>

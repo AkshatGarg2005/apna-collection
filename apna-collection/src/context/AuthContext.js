@@ -1,13 +1,19 @@
-// src/context/AuthContext.js
 import React, { createContext, useState, useEffect, useContext } from 'react';
-import { 
-  createUserWithEmailAndPassword, 
-  signInWithEmailAndPassword, 
-  signOut, 
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
   onAuthStateChanged,
-  updateProfile
+  updateProfile,
+  sendPasswordResetEmail
 } from 'firebase/auth';
-import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { 
+  doc, 
+  setDoc, 
+  getDoc, 
+  updateDoc, 
+  serverTimestamp 
+} from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
 
 const AuthContext = createContext();
@@ -16,39 +22,37 @@ export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [userProfile, setUserProfile] = useState(null);
-  
-  // Register a new user
-  const signup = async (email, password, displayName) => {
+  const [loading, setLoading] = useState(true);
+
+  // Sign up with email and password
+  const signup = async (email, password, name, phone) => {
     try {
-      // Create user in Firebase Authentication
+      // Create user with Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
       
-      // Update user profile with display name
-      await updateProfile(user, {
-        displayName: displayName
+      // Update profile display name
+      await updateProfile(userCredential.user, {
+        displayName: name
       });
       
       // Create user document in Firestore
-      await setDoc(doc(db, 'users', user.uid), {
-        uid: user.uid,
-        email: email,
-        displayName: displayName,
+      await setDoc(doc(db, 'users', userCredential.user.uid), {
+        email,
+        displayName: name,
+        phone,
+        role: 'customer',
         createdAt: serverTimestamp(),
-        role: 'customer', // Default role
-        addresses: [],
-        paymentMethods: []
+        updatedAt: serverTimestamp()
       });
       
-      return { success: true, user };
+      return { success: true, user: userCredential.user };
     } catch (error) {
       return { success: false, error: error.message };
     }
   };
-  
-  // Sign in existing user
+
+  // Login with email and password
   const login = async (email, password) => {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
@@ -57,8 +61,8 @@ export const AuthProvider = ({ children }) => {
       return { success: false, error: error.message };
     }
   };
-  
-  // Sign out user
+
+  // Logout current user
   const logout = async () => {
     try {
       await signOut(auth);
@@ -67,8 +71,92 @@ export const AuthProvider = ({ children }) => {
       return { success: false, error: error.message };
     }
   };
-  
-  // Fetch user profile from Firestore
+
+  // Send password reset email
+  const resetPassword = async (email) => {
+    try {
+      await sendPasswordResetEmail(auth, email);
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  };
+
+  // Update user profile
+  const updateUserProfile = async (data) => {
+    try {
+      if (!currentUser) {
+        throw new Error('No user is logged in');
+      }
+      
+      // Update display name if provided
+      if (data.displayName) {
+        await updateProfile(currentUser, {
+          displayName: data.displayName
+        });
+      }
+      
+      // Update user document in Firestore
+      await updateDoc(doc(db, 'users', currentUser.uid), {
+        ...data,
+        updatedAt: serverTimestamp()
+      });
+      
+      // Update local profile state
+      setUserProfile(prev => ({
+        ...prev,
+        ...data
+      }));
+      
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  };
+
+  // Add a new address to user profile
+  const addUserAddress = async (address) => {
+    try {
+      if (!currentUser) {
+        throw new Error('No user is logged in');
+      }
+      
+      // Get current addresses
+      const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+      const userData = userDoc.data();
+      
+      // Prepare addresses array (use existing or create new)
+      const addresses = userData.addresses || [];
+      
+      // If this is the first address or isDefault is true, mark as default
+      if (addresses.length === 0 || address.isDefault) {
+        // Set all existing addresses to non-default
+        addresses.forEach(addr => addr.isDefault = false);
+        address.isDefault = true;
+      }
+      
+      // Add the new address
+      addresses.push(address);
+      
+      // Update in Firestore
+      await updateDoc(doc(db, 'users', currentUser.uid), {
+        addresses,
+        updatedAt: serverTimestamp()
+      });
+      
+      // Update local profile state
+      setUserProfile(prev => ({
+        ...prev,
+        addresses
+      }));
+      
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  };
+
+  // Fetch user profile data
   const fetchUserProfile = async (userId) => {
     try {
       const userDoc = await getDoc(doc(db, 'users', userId));
@@ -76,209 +164,22 @@ export const AuthProvider = ({ children }) => {
       if (userDoc.exists()) {
         const userData = userDoc.data();
         setUserProfile(userData);
-        return userData;
       } else {
-        console.log('No user profile found!');
-        return null;
+        setUserProfile(null);
       }
     } catch (error) {
       console.error('Error fetching user profile:', error);
-      return null;
-    }
-  };
-  
-  // Update user profile
-  const updateUserProfile = async (profileData) => {
-    try {
-      if (!currentUser) throw new Error('No authenticated user');
-      
-      // Update in Firestore
-      await setDoc(doc(db, 'users', currentUser.uid), 
-        profileData, 
-        { merge: true }
-      );
-      
-      // Refresh the profile data
-      const updatedProfile = await fetchUserProfile(currentUser.uid);
-      setUserProfile(updatedProfile);
-      
-      return { success: true };
-    } catch (error) {
-      return { success: false, error: error.message };
-    }
-  };
-  
-  // Address management functions
-  const addAddress = async (newAddress) => {
-    try {
-      if (!currentUser) throw new Error('No authenticated user');
-      
-      // Create a new address with ID
-      const addressWithId = {
-        ...newAddress,
-        id: Date.now().toString(),
-        createdAt: new Date().toISOString()
-      };
-      
-      // Get current addresses
-      const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
-      const userData = userDoc.data();
-      const currentAddresses = userData.addresses || [];
-      
-      // If setting as default, update existing addresses
-      let updatedAddresses;
-      if (addressWithId.isDefault) {
-        updatedAddresses = currentAddresses.map(addr => ({
-          ...addr,
-          isDefault: false
-        }));
-      } else {
-        updatedAddresses = [...currentAddresses];
-      }
-      
-      // Add new address
-      updatedAddresses.push(addressWithId);
-      
-      // Update in Firestore
-      await setDoc(
-        doc(db, 'users', currentUser.uid), 
-        { addresses: updatedAddresses }, 
-        { merge: true }
-      );
-      
-      // Update local state
-      setUserProfile(prev => ({
-        ...prev,
-        addresses: updatedAddresses
-      }));
-      
-      return { success: true, address: addressWithId };
-    } catch (error) {
-      return { success: false, error: error.message };
+      setUserProfile(null);
     }
   };
 
-  const updateAddress = async (addressId, updatedData) => {
-    try {
-      if (!currentUser) throw new Error('No authenticated user');
-      
-      // Get current addresses
-      const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
-      const userData = userDoc.data();
-      const currentAddresses = userData.addresses || [];
-      
-      // Find the address to update
-      const addressIndex = currentAddresses.findIndex(addr => addr.id === addressId);
-      if (addressIndex === -1) throw new Error('Address not found');
-      
-      // Handle default status changes
-      let updatedAddresses = [...currentAddresses];
-      if (updatedData.isDefault) {
-        // If setting as default, update all other addresses
-        updatedAddresses = updatedAddresses.map(addr => ({
-          ...addr,
-          isDefault: false
-        }));
-      }
-      
-      // Update the specific address
-      updatedAddresses[addressIndex] = {
-        ...updatedAddresses[addressIndex],
-        ...updatedData,
-        updatedAt: new Date().toISOString()
-      };
-      
-      // Update in Firestore
-      await setDoc(
-        doc(db, 'users', currentUser.uid), 
-        { addresses: updatedAddresses }, 
-        { merge: true }
-      );
-      
-      // Update local state
-      setUserProfile(prev => ({
-        ...prev,
-        addresses: updatedAddresses
-      }));
-      
-      return { success: true };
-    } catch (error) {
-      return { success: false, error: error.message };
-    }
-  };
-
-  const deleteAddress = async (addressId) => {
-    try {
-      if (!currentUser) throw new Error('No authenticated user');
-      
-      // Get current addresses
-      const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
-      const userData = userDoc.data();
-      const currentAddresses = userData.addresses || [];
-      
-      // Filter out the address to delete
-      const updatedAddresses = currentAddresses.filter(addr => addr.id !== addressId);
-      
-      // Update in Firestore
-      await setDoc(
-        doc(db, 'users', currentUser.uid), 
-        { addresses: updatedAddresses }, 
-        { merge: true }
-      );
-      
-      // Update local state
-      setUserProfile(prev => ({
-        ...prev,
-        addresses: updatedAddresses
-      }));
-      
-      return { success: true };
-    } catch (error) {
-      return { success: false, error: error.message };
-    }
-  };
-
-  const setDefaultAddress = async (addressId) => {
-    try {
-      if (!currentUser) throw new Error('No authenticated user');
-      
-      // Get current addresses
-      const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
-      const userData = userDoc.data();
-      const currentAddresses = userData.addresses || [];
-      
-      // Update default status
-      const updatedAddresses = currentAddresses.map(addr => ({
-        ...addr,
-        isDefault: addr.id === addressId
-      }));
-      
-      // Update in Firestore
-      await setDoc(
-        doc(db, 'users', currentUser.uid), 
-        { addresses: updatedAddresses }, 
-        { merge: true }
-      );
-      
-      // Update local state
-      setUserProfile(prev => ({
-        ...prev,
-        addresses: updatedAddresses
-      }));
-      
-      return { success: true };
-    } catch (error) {
-      return { success: false, error: error.message };
-    }
-  };
-  
-  // Monitor auth state changes
+  // Listen for auth state changes
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
       
       if (user) {
-        // Fetch the user profile when user logs in
+        // Fetch user profile when logged in
         await fetchUserProfile(user.uid);
       } else {
         setUserProfile(null);
@@ -289,25 +190,24 @@ export const AuthProvider = ({ children }) => {
     
     return unsubscribe;
   }, []);
-  
+
   const value = {
     currentUser,
     userProfile,
-    signup,
     login,
+    signup,
     logout,
+    resetPassword,
     updateUserProfile,
-    loading,
-    // Added address management functions
-    addAddress,
-    updateAddress,
-    deleteAddress,
-    setDefaultAddress
+    addUserAddress,
+    loading
   };
-  
+
   return (
     <AuthContext.Provider value={value}>
       {!loading && children}
     </AuthContext.Provider>
   );
 };
+
+export default AuthProvider;

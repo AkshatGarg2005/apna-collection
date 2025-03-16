@@ -1,126 +1,155 @@
 // src/services/orders.js
 import { 
   collection, 
-  doc, 
-  getDocs, 
-  getDoc, 
   addDoc, 
   updateDoc, 
+  doc, 
+  getDoc, 
+  getDocs, 
   query, 
   where, 
   orderBy, 
-  serverTimestamp,
-  onSnapshot 
+  serverTimestamp 
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { reduceInventory } from './inventory';
+import { createOrderNotification, createCustomerNotification } from './notifications';
 
-const ordersCollection = collection(db, 'orders');
-
-// Generate a unique order number (same as admin)
-const generateOrderNumber = () => {
+/**
+ * Generates a unique order number
+ * @returns {string} Unique order number
+ */
+export const generateOrderNumber = () => {
   const timestamp = new Date().getTime().toString().slice(-6);
   const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
   return `OD${timestamp}${random}`;
 };
 
-// Create a new order with inventory check
-export const createOrder = async (orderData, userId) => {
+/**
+ * Processes a new order
+ * @param {Object} orderData - Order data
+ * @returns {Promise<Object>} - Result object with success status and message
+ */
+export const processOrder = async (orderData) => {
   try {
-    // Check inventory before placing order
-    const items = orderData.items || [];
-    for (const item of items) {
-      const productRef = doc(db, 'products', item.productId);
-      const productSnap = await getDoc(productRef);
-      
-      if (!productSnap.exists()) {
-        throw new Error(`Product ${item.productId} does not exist`);
-      }
-      
-      const product = productSnap.data();
-      if (product.stock < item.quantity) {
-        throw new Error(`Not enough stock for ${product.name}. Available: ${product.stock}`);
-      }
+    // Check inventory first
+    const inventoryCheck = await checkInventory(orderData.items);
+    
+    if (!inventoryCheck.success) {
+      return {
+        success: false,
+        message: inventoryCheck.message,
+        outOfStockItems: inventoryCheck.missingItems
+      };
     }
     
-    // Reduce inventory
-    await reduceInventory(items);
-    
-    // Create order
+    // Generate order number
     const orderNumber = generateOrderNumber();
-    const orderToCreate = {
+    
+    // Prepare order data
+    const order = {
       ...orderData,
-      userId,
       orderNumber,
       status: 'Processing',
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     };
     
-    const docRef = await addDoc(ordersCollection, orderToCreate);
+    // Add order to database
+    const docRef = await addDoc(collection(db, 'orders'), order);
+    
+    // Reduce inventory for each ordered item
+    await reduceInventory(orderData.items);
+    
+    // Create notification for admin
+    const orderWithId = { ...order, id: docRef.id };
+    await createOrderNotification(orderWithId);
+    
+    // Create order confirmation notification for customer
+    if (orderData.userId) {
+      await createCustomerNotification(
+        orderData.userId,
+        'Order Placed Successfully',
+        `Your order #${orderNumber} has been placed successfully. We'll notify you when it's confirmed.`,
+        'order',
+        docRef.id
+      );
+    }
+    
+    // Store the recent order in localStorage for OrderConfirmation page
+    const localStorageOrder = {
+      id: docRef.id,
+      orderNumber: orderNumber,
+      date: new Date().toLocaleDateString('en-IN', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      }),
+      total: orderData.total,
+      items: orderData.items,
+      shippingAddress: orderData.shippingAddress,
+      paymentMethod: orderData.paymentMethod,
+      subtotal: orderData.subtotal,
+      shipping: orderData.shipping || 0,
+      tax: orderData.tax
+    };
+    
+    localStorage.setItem('recentOrder', JSON.stringify(localStorageOrder));
     
     return {
-      id: docRef.id,
-      ...orderToCreate,
-      status: 'Processing'
+      success: true,
+      message: 'Order placed successfully',
+      orderId: docRef.id,
+      orderNumber
     };
   } catch (error) {
-    console.error('Error creating order:', error);
+    console.error('Error processing order:', error);
+    return {
+      success: false,
+      message: 'Failed to process order. Please try again.'
+    };
+  }
+};
+
+/**
+ * Gets order details by ID
+ * @param {string} orderId - Order ID
+ * @returns {Promise<Object>} - Order object with id
+ */
+export const getOrderById = async (orderId) => {
+  try {
+    const orderDoc = await getDoc(doc(db, 'orders', orderId));
+    
+    if (!orderDoc.exists()) {
+      throw new Error('Order not found');
+    }
+    
+    return {
+      id: orderDoc.id,
+      ...orderDoc.data()
+    };
+  } catch (error) {
+    console.error('Error getting order:', error);
     throw error;
   }
 };
 
-// Subscribe to user orders (real-time)
-export const subscribeToUserOrders = (userId, callback) => {
-  const q = query(
-    ordersCollection,
-    where('userId', '==', userId),
-    orderBy('createdAt', 'desc')
-  );
-  
-  return onSnapshot(q, (snapshot) => {
-    const orders = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }));
-    callback(orders);
-  }, (error) => {
-    console.error('Error getting real-time user orders:', error);
-    callback([]);
-  });
-};
-
-// Subscribe to a single order (real-time)
-export const subscribeToOrder = (orderId, callback) => {
-  const orderRef = doc(db, 'orders', orderId);
-  
-  return onSnapshot(orderRef, (snapshot) => {
-    if (snapshot.exists()) {
-      const order = {
-        id: snapshot.id,
-        ...snapshot.data()
-      };
-      callback(order);
-    } else {
-      callback(null);
-    }
-  }, (error) => {
-    console.error('Error getting real-time order:', error);
-    callback(null);
-  });
-};
-
-// Get user orders (non-realtime, for fallback)
-export const getUserOrders = async (userId) => {
+/**
+ * Gets orders by user ID
+ * @param {string} userId - User ID
+ * @returns {Promise<Array>} - Array of order objects
+ */
+export const getOrdersByUserId = async (userId) => {
   try {
-    const q = query(
-      ordersCollection,
+    const ordersQuery = query(
+      collection(db, 'orders'),
       where('userId', '==', userId),
       orderBy('createdAt', 'desc')
     );
     
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({
+    const ordersSnapshot = await getDocs(ordersQuery);
+    
+    return ordersSnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
     }));
@@ -130,109 +159,73 @@ export const getUserOrders = async (userId) => {
   }
 };
 
-// Get a specific order by ID (non-realtime, for fallback)
-export const getOrderById = async (orderId) => {
+/**
+ * Checks if there's enough inventory for all items in the order
+ * @param {Array} items - Array of order items with productId and quantity
+ * @returns {Promise<{ success: boolean, message: string, missingItems: Array }>}
+ */
+export const checkInventory = async (items) => {
   try {
-    const docRef = doc(db, 'orders', orderId);
-    const docSnap = await getDoc(docRef);
+    const missingItems = [];
     
-    if (docSnap.exists()) {
-      return {
-        id: docSnap.id,
-        ...docSnap.data()
-      };
-    } else {
-      return null;
+    for (const item of items) {
+      if (!item.id) continue;
+      
+      const productRef = doc(db, 'products', item.id);
+      const productDoc = await getDoc(productRef);
+      
+      if (!productDoc.exists()) {
+        missingItems.push({
+          productId: item.id,
+          name: item.name || 'Unknown Product',
+          requested: item.quantity,
+          available: 0,
+          message: 'Product not found'
+        });
+        continue;
+      }
+      
+      const product = productDoc.data();
+      const currentStock = product.stock || 0;
+      
+      if (currentStock < item.quantity) {
+        missingItems.push({
+          productId: item.id,
+          name: product.name || 'Unknown Product',
+          requested: item.quantity,
+          available: currentStock,
+          message: 'Insufficient stock'
+        });
+      }
     }
+    
+    if (missingItems.length > 0) {
+      return {
+        success: false,
+        message: 'Some items are out of stock',
+        missingItems
+      };
+    }
+    
+    return {
+      success: true,
+      message: 'All items are in stock',
+      missingItems: []
+    };
   } catch (error) {
-    console.error('Error getting order:', error);
-    throw error;
+    console.error('Error checking inventory:', error);
+    return {
+      success: false,
+      message: 'Error checking inventory',
+      missingItems: []
+    };
   }
 };
 
-// Cancel an order (if still possible)
-export const cancelOrder = async (orderId, userId, cancelReason = '') => {
-  try {
-    const orderRef = doc(db, 'orders', orderId);
-    const orderSnap = await getDoc(orderRef);
-    
-    if (!orderSnap.exists()) {
-      throw new Error('Order not found');
-    }
-    
-    const order = orderSnap.data();
-    
-    // Check if order belongs to user
-    if (order.userId !== userId) {
-      throw new Error('Unauthorized access to this order');
-    }
-    
-    // Check if order can be cancelled
-    if (['Delivered', 'Cancelled'].includes(order.status)) {
-      throw new Error(`Cannot cancel order with status: ${order.status}`);
-    }
-    
-    // Update order status
-    await updateDoc(orderRef, {
-      status: 'Cancelled',
-      cancelReason,
-      cancelledAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
-    });
-    
-    // Note: Inventory restoration is handled by admin
-    
-    return { success: true };
-  } catch (error) {
-    console.error('Error cancelling order:', error);
-    throw error;
-  }
-};
-
-// Get order status info for display
-export const getOrderStatusInfo = (status) => {
-  switch (status) {
-    case 'Processing':
-      return {
-        label: 'Processing',
-        description: 'Your order has been received and is being processed.',
-        color: '#2196f3',
-        icon: 'fas fa-spinner fa-spin'
-      };
-    case 'Accepted':
-      return {
-        label: 'Confirmed',
-        description: 'Your order has been confirmed and is being prepared.',
-        color: '#9c27b0',
-        icon: 'fas fa-check-circle'
-      };
-    case 'Shipped':
-      return {
-        label: 'Shipped',
-        description: 'Your order has been shipped and is on its way.',
-        color: '#ff9800',
-        icon: 'fas fa-shipping-fast'
-      };
-    case 'Delivered':
-      return {
-        label: 'Delivered',
-        description: 'Your order has been delivered successfully.',
-        color: '#4caf50',
-        icon: 'fas fa-box-open'
-      };
-    case 'Cancelled':
-      return {
-        label: 'Cancelled',
-        description: 'Your order has been cancelled.',
-        color: '#f44336',
-        icon: 'fas fa-times-circle'
-      };
-    default:
-      return {
-        label: status || 'Processing',
-        description: 'Your order is being processed.',
-        color: '#2196f3',
-        icon: 'fas fa-spinner'
-      };
-  }
+export default {
+  generateOrderNumber,
+  processOrder,
+  getOrderById,
+  getOrdersByUserId,
+  checkInventory
 };
