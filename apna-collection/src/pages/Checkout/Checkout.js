@@ -301,13 +301,52 @@ const Checkout = () => {
     setSelectedAddressId(addressId);
   };
   
-  // Handle contact info changes
+  // Handle contact info changes - UPDATED WITH REAL-TIME PHONE UPDATE
   const handleContactInfoChange = (e) => {
     const { name, value } = e.target;
     setContactInfo(prev => ({
       ...prev,
       [name]: value
     }));
+    
+    // If phone number is being changed, update it in the database immediately
+    if (name === 'phone' && value && value.trim().length >= 10 && validatePhoneNumber(value)) {
+      updateUserPhoneInDatabase(value);
+    }
+  };
+  
+  // NEW FUNCTION: Update phone number in database
+  const updateUserPhoneInDatabase = async (phoneNumber) => {
+    if (!currentUser || !currentUser.uid) return;
+    
+    try {
+      console.log("Updating phone number in database:", phoneNumber);
+      const userRef = doc(db, 'users', currentUser.uid);
+      
+      // Update the user profile in Firestore with the phone number
+      await updateDoc(userRef, {
+        phone: phoneNumber,
+        updatedAt: serverTimestamp()
+      });
+      
+      console.log("✅ Phone number updated successfully in database");
+      
+      // Optional: Show a subtle notification
+      const phoneInput = document.querySelector('input[name="phone"]');
+      if (phoneInput) {
+        phoneInput.style.transition = 'all 0.3s ease';
+        phoneInput.style.borderColor = '#28a745';
+        phoneInput.style.backgroundColor = 'rgba(40, 167, 69, 0.05)';
+        
+        setTimeout(() => {
+          phoneInput.style.borderColor = '';
+          phoneInput.style.backgroundColor = '';
+        }, 2000);
+      }
+      
+    } catch (error) {
+      console.error("Failed to update phone number in database:", error);
+    }
   };
   
   // Handle payment method change
@@ -573,7 +612,7 @@ const Checkout = () => {
     }, 5000);
   };
   
-  // Enhanced place order with advanced animation, validation, and order saving
+  // Enhanced place order with advanced animation, validation, and order saving - UPDATED
   const handlePlaceOrder = async () => {
     // Reset any previous error
     setPhoneError('');
@@ -589,6 +628,12 @@ const Checkout = () => {
         phoneInput.focus();
       }
       return; // Stop the checkout process
+    }
+    
+    // Make sure to update phone number in database before proceeding
+    // This ensures the phone is saved even if the order process fails
+    if (currentUser?.uid && contactInfo.phone) {
+      await updateUserPhoneInDatabase(contactInfo.phone);
     }
     
     // Create a local copy of the order summary data to avoid conflicts with DOM element variables
@@ -642,22 +687,6 @@ const Checkout = () => {
       // Verify user is logged in
       if (!currentUser || !currentUser.uid) {
         throw new Error("User not logged in. Please log in to place an order.");
-      }
-      
-      // Update the user's phone number in their profile if needed
-      if (currentUser.uid && contactInfo.phone) {
-        try {
-          // Update the user profile in Firestore with the phone number
-          const userRef = doc(db, 'users', currentUser.uid);
-          await updateDoc(userRef, {
-            phone: contactInfo.phone,
-            updatedAt: serverTimestamp()
-          });
-          console.log("User phone number updated in database");
-        } catch (profileError) {
-          console.error("Error updating user phone:", profileError);
-          // Continue with order process even if profile update fails
-        }
       }
       
       // 1. Sanitize the shipping address to avoid null/undefined values

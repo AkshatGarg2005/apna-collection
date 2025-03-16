@@ -24,6 +24,7 @@ export const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [loadingProfile, setLoadingProfile] = useState(false);
 
   // Sign up with email and password
   const signup = async (email, password, name, phone) => {
@@ -173,6 +174,31 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Explicitly refresh the user profile
+  const refreshUserProfile = async (userId) => {
+    if (!userId) return;
+    
+    try {
+      setLoadingProfile(true);
+      
+      const userDocRef = doc(db, 'users', userId);
+      const userSnapshot = await getDoc(userDocRef);
+      
+      if (userSnapshot.exists()) {
+        // Update the userProfile state with the latest data from Firestore
+        const userData = userSnapshot.data();
+        setUserProfile(userData);
+        console.log("User profile refreshed successfully:", userData);
+      } else {
+        console.log("No user profile found for refresh");
+      }
+    } catch (error) {
+      console.error("Error refreshing user profile:", error);
+    } finally {
+      setLoadingProfile(false);
+    }
+  };
+
   // Listen for auth state changes
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -194,13 +220,15 @@ export const AuthProvider = ({ children }) => {
   const value = {
     currentUser,
     userProfile,
+    loadingProfile,
     login,
     signup,
     logout,
     resetPassword,
     updateUserProfile,
     addUserAddress,
-    loading
+    loading,
+    refreshUserProfile // Add the refreshUserProfile function to the context
   };
 
   return (
