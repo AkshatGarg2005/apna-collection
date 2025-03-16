@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
+import { collection, addDoc, updateDoc, doc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../../firebase/config';
 import './Checkout.css';
 
 const Checkout = () => {
@@ -539,7 +541,7 @@ const Checkout = () => {
   };
   
   // Enhanced place order with advanced animation and order saving
-  const handlePlaceOrder = () => {
+  const handlePlaceOrder = async () => {
     // Store the original button width and text for consistency
     const button = document.querySelector('.place-order-btn');
     if (button) {
@@ -576,36 +578,99 @@ const Checkout = () => {
     // Create a progress indication
     createProgressAnimation();
     
-    // Create order object with all necessary details
-    const order = {
-      id: 'AC' + Math.floor(10000000 + Math.random() * 90000000),
-      date: new Date().toLocaleDateString('en-IN', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      }),
-      items: cartItems,
-      shippingAddress: addresses.find(addr => addr.id === selectedAddressId),
-      paymentMethod: paymentMethod,
-      subtotal: summary.subtotal,
-      discount: summary.discount,
-      tax: summary.gst,
-      shipping: summary.shipping || 0,
-      total: summary.total,
-      status: 'Processing',
-      userId: currentUser?.uid
-    };
-    
-    // Store order in localStorage for demo purposes
-    // In a real app, you would save this to Firestore
-    const existingOrders = JSON.parse(localStorage.getItem('orders') || '[]');
-    localStorage.setItem('orders', JSON.stringify([...existingOrders, order]));
-    
-    // Store the most recent order for order confirmation page
-    localStorage.setItem('recentOrder', JSON.stringify(order));
-    
-    // Simulate order processing (would be an API call in real app)
-    setTimeout(() => {
+    try {
+      console.log("Starting order placement");
+      
+      // 1. Sanitize the shipping address to avoid null/undefined values
+      const selectedAddress = addresses.find(addr => addr.id === selectedAddressId) || {};
+      const sanitizedAddress = {
+        id: selectedAddress.id || '',
+        type: selectedAddress.type || '',
+        address: selectedAddress.address || '',
+        city: selectedAddress.city || '',
+        state: selectedAddress.state || '',
+        pincode: selectedAddress.pincode || '',
+        phone: selectedAddress.phone || contactInfo.phone || ''
+      };
+      
+      // 2. Sanitize items to ensure they have valid properties
+      const sanitizedItems = cartItems.map(item => ({
+        id: item.id || '',
+        name: item.name || 'Product',
+        price: Number(item.price) || 0,
+        quantity: Number(item.quantity) || 1,
+        size: item.size || '',
+        color: item.color || '',
+        image: item.image || ''
+      }));
+      
+      // 3. Create a simplified order object
+      const orderData = {
+        orderNumber: 'OD' + Math.floor(1000000 + Math.random() * 9000000),
+        items: sanitizedItems,
+        shippingAddress: sanitizedAddress,
+        paymentMethod: paymentMethod || 'codPayment',
+        subtotal: Number(summary.subtotal) || 0,
+        discount: Number(summary.discount) || 0,
+        tax: Number(summary.gst) || 0,
+        shipping: Number(summary.shipping) || 0,
+        total: Number(summary.total) || 0,
+        status: 'Processing',
+        userId: currentUser?.uid || null,
+        email: contactInfo.email || '',
+        phone: contactInfo.phone || '',
+        orderNotes: contactInfo.orderNotes || '',
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      };
+      
+      console.log("Saving order with data:", JSON.stringify(orderData));
+      
+      // 4. Add the order to Firestore
+      const docRef = await addDoc(collection(db, 'orders'), {
+        orderNumber: orderData.orderNumber,
+        status: orderData.status,
+        createdAt: orderData.createdAt,
+        updatedAt: orderData.updatedAt
+      });
+      
+      console.log("Basic order created with ID:", docRef.id);
+      
+      // 5. Update with complete details
+      const orderDetails = {
+        items: orderData.items,
+        shippingAddress: orderData.shippingAddress,
+        paymentMethod: orderData.paymentMethod,
+        subtotal: orderData.subtotal,
+        discount: orderData.discount,
+        tax: orderData.tax,
+        shipping: orderData.shipping,
+        total: orderData.total,
+        userId: orderData.userId,
+        email: orderData.email,
+        phone: orderData.phone,
+        orderNotes: orderData.orderNotes
+      };
+      
+      await updateDoc(doc(db, 'orders', docRef.id), orderDetails);
+      console.log("Order successfully completed!");
+      
+      // Store for confirmation page
+      const orderForStorage = {
+        ...orderData,
+        id: docRef.id,
+        date: new Date().toLocaleDateString('en-IN', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        })
+      };
+      
+      localStorage.setItem('recentOrder', JSON.stringify(orderForStorage));
+      
+      // Clear cart
+      clearCart();
+      
       // Flash summary section
       const summary = document.querySelector('.checkout-summary .checkout-section');
       if (summary) {
@@ -616,9 +681,6 @@ const Checkout = () => {
           summary.style.boxShadow = '';
         }, 800);
       }
-      
-      // Clear the cart
-      clearCart();
       
       // Set success state
       setOrderButtonState({
@@ -637,7 +699,46 @@ const Checkout = () => {
       setTimeout(() => {
         navigate('/order-confirmation');
       }, 2200);
-    }, 2500);
+    } catch (error) {
+      console.error("Error creating order:", error);
+      
+      if (error.code) {
+        console.error("Firebase error code:", error.code);
+      }
+      
+      // Show error state
+      setOrderButtonState({
+        isLoading: false,
+        isSuccess: false,
+        text: 'Error! Try Again',
+        icon: 'fas fa-exclamation-circle'
+      });
+      
+      // Show an error message to the user
+      const errorMessage = document.createElement('div');
+      errorMessage.className = 'error-message';
+      errorMessage.textContent = 'There was an error processing your order. Please try again.';
+      errorMessage.style.color = '#dc3545';
+      errorMessage.style.padding = '10px';
+      errorMessage.style.marginTop = '10px';
+      errorMessage.style.textAlign = 'center';
+      
+      const orderButton = document.querySelector('.place-order-btn');
+      if (orderButton && orderButton.parentNode) {
+        orderButton.parentNode.insertBefore(errorMessage, orderButton.nextSibling);
+        
+        // Remove error message after a few seconds
+        setTimeout(() => {
+          errorMessage.remove();
+          setOrderButtonState({
+            isLoading: false,
+            isSuccess: false,
+            text: 'Place Order',
+            icon: 'fas fa-lock'
+          });
+        }, 5000);
+      }
+    }
   };
   
   // Show add address form
