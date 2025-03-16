@@ -11,6 +11,15 @@ const Checkout = () => {
   const { currentUser, userProfile } = useAuth();
   const { cart, calculateCartTotals, clearCart } = useCart();
   
+  // Phone validation state and function
+  const [phoneError, setPhoneError] = useState('');
+  
+  const validatePhoneNumber = (phone) => {
+    // Basic validation: Must be at least 10 digits
+    const phoneRegex = /^\d{10,}$/;
+    return phoneRegex.test(phone.replace(/\D/g, '')); // Remove non-digits before testing
+  };
+  
   // Cart items state - now connected to cart context
   const [cartItems, setCartItems] = useState([]);
   
@@ -24,11 +33,10 @@ const Checkout = () => {
     }
   }, [cart, navigate]);
   
-  // Address states
+  // Load user addresses
   const [addresses, setAddresses] = useState([]);
   const [selectedAddressId, setSelectedAddressId] = useState('');
   
-  // Load user addresses
   useEffect(() => {
     if (userProfile?.addresses && userProfile.addresses.length > 0) {
       setAddresses(userProfile.addresses);
@@ -43,16 +51,8 @@ const Checkout = () => {
     }
   }, [userProfile]);
   
-  // Form states
-  const [contactInfo, setContactInfo] = useState({
-    fullName: 'Rahul Sharma',
-    email: 'rahul.sharma@example.com',
-    phone: '9876543210',
-    orderNotes: ''
-  });
-  
-  // Payment method state
-  const [paymentMethod, setPaymentMethod] = useState('cardPayment');
+  // Payment method state - defaulting to COD
+  const [paymentMethod, setPaymentMethod] = useState('codPayment');
   
   // Payment details states
   const [cardDetails, setCardDetails] = useState({
@@ -70,10 +70,31 @@ const Checkout = () => {
     bank: ''
   });
   
-  // Summary state
+  // Form states
+  const [contactInfo, setContactInfo] = useState({
+    fullName: '',
+    email: '',
+    phone: '',
+    orderNotes: ''
+  });
+  
+  // Load user profile data when available
+  useEffect(() => {
+    if (currentUser || userProfile) {
+      setContactInfo(prevInfo => ({
+        ...prevInfo,
+        fullName: userProfile?.displayName || currentUser?.displayName || '',
+        email: currentUser?.email || '',
+        phone: userProfile?.phone || ''
+      }));
+    }
+  }, [currentUser, userProfile]);
+  
+  // Summary state (updated to include shipping)
   const [summary, setSummary] = useState({
     subtotal: 0,
     discount: 0,
+    shipping: 0,
     gst: 0,
     total: 0
   });
@@ -81,6 +102,7 @@ const Checkout = () => {
   // Animation references
   const subtotalRef = useRef(null);
   const discountRef = useRef(null);
+  const shippingRef = useRef(null);  // Added reference for shipping
   const gstRef = useRef(null);
   const totalRef = useRef(null);
   
@@ -103,29 +125,33 @@ const Checkout = () => {
   // Calculate order summary
   useEffect(() => {
     calculateOrderSummary();
-  }, [cartItems, coupon.discount]);
+  }, [cartItems, coupon.discount, coupon.isValid]);
   
   const calculateOrderSummary = () => {
     // Calculate subtotal
     const subtotal = cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
     
-    // Calculate discount
-    const discount = Math.round(subtotal * coupon.discount);
+    // Calculate discount (only if coupon is valid)
+    const discount = coupon.isValid ? Math.round(subtotal * coupon.discount) : 0;
     
     // Calculate amount after discount
     const afterDiscount = subtotal - discount;
     
-    // Calculate GST (18%)
+    // Calculate shipping - free for orders over ₹1000
+    const shipping = subtotal > 1000 ? 0 : 99;
+    
+    // Calculate GST (18%) on discounted amount
     const gst = Math.round(afterDiscount * 0.18);
     
     // Calculate total
-    const total = afterDiscount + gst;
+    const total = afterDiscount + gst + shipping;
     
     // Update state with new values
     setSummary(prevSummary => {
       const newSummary = {
         subtotal,
         discount,
+        shipping,
         gst,
         total
       };
@@ -134,6 +160,7 @@ const Checkout = () => {
       if (prevSummary.subtotal !== 0) {
         if (prevSummary.subtotal !== subtotal) animateValue(subtotalRef.current, prevSummary.subtotal, subtotal);
         if (prevSummary.discount !== discount) animateValue(discountRef.current, prevSummary.discount, discount, true);
+        if (prevSummary.shipping !== shipping && shippingRef.current) animateValue(shippingRef.current, prevSummary.shipping, shipping);
         if (prevSummary.gst !== gst) animateValue(gstRef.current, prevSummary.gst, gst);
         if (prevSummary.total !== total) animateValue(totalRef.current, prevSummary.total, total, false, true);
       }
@@ -149,6 +176,12 @@ const Checkout = () => {
     const duration = 800;
     const startTime = performance.now();
     const prefix = isDiscount ? '-₹' : '₹';
+    
+    // Handling free shipping
+    if (end === 0 && element === shippingRef.current) {
+      element.textContent = 'Free';
+      return;
+    }
     
     // Highlight the element
     element.style.transition = 'all 0.3s ease';
@@ -540,12 +573,29 @@ const Checkout = () => {
     }, 5000);
   };
   
-  // Enhanced place order with advanced animation and order saving
+  // Enhanced place order with advanced animation, validation, and order saving
   const handlePlaceOrder = async () => {
+    // Reset any previous error
+    setPhoneError('');
+    
+    // Validate phone number
+    if (!contactInfo.phone || !validatePhoneNumber(contactInfo.phone)) {
+      setPhoneError('Please add a valid phone number to continue with checkout.');
+      
+      // Scroll to phone input field
+      const phoneInput = document.querySelector('input[name="phone"]');
+      if (phoneInput) {
+        phoneInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        phoneInput.focus();
+      }
+      return; // Stop the checkout process
+    }
+    
     // Create a local copy of the order summary data to avoid conflicts with DOM element variables
     const orderSummary = {
       subtotal: summary.subtotal,
       discount: summary.discount,
+      shipping: summary.shipping,
       gst: summary.gst,
       total: summary.total
     };
@@ -594,6 +644,22 @@ const Checkout = () => {
         throw new Error("User not logged in. Please log in to place an order.");
       }
       
+      // Update the user's phone number in their profile if needed
+      if (currentUser.uid && contactInfo.phone) {
+        try {
+          // Update the user profile in Firestore with the phone number
+          const userRef = doc(db, 'users', currentUser.uid);
+          await updateDoc(userRef, {
+            phone: contactInfo.phone,
+            updatedAt: serverTimestamp()
+          });
+          console.log("User phone number updated in database");
+        } catch (profileError) {
+          console.error("Error updating user phone:", profileError);
+          // Continue with order process even if profile update fails
+        }
+      }
+      
       // 1. Sanitize the shipping address to avoid null/undefined values
       const selectedAddress = addresses.find(addr => addr.id === selectedAddressId) || {};
       const sanitizedAddress = {
@@ -627,18 +693,18 @@ const Checkout = () => {
         orderNumber: orderNumber,
         items: sanitizedItems,
         shippingAddress: sanitizedAddress,
-        paymentMethod: paymentMethod || 'codPayment',
+        paymentMethod: 'codPayment', // Always use COD
         subtotal: Number(orderSummary.subtotal) || 0,
         discount: Number(orderSummary.discount) || 0,
+        shipping: Number(orderSummary.shipping) || 0,
         gst: Number(orderSummary.gst) || 0,
-        shipping: 0,
         total: Number(orderSummary.total) || 0,
         status: 'Processing',
         userId: currentUser.uid,  // CRITICAL - this field is how orders are linked to users
         email: contactInfo.email || currentUser.email || '',
         phone: contactInfo.phone || '',
         orderNotes: contactInfo.orderNotes || '',
-        paymentStatus: paymentMethod === 'codPayment' ? 'Pending' : 'Paid',
+        paymentStatus: 'Pending', // Always pending for COD
         createdAt: serverTimestamp(),  // CRITICAL - this is used for ordering in the admin panel
         updatedAt: serverTimestamp()
       };
@@ -919,20 +985,36 @@ const Checkout = () => {
                     onChange={handleContactInfoChange}
                     required 
                   />
+                  {currentUser?.email && contactInfo.email !== currentUser.email && (
+                    <div className="field-note">
+                      <i className="fas fa-info-circle"></i> This email is different from your account email.
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="form-col">
                 <div className="form-group">
-                  <label className="form-label">Phone Number*</label>
+                  <label className="form-label">Phone Number* <span className="required-field">Required</span></label>
                   <input 
                     type="tel" 
-                    className="form-input" 
+                    className={`form-input ${phoneError ? 'input-error' : ''}`}
                     placeholder="Your phone number" 
                     name="phone"
                     value={contactInfo.phone} 
-                    onChange={handleContactInfoChange}
+                    onChange={(e) => {
+                      handleContactInfoChange(e);
+                      if (phoneError) setPhoneError(''); // Clear error on change
+                    }}
                     required 
                   />
+                  {phoneError && (
+                    <div className="error-message">
+                      <i className="fas fa-exclamation-circle"></i> {phoneError}
+                    </div>
+                  )}
+                  <div className="field-note">
+                    <i className="fas fa-info-circle"></i> Your phone number will be used for delivery updates
+                  </div>
                 </div>
               </div>
             </div>
@@ -957,164 +1039,52 @@ const Checkout = () => {
               <div className="payment-method">
                 <input 
                   type="radio" 
-                  id="cardPayment" 
-                  name="paymentMethod" 
-                  className="payment-radio" 
-                  checked={paymentMethod === 'cardPayment'} 
-                  onChange={handlePaymentMethodChange}
-                />
-                <label htmlFor="cardPayment" className="payment-label">
-                  <i className="fas fa-credit-card payment-icon"></i>
-                  <span className="payment-name">Credit/Debit Card</span>
-                </label>
-              </div>
-              
-              <div className="payment-method">
-                <input 
-                  type="radio" 
-                  id="upiPayment" 
-                  name="paymentMethod" 
-                  className="payment-radio" 
-                  checked={paymentMethod === 'upiPayment'} 
-                  onChange={handlePaymentMethodChange}
-                />
-                <label htmlFor="upiPayment" className="payment-label">
-                  <i className="fas fa-mobile-alt payment-icon"></i>
-                  <span className="payment-name">UPI</span>
-                </label>
-              </div>
-              
-              <div className="payment-method">
-                <input 
-                  type="radio" 
-                  id="netBankingPayment" 
-                  name="paymentMethod" 
-                  className="payment-radio" 
-                  checked={paymentMethod === 'netBankingPayment'} 
-                  onChange={handlePaymentMethodChange}
-                />
-                <label htmlFor="netBankingPayment" className="payment-label">
-                  <i className="fas fa-university payment-icon"></i>
-                  <span className="payment-name">Net Banking</span>
-                </label>
-              </div>
-              
-              <div className="payment-method">
-                <input 
-                  type="radio" 
                   id="codPayment" 
                   name="paymentMethod" 
                   className="payment-radio" 
-                  checked={paymentMethod === 'codPayment'} 
-                  onChange={handlePaymentMethodChange}
+                  checked={true} // Always checked
+                  readOnly // Cannot be changed
                 />
-                <label htmlFor="codPayment" className="payment-label">
+                <label htmlFor="codPayment" className="payment-label active-payment">
                   <i className="fas fa-money-bill-wave payment-icon"></i>
                   <span className="payment-name">Cash on Delivery</span>
                 </label>
               </div>
-            </div>
-            
-            {/* Card Payment Details */}
-            <div className={`payment-details ${paymentMethod === 'cardPayment' ? 'active' : ''}`} id="cardPaymentDetails">
-              <div className="form-group">
-                <label className="form-label">Card Number*</label>
-                <input 
-                  type="text" 
-                  className="form-input" 
-                  placeholder="Card number" 
-                  name="cardNumber"
-                  value={cardDetails.cardNumber}
-                  onChange={handleCardDetailsChange}
-                  required 
-                />
-              </div>
               
-              <div className="form-row">
-                <div className="form-col">
-                  <div className="form-group">
-                    <label className="form-label">Expiry Date*</label>
-                    <input 
-                      type="text" 
-                      className="form-input" 
-                      placeholder="MM/YY" 
-                      name="expiryDate"
-                      value={cardDetails.expiryDate}
-                      onChange={handleCardDetailsChange}
-                      required 
-                    />
-                  </div>
-                </div>
-                <div className="form-col">
-                  <div className="form-group">
-                    <label className="form-label">CVV*</label>
-                    <input 
-                      type="text" 
-                      className="form-input" 
-                      placeholder="CVV" 
-                      name="cvv"
-                      value={cardDetails.cvv}
-                      onChange={handleCardDetailsChange}
-                      required 
-                    />
-                  </div>
+              <div className="payment-method coming-soon">
+                <div className="coming-soon-badge">Coming Soon</div>
+                <div className="payment-label disabled-payment">
+                  <i className="fas fa-credit-card payment-icon"></i>
+                  <span className="payment-name">Credit/Debit Card</span>
                 </div>
               </div>
               
-              <div className="form-group">
-                <label className="form-label">Name on Card*</label>
-                <input 
-                  type="text" 
-                  className="form-input" 
-                  placeholder="Name on card" 
-                  name="nameOnCard"
-                  value={cardDetails.nameOnCard}
-                  onChange={handleCardDetailsChange}
-                  required 
-                />
-              </div>
-            </div>
-            
-            {/* UPI Payment Details */}
-            <div className={`payment-details ${paymentMethod === 'upiPayment' ? 'active' : ''}`} id="upiPaymentDetails">
-              <div className="form-group">
-                <label className="form-label">UPI ID*</label>
-                <input 
-                  type="text" 
-                  className="form-input" 
-                  placeholder="yourname@upi" 
-                  name="upiId"
-                  value={upiDetails.upiId}
-                  onChange={handleUpiDetailsChange}
-                  required 
-                />
-              </div>
-            </div>
-            
-            {/* Net Banking Payment Details */}
-            <div className={`payment-details ${paymentMethod === 'netBankingPayment' ? 'active' : ''}`} id="netBankingDetails">
-              <div className="form-group">
-                <label className="form-label">Select Bank*</label>
-                <select 
-                  className="form-input" 
-                  name="bank"
-                  value={netBankingDetails.bank}
-                  onChange={handleNetBankingDetailsChange}
-                  required
-                >
-                  <option value="">Select Bank</option>
-                  <option value="sbi">State Bank of India</option>
-                  <option value="hdfc">HDFC Bank</option>
-                  <option value="icici">ICICI Bank</option>
-                  <option value="axis">Axis Bank</option>
-                  <option value="other">Other Bank</option>
-                </select>
+              <div className="payment-method coming-soon">
+                <div className="coming-soon-badge">Coming Soon</div>
+                <div className="payment-label disabled-payment">
+                  <i className="fas fa-mobile-alt payment-icon"></i>
+                  <span className="payment-name">UPI</span>
+                </div>
               </div>
             </div>
             
             {/* COD Payment Details */}
-            <div className={`payment-details ${paymentMethod === 'codPayment' ? 'active' : ''}`} id="codDetails">
+            <div className="payment-details active" id="codDetails">
               <p>Pay with cash upon delivery. Please keep exact change handy to help our delivery associates.</p>
+              <div className="cod-info">
+                <div className="info-item">
+                  <i className="fas fa-check-circle"></i>
+                  <span>No advance payment required</span>
+                </div>
+                <div className="info-item">
+                  <i className="fas fa-check-circle"></i>
+                  <span>Cash, UPI & card payments accepted at delivery</span>
+                </div>
+                <div className="info-item">
+                  <i className="fas fa-check-circle"></i>
+                  <span>Verify your product before payment</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -1141,7 +1111,9 @@ const Checkout = () => {
             
             <div className="summary-row">
               <div className="summary-label"><i className="fas fa-truck" style={{ color: '#c59b6d' }}></i> Delivery Charges</div>
-              <div className="summary-value" id="summary-delivery">Free</div>
+              <div className="summary-value" id="summary-delivery" ref={shippingRef}>
+                {summary.shipping === 0 ? 'Free' : `₹${summary.shipping}`}
+              </div>
             </div>
             
             <div className="summary-row summary-total">

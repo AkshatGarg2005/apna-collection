@@ -1,14 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useCart } from '../../context/CartContext'; // Add this import
+import { useCart } from '../../context/CartContext';
 
 const Cart = () => {
-  const { cart, removeFromCart, updateCartItemQuantity } = useCart(); // Get data from context
+  const { cart, removeFromCart, updateCartItemQuantity } = useCart();
   const [promoCode, setPromoCode] = useState('');
-  const [discount, setDiscount] = useState(500);
+  const [discount, setDiscount] = useState(0);
   const [shippingFee, setShippingFee] = useState(99);
-  const [isPromoApplied, setIsPromoApplied] = useState(true);
+  const [isPromoApplied, setIsPromoApplied] = useState(false);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const [promoError, setPromoError] = useState('');
+  const [promoSuccess, setPromoSuccess] = useState('');
   const navigate = useNavigate();
   
   // References for animated values
@@ -51,17 +53,39 @@ const Cart = () => {
 
   // Apply promo code
   const applyPromoCode = () => {
+    // Reset previous messages
+    setPromoError('');
+    setPromoSuccess('');
+    
     if (promoCode.trim() === '') {
-      alert('Please enter a valid promo code.');
+      setPromoError('Please enter a valid promo code.');
       return;
     }
     
-    // In a real app, you would validate the promo code against a database
-    // For now, just show a success message and apply a fixed discount
-    alert('Promo code applied successfully!');
-    setDiscount(500);
-    setIsPromoApplied(true);
-    setPromoCode('');
+    // Validate against specific promo codes
+    const code = promoCode.trim().toUpperCase();
+    const subtotal = calculateSubtotal();
+    
+    if (code === 'WELCOME10') {
+      const discountAmount = Math.floor(subtotal * 0.1); // 10% discount
+      setDiscount(discountAmount);
+      setIsPromoApplied(true);
+      setPromoSuccess('Promo code applied successfully!');
+    } else if (code === 'APNA20') {
+      const discountAmount = Math.floor(subtotal * 0.2); // 20% discount
+      setDiscount(discountAmount);
+      setIsPromoApplied(true);
+      setPromoSuccess('Promo code applied successfully!');
+    } else if (code === 'FLAT500') {
+      setDiscount(500);
+      setIsPromoApplied(true);
+      setPromoSuccess('Promo code applied successfully!');
+    } else {
+      setPromoError('Invalid promo code. Please try another code.');
+      return;
+    }
+    
+    setPromoCode(''); // Clear the input field after successful application
   };
 
   // Animation for counting up/down
@@ -116,8 +140,17 @@ const Cart = () => {
 
   // Calculate order summary values
   const subtotal = calculateSubtotal();
-  const tax = Math.round(subtotal * TAX_RATE);
-  const total = subtotal + tax - discount + shippingFee;
+  
+  // Determine shipping fee - free for orders over ₹1000
+  const actualShippingFee = subtotal > 1000 ? 0 : 99;
+  useEffect(() => {
+    setShippingFee(subtotal > 1000 ? 0 : 99);
+  }, [subtotal]);
+
+  // Calculate tax based on post-discount subtotal (for consistency with checkout)
+  const discountedSubtotal = subtotal - discount;
+  const tax = Math.round(discountedSubtotal * TAX_RATE);
+  const total = discountedSubtotal + tax + actualShippingFee;
 
   // Update item subtotals when quantities change
   useEffect(() => {
@@ -163,7 +196,7 @@ const Cart = () => {
       animateValue(totalRef.current, total, setDisplayTotal);
       totalRef.current = total;
     }
-  }, [subtotal, tax, total]);
+  }, [subtotal, tax, total, discount]);
 
   // Initialize display values on component mount
   useEffect(() => {
@@ -485,6 +518,19 @@ const Cart = () => {
             <span id="cart-subtotal" className="animated-value">{formatCurrency(displaySubtotal)}</span>
           </div>
           
+          {isPromoApplied && (
+            <div className="summary-row discount" style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              marginBottom: '15px',
+              fontSize: '1rem',
+              color: '#28a745'
+            }}>
+              <span>Discount</span>
+              <span id="cart-discount">{formatCurrency(-discount)}</span>
+            </div>
+          )}
+          
           <div className="summary-row" style={{
             display: 'flex',
             justifyContent: 'space-between',
@@ -496,17 +542,6 @@ const Cart = () => {
             <span id="cart-tax" className="animated-value">{formatCurrency(displayTax)}</span>
           </div>
           
-          <div className="summary-row discount" style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            marginBottom: '15px',
-            fontSize: '1rem',
-            color: '#28a745'
-          }}>
-            <span>Discount</span>
-            <span id="cart-discount">{formatCurrency(-discount)}</span>
-          </div>
-          
           <div className="summary-row" style={{
             display: 'flex',
             justifyContent: 'space-between',
@@ -515,7 +550,7 @@ const Cart = () => {
             color: '#555'
           }}>
             <span>Shipping</span>
-            <span id="cart-shipping">{formatCurrency(shippingFee)}</span>
+            <span id="cart-shipping">{subtotal > 1000 ? 'Free' : formatCurrency(shippingFee)}</span>
           </div>
           
           <div className="summary-row total" style={{
@@ -578,6 +613,18 @@ const Cart = () => {
                 }}
               >Apply</button>
             </div>
+            
+            {promoError && (
+              <div style={{ color: '#dc3545', fontSize: '0.9rem', marginBottom: '15px' }}>
+                {promoError}
+              </div>
+            )}
+            
+            {promoSuccess && (
+              <div style={{ color: '#28a745', fontSize: '0.9rem', marginBottom: '15px' }}>
+                {promoSuccess}
+              </div>
+            )}
           </div>
           
           <button 
