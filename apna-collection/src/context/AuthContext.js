@@ -115,8 +115,8 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Add a new address to user profile
-  const addUserAddress = async (address) => {
+  // Add a new address
+  const addAddress = async (addressData) => {
     try {
       if (!currentUser) {
         throw new Error('No user is logged in');
@@ -129,15 +129,78 @@ export const AuthProvider = ({ children }) => {
       // Prepare addresses array (use existing or create new)
       const addresses = userData.addresses || [];
       
+      // Generate a unique ID for the address
+      const addressId = Date.now().toString();
+      const newAddress = {
+        id: addressId,
+        ...addressData,
+        createdAt: new Date().toISOString()
+      };
+      
       // If this is the first address or isDefault is true, mark as default
-      if (addresses.length === 0 || address.isDefault) {
+      if (addresses.length === 0 || addressData.isDefault) {
         // Set all existing addresses to non-default
         addresses.forEach(addr => addr.isDefault = false);
-        address.isDefault = true;
+        newAddress.isDefault = true;
       }
       
       // Add the new address
-      addresses.push(address);
+      addresses.push(newAddress);
+      
+      // Update in Firestore
+      await updateDoc(doc(db, 'users', currentUser.uid), {
+        addresses,
+        updatedAt: serverTimestamp()
+      });
+      
+      // Update local profile state
+      setUserProfile(prev => ({
+        ...prev,
+        addresses
+      }));
+      
+      return { success: true, addressId };
+    } catch (error) {
+      console.error('Error adding address:', error);
+      return { success: false, error: error.message };
+    }
+  };
+
+  // Update an existing address
+  const updateAddress = async (addressId, addressData) => {
+    try {
+      if (!currentUser) {
+        throw new Error('No user is logged in');
+      }
+      
+      // Get current addresses
+      const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+      const userData = userDoc.data();
+      
+      if (!userData.addresses) {
+        throw new Error('No addresses found');
+      }
+      
+      // Find the address to update
+      const addresses = [...userData.addresses];
+      const addressIndex = addresses.findIndex(addr => addr.id === addressId);
+      
+      if (addressIndex === -1) {
+        throw new Error('Address not found');
+      }
+      
+      // If setting as default, update all addresses
+      if (addressData.isDefault) {
+        addresses.forEach(addr => addr.isDefault = false);
+      }
+      
+      // Update the address
+      addresses[addressIndex] = {
+        ...addresses[addressIndex],
+        ...addressData,
+        id: addressId, // Ensure ID doesn't change
+        updatedAt: new Date().toISOString()
+      };
       
       // Update in Firestore
       await updateDoc(doc(db, 'users', currentUser.uid), {
@@ -153,6 +216,97 @@ export const AuthProvider = ({ children }) => {
       
       return { success: true };
     } catch (error) {
+      console.error('Error updating address:', error);
+      return { success: false, error: error.message };
+    }
+  };
+
+  // Delete an address
+  const deleteAddress = async (addressId) => {
+    try {
+      if (!currentUser) {
+        throw new Error('No user is logged in');
+      }
+      
+      // Get current addresses
+      const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+      const userData = userDoc.data();
+      
+      if (!userData.addresses) {
+        throw new Error('No addresses found');
+      }
+      
+      // Find the address to delete
+      const addresses = userData.addresses;
+      const addressToDelete = addresses.find(addr => addr.id === addressId);
+      
+      if (!addressToDelete) {
+        throw new Error('Address not found');
+      }
+      
+      // Remove the address
+      const updatedAddresses = addresses.filter(addr => addr.id !== addressId);
+      
+      // If we deleted the default address and have other addresses, make the first one default
+      if (addressToDelete.isDefault && updatedAddresses.length > 0) {
+        updatedAddresses[0].isDefault = true;
+      }
+      
+      // Update in Firestore
+      await updateDoc(doc(db, 'users', currentUser.uid), {
+        addresses: updatedAddresses,
+        updatedAt: serverTimestamp()
+      });
+      
+      // Update local profile state
+      setUserProfile(prev => ({
+        ...prev,
+        addresses: updatedAddresses
+      }));
+      
+      return { success: true };
+    } catch (error) {
+      console.error('Error deleting address:', error);
+      return { success: false, error: error.message };
+    }
+  };
+
+  // Set an address as default
+  const setDefaultAddress = async (addressId) => {
+    try {
+      if (!currentUser) {
+        throw new Error('No user is logged in');
+      }
+      
+      // Get current addresses
+      const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+      const userData = userDoc.data();
+      
+      if (!userData.addresses) {
+        throw new Error('No addresses found');
+      }
+      
+      // Update addresses to set the new default
+      const updatedAddresses = userData.addresses.map(addr => ({
+        ...addr,
+        isDefault: addr.id === addressId
+      }));
+      
+      // Update in Firestore
+      await updateDoc(doc(db, 'users', currentUser.uid), {
+        addresses: updatedAddresses,
+        updatedAt: serverTimestamp()
+      });
+      
+      // Update local profile state
+      setUserProfile(prev => ({
+        ...prev,
+        addresses: updatedAddresses
+      }));
+      
+      return { success: true };
+    } catch (error) {
+      console.error('Error setting default address:', error);
       return { success: false, error: error.message };
     }
   };
@@ -226,9 +380,12 @@ export const AuthProvider = ({ children }) => {
     logout,
     resetPassword,
     updateUserProfile,
-    addUserAddress,
+    addAddress,
+    updateAddress,
+    deleteAddress,
+    setDefaultAddress,
     loading,
-    refreshUserProfile // Add the refreshUserProfile function to the context
+    refreshUserProfile
   };
 
   return (
@@ -237,5 +394,3 @@ export const AuthProvider = ({ children }) => {
     </AuthContext.Provider>
   );
 };
-
-export default AuthProvider;
