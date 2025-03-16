@@ -26,6 +26,7 @@ import Offers from './pages/Offers/Offers';
 import Search from './pages/Search/Search';
 import UserDash from './pages/UserDash/UserDash';
 import LoginStatusToast from './components/LoginStatusToast';
+import Notifications from './pages/Notifications/Notifications';
 
 function App() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -72,6 +73,11 @@ function App() {
                   <Route path="/contact" element={<Contact />} />
                   <Route path="/offers" element={<Offers />} />
                   <Route path="/search" element={<Search />} />
+                  <Route path="/notifications" element={
+                    <PrivateRoute>
+                      <Notifications />
+                    </PrivateRoute>
+                  } />
                   <Route path="/account" element={
                     <PrivateRoute>
                       <UserDash />
