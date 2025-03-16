@@ -1,249 +1,91 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useCart } from '../../context/CartContext'; // Added CartContext import
+import { useCart } from '../../context/CartContext';
+import { collection, getDocs, query, where, onSnapshot } from 'firebase/firestore';
+import { db } from '../../firebase/config';
 import './Search.css';
 // Add FontAwesome stylesheet for icons
 import 'font-awesome/css/font-awesome.min.css';
-
-// Mock product data - in a real app, this would come from an API or context
-const products = [
-  // Shirts
-  {
-    id: 1,
-    name: "Premium Cotton Formal Shirt",
-    category: "shirts",
-    price: 1299,
-    image: "/api/placeholder/400/500",
-    isNew: true
-  },
-  {
-    id: 2,
-    name: "Classic White Shirt",
-    category: "shirts",
-    price: 1199,
-    image: "/api/placeholder/400/500",
-    isNew: false
-  },
-  {
-    id: 3,
-    name: "Casual Linen Shirt",
-    category: "shirts",
-    price: 1499,
-    image: "/api/placeholder/400/500",
-    isNew: true
-  },
-  {
-    id: 4,
-    name: "Designer Check Shirt",
-    category: "shirts",
-    price: 1599,
-    image: "/api/placeholder/400/500",
-    isNew: false
-  },
-  
-  // Jeans
-  {
-    id: 5,
-    name: "Slim Fit Dark Denim Jeans",
-    category: "jeans",
-    price: 1899,
-    image: "/api/placeholder/400/500",
-    isNew: true
-  },
-  {
-    id: 6,
-    name: "Classic Blue Denim Jeans",
-    category: "jeans",
-    price: 1799,
-    image: "/api/placeholder/400/500",
-    isNew: false
-  },
-  {
-    id: 7,
-    name: "Distressed Denim Jeans",
-    category: "jeans",
-    price: 1999,
-    image: "/api/placeholder/400/500",
-    isNew: false
-  },
-  {
-    id: 8,
-    name: "Black Slim Fit Jeans",
-    category: "jeans",
-    price: 1899,
-    image: "/api/placeholder/400/500",
-    isNew: false
-  },
-  
-  // Kurta
-  {
-    id: 9,
-    name: "Traditional Silk Kurta",
-    category: "kurta",
-    price: 2999,
-    image: "/api/placeholder/400/500",
-    isNew: true
-  },
-  {
-    id: 10,
-    name: "Designer Wedding Kurta",
-    category: "kurta",
-    price: 3499,
-    image: "/api/placeholder/400/500",
-    isNew: false
-  },
-  {
-    id: 11,
-    name: "Cotton Casual Kurta",
-    category: "kurta",
-    price: 1999,
-    image: "/api/placeholder/400/500",
-    isNew: true
-  },
-  {
-    id: 12,
-    name: "Festive Embroidered Kurta",
-    category: "kurta",
-    price: 2499,
-    image: "/api/placeholder/400/500",
-    isNew: false
-  },
-  
-  // T-shirts
-  {
-    id: 13,
-    name: "Classic Round Neck T-shirt",
-    category: "tshirt",
-    price: 799,
-    image: "/api/placeholder/400/500",
-    isNew: false
-  },
-  {
-    id: 14,
-    name: "Premium V-Neck T-shirt",
-    category: "tshirt",
-    price: 899,
-    image: "/api/placeholder/400/500",
-    isNew: true
-  },
-  {
-    id: 15,
-    name: "Graphic Print T-shirt",
-    category: "tshirt",
-    price: 999,
-    image: "/api/placeholder/400/500",
-    isNew: false
-  },
-  {
-    id: 16,
-    name: "Polo T-shirt",
-    category: "tshirt",
-    price: 1199,
-    image: "/api/placeholder/400/500",
-    isNew: true
-  },
-  
-  // Undergarments
-  {
-    id: 17,
-    name: "Premium Cotton Briefs (Pack of 3)",
-    category: "undergarments",
-    price: 699,
-    image: "/api/placeholder/400/500",
-    isNew: true
-  },
-  {
-    id: 18,
-    name: "Boxer Shorts (Pack of 2)",
-    category: "undergarments",
-    price: 599,
-    image: "/api/placeholder/400/500",
-    isNew: false
-  },
-  {
-    id: 19,
-    name: "Cotton Vest (Pack of 3)",
-    category: "undergarments",
-    price: 499,
-    image: "/api/placeholder/400/500",
-    isNew: false
-  },
-  {
-    id: 20,
-    name: "Thermal Underwear Set",
-    category: "undergarments",
-    price: 999,
-    image: "/api/placeholder/400/500",
-    isNew: true
-  },
-  {
-    id: 21,
-    name: "Bamboo Fiber Briefs (Pack of 3)",
-    category: "undergarments",
-    price: 799,
-    image: "/api/placeholder/400/500",
-    isNew: false
-  },
-  {
-    id: 22,
-    name: "Designer Boxer Shorts",
-    category: "undergarments",
-    price: 499,
-    image: "/api/placeholder/400/500",
-    isNew: true
-  },
-  {
-    id: 23,
-    name: "Sports Underwear (Pack of 2)",
-    category: "undergarments",
-    price: 699,
-    image: "/api/placeholder/400/500",
-    isNew: false
-  },
-  {
-    id: 24,
-    name: "Premium Cotton Vests (Pack of 5)",
-    category: "undergarments",
-    price: 799,
-    image: "/api/placeholder/400/500",
-    isNew: false
-  }
-];
 
 const Search = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const searchParams = new URLSearchParams(location.search);
   const searchQuery = searchParams.get('q') || '';
-  const { addToCart } = useCart(); // Get addToCart from context
+  const { addToCart } = useCart();
   
   const [searchInput, setSearchInput] = useState(searchQuery);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [sortOption, setSortOption] = useState('default');
   const [searchResults, setSearchResults] = useState([]);
   const [favorites, setFavorites] = useState({});
+  const [allProducts, setAllProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   
+  // Fetch all products from Firebase
   useEffect(() => {
-    // Reset search input when query changes
-    setSearchInput(searchQuery);
+    const fetchProducts = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        const productsQuery = query(collection(db, 'products'));
+        
+        const unsubscribe = onSnapshot(productsQuery, (snapshot) => {
+          if (snapshot.empty) {
+            setAllProducts([]);
+            setLoading(false);
+            return;
+          }
+          
+          const productsList = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }));
+          
+          setAllProducts(productsList);
+          setLoading(false);
+        }, (error) => {
+          console.error("Error fetching products:", error);
+          setError("Failed to load products. Please try again later.");
+          setLoading(false);
+        });
+        
+        return () => unsubscribe();
+      } catch (error) {
+        console.error("Error setting up products listener:", error);
+        setError("Something went wrong. Please try again later.");
+        setLoading(false);
+      }
+    };
     
-    // Perform search
-    performSearch();
-  }, [searchQuery, selectedCategory, sortOption]);
+    fetchProducts();
+  }, []);
   
+  // Perform search when query or filters change
+  useEffect(() => {
+    if (allProducts.length > 0) {
+      performSearch();
+    }
+  }, [searchQuery, selectedCategory, sortOption, allProducts]);
+  
+  // Search functionality
   const performSearch = () => {
+    // If no search query and category is "all", show no results
     if (!searchQuery && selectedCategory === 'all') {
       setSearchResults([]);
       return;
     }
     
     // Filter products based on search query
-    let results = products;
+    let results = [...allProducts];
     
     if (searchQuery) {
       results = results.filter(product => 
         product.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-        product.category.toLowerCase().includes(searchQuery.toLowerCase())
+        product.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (product.description && product.description.toLowerCase().includes(searchQuery.toLowerCase()))
       );
     }
     
@@ -292,7 +134,7 @@ const Search = () => {
     }));
   };
   
-  // Updated handleAddToCart function
+  // Handle adding to cart
   const handleAddToCart = (product) => {
     const productToAdd = {
       id: product.id,
@@ -300,8 +142,8 @@ const Search = () => {
       price: product.price,
       image: product.image,
       quantity: 1,
-      size: "M", // Default size
-      color: "Default" // Default color
+      size: product.sizes && product.sizes.length > 0 ? product.sizes[0] : "M", // Default size
+      color: product.colors && product.colors.length > 0 ? product.colors[0] : "Default" // Default color
     };
     
     // Add to cart using context
@@ -316,8 +158,40 @@ const Search = () => {
     return string.charAt(0).toUpperCase() + string.slice(1);
   };
   
+  // Get unique categories from products for category chips
+  const getUniqueCategories = () => {
+    if (!allProducts.length) return [];
+    
+    const categories = allProducts
+      .map(product => product.category)
+      .filter((value, index, self) => self.indexOf(value) === index);
+      
+    return categories.slice(0, 5); // Limit to 5 categories for display
+  };
+  
   // Render the search results or empty state
   const renderSearchResults = () => {
+    if (loading) {
+      return (
+        <div className="loading-container">
+          <div className="loading-spinner"></div>
+          <p>Searching products...</p>
+        </div>
+      );
+    }
+    
+    if (error) {
+      return (
+        <div className="error-container">
+          <i className="fas fa-exclamation-circle error-icon"></i>
+          <p className="error-message">{error}</p>
+          <button className="retry-button" onClick={() => window.location.reload()}>
+            <i className="fas fa-redo"></i> Try Again
+          </button>
+        </div>
+      );
+    }
+    
     if (!searchQuery) {
       return (
         <div className="no-search-results">
@@ -329,10 +203,15 @@ const Search = () => {
             Try searching for product names, categories, or specific styles you're looking for.
           </p>
           <div className="search-category-chips">
-            <Link to="/search?q=shirts" className="category-chip">Shirts</Link>
-            <Link to="/search?q=jeans" className="category-chip">Jeans</Link>
-            <Link to="/search?q=kurta" className="category-chip">Kurta</Link>
-            <Link to="/search?q=tshirt" className="category-chip">T-shirts</Link>
+            {getUniqueCategories().map(category => (
+              <Link 
+                key={category} 
+                to={`/search?q=${category}`} 
+                className="category-chip"
+              >
+                {capitalizeFirstLetter(category)}
+              </Link>
+            ))}
           </div>
         </div>
       );
@@ -350,10 +229,15 @@ const Search = () => {
             You can also browse our categories to find what you're looking for.
           </p>
           <div className="search-category-chips">
-            <Link to="/search?q=shirts" className="category-chip">Shirts</Link>
-            <Link to="/search?q=jeans" className="category-chip">Jeans</Link>
-            <Link to="/search?q=kurta" className="category-chip">Kurta</Link>
-            <Link to="/search?q=tshirt" className="category-chip">T-shirts</Link>
+            {getUniqueCategories().map(category => (
+              <Link 
+                key={category} 
+                to={`/search?q=${category}`} 
+                className="category-chip"
+              >
+                {capitalizeFirstLetter(category)}
+              </Link>
+            ))}
           </div>
         </div>
       );
@@ -395,7 +279,7 @@ const Search = () => {
     <main className="search-page-container">
       <div className="search-page-header">
         <h1 className="search-page-title">
-          Search Results for "<span className="search-query">{searchQuery}</span>"
+          {searchQuery ? `Search Results for "${searchQuery}"` : 'Search Our Collection'}
         </h1>
         <p className="search-page-subtitle">Discover our premium collection matching your search criteria.</p>
       </div>
@@ -458,11 +342,14 @@ const Search = () => {
                 onChange={handleCategoryChange}
               >
                 <option value="all">All Categories</option>
-                <option value="shirts">Shirts</option>
-                <option value="jeans">Jeans</option>
-                <option value="kurta">Kurta</option>
-                <option value="tshirt">T-shirts</option>
-                <option value="undergarments">Undergarments</option>
+                {allProducts.length > 0 && [...new Set(allProducts.map(product => product.category))]
+                  .sort()
+                  .map(category => (
+                    <option key={category} value={category}>
+                      {capitalizeFirstLetter(category)}
+                    </option>
+                  ))
+                }
               </select>
             </div>
           </div>

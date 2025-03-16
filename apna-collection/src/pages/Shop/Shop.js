@@ -12,34 +12,12 @@ const Shop = () => {
   const { addToCart } = useCart();
   const { isInWishlist, toggleWishlist } = useWishlist();
   
-  // Sample product data for fallback
-  const sampleProductData = [
-    // Shirts
-    {
-      id: 1,
-      name: "Premium Cotton Formal Shirt",
-      category: "shirts",
-      price: 1299,
-      image: "/api/placeholder/400/500",
-      isNew: true
-    },
-    {
-      id: 2,
-      name: "Classic White Shirt",
-      category: "shirts",
-      price: 1199,
-      image: "/api/placeholder/400/500",
-      isNew: false
-    },
-    // ... [rest of the sample data] ...
-  ];
-  
   // Set up state
   const [products, setProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [currentCategory, setCurrentCategory] = useState('all');
   const [loading, setLoading] = useState(true);
-  const [useFallbackData, setUseFallbackData] = useState(false);
+  const [error, setError] = useState(null);
   const [favorites, setFavorites] = useState({});
   
   // Load initial favorites state from wishlist
@@ -56,6 +34,8 @@ const Shop = () => {
     const fetchProducts = async () => {
       try {
         setLoading(true);
+        setError(null);
+        
         // Set up real-time listener for products collection
         const productsQuery = query(
           collection(db, 'products'),
@@ -63,55 +43,34 @@ const Shop = () => {
         );
         
         const unsubscribe = onSnapshot(productsQuery, (snapshot) => {
+          if (snapshot.empty) {
+            setProducts([]);
+            setFilteredProducts([]);
+            setLoading(false);
+            return;
+          }
+          
           const productsList = snapshot.docs.map(doc => ({
             id: doc.id,
             ...doc.data()
           }));
           
-          // If we successfully got products from Firebase
-          if (productsList.length > 0) {
-            setProducts(productsList);
-            
-            // Apply any existing category filter
-            if (currentCategory === 'all') {
-              setFilteredProducts(productsList);
-            } else {
-              const filtered = productsList.filter(product => 
-                product.category === currentCategory
-              );
-              setFilteredProducts(filtered);
-            }
-          } else {
-            // If no products were returned, use sample data
-            setUseFallbackData(true);
-            setProducts(sampleProductData);
-            
-            if (currentCategory === 'all') {
-              setFilteredProducts(sampleProductData);
-            } else {
-              const filtered = sampleProductData.filter(product => 
-                product.category === currentCategory
-              );
-              setFilteredProducts(filtered);
-            }
-          }
+          setProducts(productsList);
           
-          setLoading(false);
-        }, (error) => {
-          console.error("Error fetching products:", error);
-          // Use sample data on error
-          setUseFallbackData(true);
-          setProducts(sampleProductData);
-          
+          // Apply any existing category filter
           if (currentCategory === 'all') {
-            setFilteredProducts(sampleProductData);
+            setFilteredProducts(productsList);
           } else {
-            const filtered = sampleProductData.filter(product => 
+            const filtered = productsList.filter(product => 
               product.category === currentCategory
             );
             setFilteredProducts(filtered);
           }
           
+          setLoading(false);
+        }, (error) => {
+          console.error("Error fetching products:", error);
+          setError("Failed to load products. Please try again later.");
           setLoading(false);
         });
         
@@ -119,19 +78,7 @@ const Shop = () => {
         return () => unsubscribe();
       } catch (error) {
         console.error("Error setting up products listener:", error);
-        // Use sample data on error
-        setUseFallbackData(true);
-        setProducts(sampleProductData);
-        
-        if (currentCategory === 'all') {
-          setFilteredProducts(sampleProductData);
-        } else {
-          const filtered = sampleProductData.filter(product => 
-            product.category === currentCategory
-          );
-          setFilteredProducts(filtered);
-        }
-        
+        setError("Something went wrong. Please try again later.");
         setLoading(false);
       }
     };
@@ -184,7 +131,7 @@ const Shop = () => {
     }
   };
 
-  // Updated handleAddToCart function to use CartContext
+  // Function to add product to cart
   const handleAddToCart = (e, product) => {
     e.preventDefault();
     e.stopPropagation();
@@ -214,7 +161,7 @@ const Shop = () => {
     }, 1000);
   };
 
-  // Updated function to toggle favorite status using WishlistContext
+  // Function to toggle favorite status using WishlistContext
   const handleToggleFavorite = (e, product) => {
     e.preventDefault();
     e.stopPropagation();
@@ -266,17 +213,20 @@ const Shop = () => {
             Discover our premium collection of men's clothing, crafted with the finest materials for the modern Indian gentleman. 
             From traditional to contemporary, we have styles for every occasion.
           </p>
-          {useFallbackData && (
-            <div className="data-notice">
-              <p>Currently displaying sample data. Connect to Firebase for live data.</p>
-            </div>
-          )}
         </div>
         
         {loading ? (
           <div className="loading-container">
             <div className="loading-spinner"></div>
             <p>Loading products...</p>
+          </div>
+        ) : error ? (
+          <div className="error-container">
+            <i className="fas fa-exclamation-circle error-icon"></i>
+            <p className="error-message">{error}</p>
+            <button className="retry-button" onClick={() => window.location.reload()}>
+              <i className="fas fa-redo"></i> Try Again
+            </button>
           </div>
         ) : (
           <div className="shop-layout">
@@ -346,7 +296,11 @@ const Shop = () => {
               
               {filteredProducts.length === 0 ? (
                 <div className="no-products">
-                  <p className="no-products-message">No products found in this category.</p>
+                  <p className="no-products-message">
+                    {currentCategory === 'all' 
+                      ? "No products have been added yet. Check back later!" 
+                      : `No products found in the ${capitalizeFirstLetter(currentCategory)} category.`}
+                  </p>
                 </div>
               ) : (
                 <div className="products-grid">
