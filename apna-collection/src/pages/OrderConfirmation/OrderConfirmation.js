@@ -19,6 +19,7 @@ const OrderConfirmation = () => {
         // Format data structure to match component expectations
         setOrderDetails({
           orderId: recentOrder.id || recentOrder.orderNumber || 'N/A',
+          orderNumber: recentOrder.orderNumber,
           orderDate: recentOrder.date || new Date().toLocaleDateString('en-IN'),
           paymentMethod: getPaymentMethodText(recentOrder.paymentMethod),
           shippingAddress: recentOrder.shippingAddress,
@@ -29,61 +30,13 @@ const OrderConfirmation = () => {
           total: recentOrder.total || 0
         });
       } else {
-        // Fallback if no recent order is found
-        setOrderDetails({
-          orderId: 'AC' + Math.floor(10000000 + Math.random() * 90000000),
-          orderDate: new Date().toLocaleDateString('en-IN', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-          }),
-          paymentMethod: 'Credit Card (•••• 4582)',
-          shippingAddress: {
-            name: 'Rahul Sharma',
-            addressLine1: '123 Shivaji Nagar',
-            addressLine2: 'Sehore, Madhya Pradesh 466001',
-            country: 'India'
-          },
-          items: [
-            {
-              id: 1,
-              name: 'Premium Cotton Formal Shirt',
-              price: 1299,
-              quantity: 1,
-              size: 'M',
-              color: 'White',
-              image: '/api/placeholder/80/80'
-            },
-            {
-              id: 2,
-              name: 'Designer Blazer',
-              price: 3499,
-              quantity: 1,
-              size: '40',
-              color: 'Navy Blue',
-              image: '/api/placeholder/80/80'
-            }
-          ],
-          subtotal: 4798,
-          shipping: 0,
-          tax: 864,
-          total: 5662
-        });
+        console.error("No order data found in localStorage");
+        // Don't set a fallback - this will show an error state instead
+        setOrderDetails(null);
       }
     } catch (error) {
       console.error("Error processing order data:", error);
-      // Set fallback data in case of any error
-      setOrderDetails({
-        orderId: 'ERROR-RECOVERY',
-        orderDate: new Date().toLocaleDateString('en-IN'),
-        paymentMethod: 'N/A',
-        shippingAddress: null,
-        items: [],
-        subtotal: 0,
-        shipping: 0,
-        tax: 0,
-        total: 0
-      });
+      setOrderDetails(null);
     }
     
     // Scroll to top when component mounts
@@ -288,7 +241,27 @@ const OrderConfirmation = () => {
   };
 
   if (!orderDetails) {
-    return <div className="loading-container">Loading order details...</div>;
+    return (
+      <div className="confirmation-container" style={{ textAlign: 'center', padding: '50px 20px' }}>
+        <div className="error-icon" style={{ fontSize: '3rem', color: '#c59b6d', marginBottom: '20px' }}>
+          <i className="fas fa-exclamation-circle"></i>
+        </div>
+        <h2 style={{ marginBottom: '20px', color: '#333' }}>Order Information Not Found</h2>
+        <p style={{ marginBottom: '30px', color: '#666', maxWidth: '600px', margin: '0 auto' }}>
+          We couldn't find information about your recent order. This might happen if you refreshed the page or accessed this page directly.
+        </p>
+        <div style={{ marginTop: '30px' }}>
+          <Link to="/orders" className="btn-continue" style={{ marginRight: '15px' }}>
+            <i className="fas fa-clipboard-list" style={{ marginRight: '8px' }}></i>
+            View Your Orders
+          </Link>
+          <Link to="/shop" className="btn-continue">
+            <i className="fas fa-shopping-bag" style={{ marginRight: '8px' }}></i>
+            Continue Shopping
+          </Link>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -306,7 +279,7 @@ const OrderConfirmation = () => {
           <div>
             <div className="info-item">
               <div className="info-label">Order Number</div>
-              <div className="info-value">#{orderDetails.orderId}</div>
+              <div className="info-value">#{orderDetails.orderNumber || orderDetails.orderId}</div>
             </div>
             <div className="info-item">
               <div className="info-label">Order Date</div>
@@ -408,7 +381,7 @@ const OrderConfirmation = () => {
           <div className="contact-title">Need Help?</div>
           <div className="contact-info">Email: support@apnacollection.com</div>
           <div className="contact-info">Phone: +91 1234567890</div>
-          <div className="contact-info">Order Reference: #{orderDetails.orderId}</div>
+          <div className="contact-info">Order Reference: #{orderDetails.orderNumber || orderDetails.orderId}</div>
         </div>
         
         <div className="action-buttons">

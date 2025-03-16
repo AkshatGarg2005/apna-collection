@@ -8,7 +8,7 @@ import {
   onSnapshot,
   doc,
   updateDoc,
-  serverTimestamp
+  serverTimestamp,
 } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { useAuth } from '../../context/AuthContext';
@@ -67,16 +67,15 @@ const Orders = () => {
       return;
     }
     
+    console.log("Starting orders fetch for user:", currentUser.uid);
     setLoading(true);
     
     try {
-      console.log("Fetching orders for user:", currentUser.uid);
-      
-      // Create query for user's orders
+      // Create query for user's orders - NOW WITH INDEX SUPPORT
       const ordersQuery = query(
         collection(db, 'orders'),
         where('userId', '==', currentUser.uid),
-        orderBy('createdAt', 'desc')
+        orderBy('createdAt', 'desc')  // Now works with the index
       );
       
       // Set up real-time listener
@@ -84,32 +83,34 @@ const Orders = () => {
         console.log("Orders snapshot received:", snapshot.size, "documents");
         
         if (snapshot.empty) {
-          console.log("No orders found in database");
-          // Only use sample data if in development mode
-          if (process.env.NODE_ENV === 'development') {
-            console.log("Using sample orders for development");
-            setOrders(getSampleOrders());
-          } else {
-            setOrders([]);
-          }
+          console.log("No orders found for this user");
+          setOrders([]);
           setLoading(false);
           return;
         }
         
         const ordersList = snapshot.docs.map(doc => {
           const data = doc.data();
-          console.log("Order data:", doc.id, data);
-          return {
-            id: doc.id,
-            ...data,
-            // Format createdAt date if available
-            date: data.createdAt?.toDate ? 
+          
+          // Format date safely
+          let formattedDate;
+          try {
+            formattedDate = data.createdAt?.toDate ? 
               formatDate(data.createdAt.toDate()) : 
               new Date().toLocaleDateString('en-IN', {
                 day: 'numeric',
                 month: 'long',
                 year: 'numeric'
-              })
+              });
+          } catch (dateError) {
+            console.error("Error formatting date for order:", doc.id, dateError);
+            formattedDate = "Unknown date";
+          }
+          
+          return {
+            id: doc.id,
+            ...data,
+            date: formattedDate
           };
         });
         
@@ -118,14 +119,7 @@ const Orders = () => {
         setLoading(false);
       }, (error) => {
         console.error("Error fetching orders:", error);
-        
-        // Only use sample data in development mode
-        if (process.env.NODE_ENV === 'development') {
-          console.log("Using sample orders for development due to error");
-          setOrders(getSampleOrders());
-        } else {
-          setOrders([]);
-        }
+        setOrders([]);
         setLoading(false);
       });
       
@@ -133,14 +127,7 @@ const Orders = () => {
       return () => unsubscribe();
     } catch (error) {
       console.error("Error setting up orders listener:", error);
-      
-      // Only use sample data in development mode
-      if (process.env.NODE_ENV === 'development') {
-        console.log("Using sample orders for development due to error");
-        setOrders(getSampleOrders());
-      } else {
-        setOrders([]);
-      }
+      setOrders([]);
       setLoading(false);
     }
   }, [currentUser]);
@@ -178,154 +165,6 @@ const Orders = () => {
     
     setFilteredOrders(result);
   }, [activeFilter, searchTerm, orders]);
-
-  // Sample orders for demo purposes or fallback
-  const getSampleOrders = () => {
-    return [
-      {
-        id: 'AC23051587',
-        orderNumber: 'OD230412587',
-        date: '4 March, 2025',
-        status: 'Delivered',
-        items: [
-          {
-            id: 1,
-            name: 'Premium Cotton Formal Shirt',
-            image: '/api/placeholder/200/200',
-            size: 'L',
-            color: 'White',
-            quantity: 1,
-            price: 1299
-          },
-          {
-            id: 2,
-            name: 'Slim Fit Dark Denim Jeans',
-            image: '/api/placeholder/200/200',
-            size: '32',
-            color: 'Dark Blue',
-            quantity: 1,
-            price: 1899
-          }
-        ],
-        subtotal: 3198,
-        shipping: 0,
-        tax: 160,
-        total: 3358,
-        paymentMethod: 'upiPayment',
-        paymentStatus: 'Paid',
-        shippingAddress: {
-          name: 'John Doe',
-          address: '123 Main Street, Apartment 4B',
-          city: 'Mumbai',
-          state: 'Maharashtra',
-          pincode: '400001',
-          phone: '9876543210'
-        }
-      },
-      {
-        id: 'AC23051492',
-        orderNumber: 'OD230412492',
-        date: '28 February, 2025',
-        status: 'Shipped',
-        items: [
-          {
-            id: 3,
-            name: 'Traditional Silk Kurta',
-            image: '/api/placeholder/200/200',
-            size: 'M',
-            color: 'Maroon',
-            quantity: 1,
-            price: 2999
-          }
-        ],
-        subtotal: 2999,
-        shipping: 0,
-        tax: 150,
-        total: 3149,
-        paymentMethod: 'cardPayment',
-        paymentStatus: 'Paid',
-        shippingAddress: {
-          name: 'John Doe',
-          address: '123 Main Street, Apartment 4B',
-          city: 'Mumbai',
-          state: 'Maharashtra',
-          pincode: '400001',
-          phone: '9876543210'
-        }
-      },
-      {
-        id: 'AC23051375',
-        orderNumber: 'OD230412375',
-        date: '15 February, 2025',
-        status: 'Processing',
-        items: [
-          {
-            id: 4,
-            name: 'Designer Blazer',
-            image: '/api/placeholder/200/200',
-            size: '40',
-            color: 'Navy Blue',
-            quantity: 1,
-            price: 3499
-          },
-          {
-            id: 5,
-            name: 'Formal Shoes',
-            image: '/api/placeholder/200/200',
-            size: '9',
-            color: 'Brown',
-            quantity: 1,
-            price: 2199
-          }
-        ],
-        subtotal: 5698,
-        shipping: 0,
-        tax: 285,
-        total: 5983,
-        paymentMethod: 'codPayment',
-        paymentStatus: 'Pending',
-        shippingAddress: {
-          name: 'John Doe',
-          address: '123 Main Street, Apartment 4B',
-          city: 'Mumbai',
-          state: 'Maharashtra',
-          pincode: '400001',
-          phone: '9876543210'
-        }
-      },
-      {
-        id: 'AC23051240',
-        orderNumber: 'OD230412240',
-        date: '10 February, 2025',
-        status: 'Cancelled',
-        items: [
-          {
-            id: 6,
-            name: 'Polo T-shirt',
-            image: '/api/placeholder/200/200',
-            size: 'M',
-            color: 'Black',
-            quantity: 2,
-            price: 1199
-          }
-        ],
-        subtotal: 2398,
-        shipping: 0,
-        tax: 120,
-        total: 2518,
-        paymentMethod: 'upiPayment',
-        paymentStatus: 'Refunded',
-        shippingAddress: {
-          name: 'John Doe',
-          address: '123 Main Street, Apartment 4B',
-          city: 'Mumbai',
-          state: 'Maharashtra',
-          pincode: '400001',
-          phone: '9876543210'
-        }
-      }
-    ];
-  };
 
   // Utility Functions
   const formatDate = (date) => {
@@ -461,7 +300,7 @@ const Orders = () => {
   };
 
   const getStatusClass = (status) => {
-    return status.toLowerCase();
+    return status?.toLowerCase() || 'processing';
   };
 
   const getStatusIcon = (status) => {
@@ -869,7 +708,7 @@ const Orders = () => {
                     </div>
                     <div className="price-row">
                       <div className="price-label">Tax</div>
-                      <div className="price-value">{formatPrice(selectedOrder.tax || 0)}</div>
+                      <div className="price-value">{formatPrice(selectedOrder.tax || selectedOrder.gst || 0)}</div>
                     </div>
                     <div className="price-row total">
                       <div className="price-label">Total</div>

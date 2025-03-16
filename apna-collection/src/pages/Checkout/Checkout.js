@@ -589,6 +589,11 @@ const Checkout = () => {
     try {
       console.log("Starting order placement");
       
+      // Verify user is logged in
+      if (!currentUser || !currentUser.uid) {
+        throw new Error("User not logged in. Please log in to place an order.");
+      }
+      
       // 1. Sanitize the shipping address to avoid null/undefined values
       const selectedAddress = addresses.find(addr => addr.id === selectedAddressId) || {};
       const sanitizedAddress = {
@@ -614,9 +619,12 @@ const Checkout = () => {
         image: item.image || ''
       }));
       
-      // 3. Create a simplified order object using our local copy of the summary data
+      // Generate order number with prefix OD and 10 random digits
+      const orderNumber = 'OD' + Math.floor(1000000000 + Math.random() * 9000000000);
+      
+      // 3. Create a complete order object with all required fields
       const orderData = {
-        orderNumber: 'OD' + Math.floor(1000000 + Math.random() * 9000000),
+        orderNumber: orderNumber,
         items: sanitizedItems,
         shippingAddress: sanitizedAddress,
         paymentMethod: paymentMethod || 'codPayment',
@@ -626,12 +634,12 @@ const Checkout = () => {
         shipping: 0,
         total: Number(orderSummary.total) || 0,
         status: 'Processing',
-        userId: currentUser?.uid || null,
-        email: contactInfo.email || '',
+        userId: currentUser.uid,  // CRITICAL - this field is how orders are linked to users
+        email: contactInfo.email || currentUser.email || '',
         phone: contactInfo.phone || '',
         orderNotes: contactInfo.orderNotes || '',
         paymentStatus: paymentMethod === 'codPayment' ? 'Pending' : 'Paid',
-        createdAt: serverTimestamp(),
+        createdAt: serverTimestamp(),  // CRITICAL - this is used for ordering in the admin panel
         updatedAt: serverTimestamp()
       };
       
@@ -659,7 +667,7 @@ const Checkout = () => {
         // Continue with order process even if notification fails
       }
       
-      // 6. Store for confirmation page
+      // 6. Store for confirmation page - include everything needed in order confirmation
       const orderForStorage = {
         ...orderData,
         id: docRef.id,
@@ -675,7 +683,7 @@ const Checkout = () => {
       // 7. Clear cart
       clearCart();
       
-      // Flash summary section - using a differently named variable to avoid conflicts
+      // Flash summary section
       const summaryElement = document.querySelector('.checkout-summary .checkout-section');
       if (summaryElement) {
         summaryElement.style.transition = 'all 0.5s ease';
