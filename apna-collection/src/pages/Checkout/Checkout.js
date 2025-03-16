@@ -542,6 +542,14 @@ const Checkout = () => {
   
   // Enhanced place order with advanced animation and order saving
   const handlePlaceOrder = async () => {
+    // Create a local copy of the order summary data to avoid conflicts with DOM element variables
+    const orderSummary = {
+      subtotal: summary.subtotal,
+      discount: summary.discount,
+      gst: summary.gst,
+      total: summary.total
+    };
+    
     // Store the original button width and text for consistency
     const button = document.querySelector('.place-order-btn');
     if (button) {
@@ -590,12 +598,14 @@ const Checkout = () => {
         city: selectedAddress.city || '',
         state: selectedAddress.state || '',
         pincode: selectedAddress.pincode || '',
-        phone: selectedAddress.phone || contactInfo.phone || ''
+        phone: selectedAddress.phone || contactInfo.phone || '',
+        name: contactInfo.fullName || currentUser?.displayName || 'Customer',
       };
       
       // 2. Sanitize items to ensure they have valid properties
       const sanitizedItems = cartItems.map(item => ({
-        id: item.id || '',
+        productId: item.id || '',  // THIS IS CRITICAL - admin expects productId, not id
+        id: item.id || '',         // Keep this for backward compatibility
         name: item.name || 'Product',
         price: Number(item.price) || 0,
         quantity: Number(item.quantity) || 1,
@@ -604,58 +614,52 @@ const Checkout = () => {
         image: item.image || ''
       }));
       
-      // 3. Create a simplified order object
+      // 3. Create a simplified order object using our local copy of the summary data
       const orderData = {
         orderNumber: 'OD' + Math.floor(1000000 + Math.random() * 9000000),
         items: sanitizedItems,
         shippingAddress: sanitizedAddress,
         paymentMethod: paymentMethod || 'codPayment',
-        subtotal: Number(summary.subtotal) || 0,
-        discount: Number(summary.discount) || 0,
-        tax: Number(summary.gst) || 0,
-        shipping: Number(summary.shipping) || 0,
-        total: Number(summary.total) || 0,
+        subtotal: Number(orderSummary.subtotal) || 0,
+        discount: Number(orderSummary.discount) || 0,
+        gst: Number(orderSummary.gst) || 0,
+        shipping: 0,
+        total: Number(orderSummary.total) || 0,
         status: 'Processing',
         userId: currentUser?.uid || null,
         email: contactInfo.email || '',
         phone: contactInfo.phone || '',
         orderNotes: contactInfo.orderNotes || '',
+        paymentStatus: paymentMethod === 'codPayment' ? 'Pending' : 'Paid',
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       };
       
       console.log("Saving order with data:", JSON.stringify(orderData));
       
-      // 4. Add the order to Firestore
-      const docRef = await addDoc(collection(db, 'orders'), {
-        orderNumber: orderData.orderNumber,
-        status: orderData.status,
-        createdAt: orderData.createdAt,
-        updatedAt: orderData.updatedAt
-      });
+      // 4. Add the complete order to Firestore in a single operation
+      const docRef = await addDoc(collection(db, 'orders'), orderData);
+      console.log("Order created with ID:", docRef.id);
       
-      console.log("Basic order created with ID:", docRef.id);
+      // 5. Create a notification in adminNotifications collection
+      // This is expected by the admin dashboard
+      try {
+        await addDoc(collection(db, 'adminNotifications'), {
+          type: 'order',
+          title: 'New Order Received',
+          message: `Order #${orderData.orderNumber} for ₹${orderData.total} from ${sanitizedAddress.name}`,
+          orderId: docRef.id,
+          read: false,
+          resolved: false,
+          createdAt: serverTimestamp()
+        });
+        console.log("Admin notification created");
+      } catch (notifError) {
+        console.error("Error creating admin notification:", notifError);
+        // Continue with order process even if notification fails
+      }
       
-      // 5. Update with complete details
-      const orderDetails = {
-        items: orderData.items,
-        shippingAddress: orderData.shippingAddress,
-        paymentMethod: orderData.paymentMethod,
-        subtotal: orderData.subtotal,
-        discount: orderData.discount,
-        tax: orderData.tax,
-        shipping: orderData.shipping,
-        total: orderData.total,
-        userId: orderData.userId,
-        email: orderData.email,
-        phone: orderData.phone,
-        orderNotes: orderData.orderNotes
-      };
-      
-      await updateDoc(doc(db, 'orders', docRef.id), orderDetails);
-      console.log("Order successfully completed!");
-      
-      // Store for confirmation page
+      // 6. Store for confirmation page
       const orderForStorage = {
         ...orderData,
         id: docRef.id,
@@ -668,17 +672,17 @@ const Checkout = () => {
       
       localStorage.setItem('recentOrder', JSON.stringify(orderForStorage));
       
-      // Clear cart
+      // 7. Clear cart
       clearCart();
       
-      // Flash summary section
-      const summary = document.querySelector('.checkout-summary .checkout-section');
-      if (summary) {
-        summary.style.transition = 'all 0.5s ease';
-        summary.style.boxShadow = '0 0 30px rgba(197, 155, 109, 0.5)';
+      // Flash summary section - using a differently named variable to avoid conflicts
+      const summaryElement = document.querySelector('.checkout-summary .checkout-section');
+      if (summaryElement) {
+        summaryElement.style.transition = 'all 0.5s ease';
+        summaryElement.style.boxShadow = '0 0 30px rgba(197, 155, 109, 0.5)';
         
         setTimeout(() => {
-          summary.style.boxShadow = '';
+          summaryElement.style.boxShadow = '';
         }, 800);
       }
       
@@ -701,10 +705,7 @@ const Checkout = () => {
       }, 2200);
     } catch (error) {
       console.error("Error creating order:", error);
-      
-      if (error.code) {
-        console.error("Firebase error code:", error.code);
-      }
+      console.error("Error details:", error.code, error.message);
       
       // Show error state
       setOrderButtonState({
@@ -717,7 +718,7 @@ const Checkout = () => {
       // Show an error message to the user
       const errorMessage = document.createElement('div');
       errorMessage.className = 'error-message';
-      errorMessage.textContent = 'There was an error processing your order. Please try again.';
+      errorMessage.textContent = `There was an error processing your order: ${error.message || 'Please try again'}`;
       errorMessage.style.color = '#dc3545';
       errorMessage.style.padding = '10px';
       errorMessage.style.marginTop = '10px';

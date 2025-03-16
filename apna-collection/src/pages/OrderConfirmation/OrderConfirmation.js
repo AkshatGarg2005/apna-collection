@@ -9,61 +9,80 @@ const OrderConfirmation = () => {
   const [orderDetails, setOrderDetails] = useState(null);
 
   useEffect(() => {
-    // Retrieve the recent order from localStorage
-    const recentOrder = JSON.parse(localStorage.getItem('recentOrder'));
-    if (recentOrder) {
-      // Format data structure to match component expectations
-      setOrderDetails({
-        orderId: recentOrder.id,
-        orderDate: recentOrder.date,
-        paymentMethod: getPaymentMethodText(recentOrder.paymentMethod),
-        shippingAddress: recentOrder.shippingAddress,
-        items: recentOrder.items,
-        subtotal: recentOrder.subtotal,
-        shipping: recentOrder.shipping || 0,
-        tax: recentOrder.tax,
-        total: recentOrder.total
-      });
-    } else {
-      // Fallback if no recent order is found
-      setOrderDetails({
-        orderId: 'AC' + Math.floor(10000000 + Math.random() * 90000000),
-        orderDate: new Date().toLocaleDateString('en-IN', {
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric'
-        }),
-        paymentMethod: 'Credit Card (•••• 4582)',
-        shippingAddress: {
-          name: 'Rahul Sharma',
-          addressLine1: '123 Shivaji Nagar',
-          addressLine2: 'Sehore, Madhya Pradesh 466001',
-          country: 'India'
-        },
-        items: [
-          {
-            id: 1,
-            name: 'Premium Cotton Formal Shirt',
-            price: 1299,
-            quantity: 1,
-            size: 'M',
-            color: 'White',
-            image: '/api/placeholder/80/80'
+    try {
+      // Retrieve the recent order from localStorage
+      const recentOrderJson = localStorage.getItem('recentOrder');
+      if (recentOrderJson) {
+        const recentOrder = JSON.parse(recentOrderJson);
+        console.log("Retrieved order data:", recentOrder);
+        
+        // Format data structure to match component expectations
+        setOrderDetails({
+          orderId: recentOrder.id || recentOrder.orderNumber || 'N/A',
+          orderDate: recentOrder.date || new Date().toLocaleDateString('en-IN'),
+          paymentMethod: getPaymentMethodText(recentOrder.paymentMethod),
+          shippingAddress: recentOrder.shippingAddress,
+          items: recentOrder.items || [],
+          subtotal: recentOrder.subtotal || 0,
+          shipping: recentOrder.shipping || 0,
+          tax: recentOrder.gst || recentOrder.tax || 0, // Adjust for the 'gst' field
+          total: recentOrder.total || 0
+        });
+      } else {
+        // Fallback if no recent order is found
+        setOrderDetails({
+          orderId: 'AC' + Math.floor(10000000 + Math.random() * 90000000),
+          orderDate: new Date().toLocaleDateString('en-IN', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+          }),
+          paymentMethod: 'Credit Card (•••• 4582)',
+          shippingAddress: {
+            name: 'Rahul Sharma',
+            addressLine1: '123 Shivaji Nagar',
+            addressLine2: 'Sehore, Madhya Pradesh 466001',
+            country: 'India'
           },
-          {
-            id: 2,
-            name: 'Designer Blazer',
-            price: 3499,
-            quantity: 1,
-            size: '40',
-            color: 'Navy Blue',
-            image: '/api/placeholder/80/80'
-          }
-        ],
-        subtotal: 4798,
+          items: [
+            {
+              id: 1,
+              name: 'Premium Cotton Formal Shirt',
+              price: 1299,
+              quantity: 1,
+              size: 'M',
+              color: 'White',
+              image: '/api/placeholder/80/80'
+            },
+            {
+              id: 2,
+              name: 'Designer Blazer',
+              price: 3499,
+              quantity: 1,
+              size: '40',
+              color: 'Navy Blue',
+              image: '/api/placeholder/80/80'
+            }
+          ],
+          subtotal: 4798,
+          shipping: 0,
+          tax: 864,
+          total: 5662
+        });
+      }
+    } catch (error) {
+      console.error("Error processing order data:", error);
+      // Set fallback data in case of any error
+      setOrderDetails({
+        orderId: 'ERROR-RECOVERY',
+        orderDate: new Date().toLocaleDateString('en-IN'),
+        paymentMethod: 'N/A',
+        shippingAddress: null,
+        items: [],
+        subtotal: 0,
         shipping: 0,
-        tax: 864,
-        total: 5662
+        tax: 0,
+        total: 0
       });
     }
     
@@ -78,8 +97,16 @@ const OrderConfirmation = () => {
     }, 300);
   }, []);
 
+  // Safe formatter function for prices
+  const formatPrice = (price) => {
+    if (price === undefined || price === null) return "0";
+    return Number(price).toLocaleString();
+  };
+
   // Helper function to format payment method text
   const getPaymentMethodText = (paymentMethod) => {
+    if (!paymentMethod) return 'N/A';
+    
     switch(paymentMethod) {
       case 'cardPayment':
         return 'Credit/Debit Card';
@@ -309,38 +336,42 @@ const OrderConfirmation = () => {
         
         <h3>Order Items</h3>
         <div className="ordered-items">
-          {orderDetails.items.map(item => (
-            <div className="item-card" key={item.id}>
-              <div className="item-image">
-                <img src={item.image} alt={item.name} />
-              </div>
-              <div className="item-details">
-                <div className="item-name">{item.name}</div>
-                <div className="item-meta">
-                  Size: {item.size} | Color: {item.color} | Quantity: {item.quantity}
+          {orderDetails.items && orderDetails.items.length > 0 ? (
+            orderDetails.items.map((item, index) => (
+              <div className="item-card" key={item.id || index}>
+                <div className="item-image">
+                  <img src={item.image || '/api/placeholder/80/80'} alt={item.name || 'Product'} />
                 </div>
-                <div className="item-price">₹{item.price.toLocaleString()}</div>
+                <div className="item-details">
+                  <div className="item-name">{item.name || 'Product'}</div>
+                  <div className="item-meta">
+                    Size: {item.size || 'N/A'} | Color: {item.color || 'N/A'} | Quantity: {item.quantity || 1}
+                  </div>
+                  <div className="item-price">₹{formatPrice(item.price)}</div>
+                </div>
               </div>
-            </div>
-          ))}
+            ))
+          ) : (
+            <div className="no-items">No items in this order</div>
+          )}
         </div>
         
         <div className="order-summary">
           <div className="summary-row">
             <div>Subtotal</div>
-            <div>₹{orderDetails.subtotal.toLocaleString()}</div>
+            <div>₹{formatPrice(orderDetails.subtotal)}</div>
           </div>
           <div className="summary-row">
             <div>Shipping</div>
-            <div>{orderDetails.shipping === 0 ? 'Free' : `₹${orderDetails.shipping.toLocaleString()}`}</div>
+            <div>{orderDetails.shipping === 0 ? 'Free' : `₹${formatPrice(orderDetails.shipping)}`}</div>
           </div>
           <div className="summary-row">
             <div>Tax</div>
-            <div>₹{orderDetails.tax.toLocaleString()}</div>
+            <div>₹{formatPrice(orderDetails.tax)}</div>
           </div>
           <div className="summary-row total">
             <div>Total Amount</div>
-            <div>₹{orderDetails.total.toLocaleString()}</div>
+            <div>₹{formatPrice(orderDetails.total)}</div>
           </div>
         </div>
         

@@ -70,6 +70,8 @@ const Orders = () => {
     setLoading(true);
     
     try {
+      console.log("Fetching orders for user:", currentUser.uid);
+      
       // Create query for user's orders
       const ordersQuery = query(
         collection(db, 'orders'),
@@ -79,15 +81,24 @@ const Orders = () => {
       
       // Set up real-time listener
       const unsubscribe = onSnapshot(ordersQuery, (snapshot) => {
+        console.log("Orders snapshot received:", snapshot.size, "documents");
+        
         if (snapshot.empty) {
-          // If no orders found, use sample data
-          setOrders(getSampleOrders());
+          console.log("No orders found in database");
+          // Only use sample data if in development mode
+          if (process.env.NODE_ENV === 'development') {
+            console.log("Using sample orders for development");
+            setOrders(getSampleOrders());
+          } else {
+            setOrders([]);
+          }
           setLoading(false);
           return;
         }
         
         const ordersList = snapshot.docs.map(doc => {
           const data = doc.data();
+          console.log("Order data:", doc.id, data);
           return {
             id: doc.id,
             ...data,
@@ -102,12 +113,19 @@ const Orders = () => {
           };
         });
         
+        console.log("Processed orders:", ordersList.length);
         setOrders(ordersList);
         setLoading(false);
       }, (error) => {
         console.error("Error fetching orders:", error);
-        // Fallback to sample data on error
-        setOrders(getSampleOrders());
+        
+        // Only use sample data in development mode
+        if (process.env.NODE_ENV === 'development') {
+          console.log("Using sample orders for development due to error");
+          setOrders(getSampleOrders());
+        } else {
+          setOrders([]);
+        }
         setLoading(false);
       });
       
@@ -115,7 +133,14 @@ const Orders = () => {
       return () => unsubscribe();
     } catch (error) {
       console.error("Error setting up orders listener:", error);
-      setOrders(getSampleOrders());
+      
+      // Only use sample data in development mode
+      if (process.env.NODE_ENV === 'development') {
+        console.log("Using sample orders for development due to error");
+        setOrders(getSampleOrders());
+      } else {
+        setOrders([]);
+      }
       setLoading(false);
     }
   }, [currentUser]);
