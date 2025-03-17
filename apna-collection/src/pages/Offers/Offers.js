@@ -143,7 +143,7 @@ const Offers = () => {
           ))}
         </div>
 
-        {/* Improved Seasonal Banner */}
+        {/* Updated link to the new End of Season Sale page */}
         <div className="seasonal-banner">
           <div className="banner-content">
             <h2 className="banner-title">End of Season Sale</h2>
@@ -151,7 +151,7 @@ const Offers = () => {
               Upgrade your wardrobe with our essential clothing collection at unbeatable prices. 
               Shop shirts, jeans, kurtas, t-shirts, and undergarments with the finest materials and craftsmanship.
             </p>
-            <Link to="/shop" className="banner-shop-now-btn">Explore Collection</Link>
+            <Link to="/end-of-season-sale" className="banner-shop-now-btn">Explore Collection</Link>
           </div>
           <div 
             className="banner-image" 

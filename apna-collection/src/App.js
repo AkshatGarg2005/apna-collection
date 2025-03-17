@@ -29,6 +29,7 @@ import LoginStatusToast from './components/LoginStatusToast';
 import Notifications from './pages/Notifications/Notifications';
 import FestiveCollection from './pages/FestiveCollection/FestiveCollection';
 import WeddingCollection from './pages/WeddingCollection/WeddingCollection';
+import EndOfSeasonSale from './pages/EndOfSeasonSale/EndOfSeasonSale'; // Import the new component
 
 function App() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -85,10 +86,10 @@ function App() {
                       <UserDash />
                     </PrivateRoute>
                   } />
-                  {/* Route for festive collection */}
                   <Route path="/festive-collection" element={<FestiveCollection />} />
-                  {/* New route for wedding collection */}
                   <Route path="/wedding-collection" element={<WeddingCollection />} />
+                  {/* New route for End of Season Sale */}
+                  <Route path="/end-of-season-sale" element={<EndOfSeasonSale />} />
                 </Routes>
               </main>
               <Footer />
