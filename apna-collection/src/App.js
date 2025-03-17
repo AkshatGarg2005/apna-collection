@@ -28,6 +28,7 @@ import UserDash from './pages/UserDash/UserDash';
 import LoginStatusToast from './components/LoginStatusToast';
 import Notifications from './pages/Notifications/Notifications';
 import FestiveCollection from './pages/FestiveCollection/FestiveCollection';
+import WeddingCollection from './pages/WeddingCollection/WeddingCollection';
 
 function App() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -84,8 +85,10 @@ function App() {
                       <UserDash />
                     </PrivateRoute>
                   } />
-                  {/* New route for festive collection */}
+                  {/* Route for festive collection */}
                   <Route path="/festive-collection" element={<FestiveCollection />} />
+                  {/* New route for wedding collection */}
+                  <Route path="/wedding-collection" element={<WeddingCollection />} />
                 </Routes>
               </main>
               <Footer />

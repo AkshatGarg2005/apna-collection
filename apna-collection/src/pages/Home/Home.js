@@ -94,7 +94,7 @@ const Home = () => {
           <div className="offer-content">
             <h3 className="offer-title">Wedding Season Special</h3>
             <p className="offer-desc">Make a statement at every occasion with our premium wedding collection.</p>
-            <Link to="/shop" className="btn">Explore Collection</Link>
+            <Link to="/wedding-collection" className="btn">Explore Collection</Link>
           </div>
         </div>
       </section>
