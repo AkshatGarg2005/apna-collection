@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 import { useWishlist } from '../../context/WishlistContext';
@@ -7,6 +7,7 @@ import './UserDash.css';
 
 const UserDash = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { 
     currentUser, 
     userProfile, 
@@ -19,7 +20,12 @@ const UserDash = () => {
   } = useAuth();
   const { addToCart } = useCart();
   const { wishlist, removeFromWishlist } = useWishlist();
-  const [activeSection, setActiveSection] = useState('overview');
+  
+  // Get section from URL parameters
+  const queryParams = new URLSearchParams(location.search);
+  const sectionParam = queryParams.get('section');
+  
+  const [activeSection, setActiveSection] = useState(sectionParam || 'overview');
   const [animateIn, setAnimateIn] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [updateSuccess, setUpdateSuccess] = useState(false);
@@ -83,6 +89,13 @@ const UserDash = () => {
       }
     ]
   };
+
+  // Update active section when URL parameter changes
+  useEffect(() => {
+    if (sectionParam && ['overview', 'orders', 'profile', 'wishlist', 'addresses', 'payments'].includes(sectionParam)) {
+      setActiveSection(sectionParam);
+    }
+  }, [sectionParam]);
 
   // Initialize form data when user profile is loaded
   useEffect(() => {
@@ -381,9 +394,9 @@ const UserDash = () => {
       <div className="dashboard-section">
         <div className="section-header">
           <h3>Recent Orders</h3>
-          <button className="view-all-btn" onClick={() => setActiveSection('orders')}>
+          <Link to="/orders" className="view-all-btn">
             View All
-          </button>
+          </Link>
         </div>
         <div className="order-cards">
           {mockData.recentOrders.slice(0, 2).map(order => (
@@ -528,57 +541,6 @@ const UserDash = () => {
               <p>No payment methods saved yet. Add your first payment method from the Payment Methods section.</p>
             )}
           </div>
-        </div>
-      </div>
-    </div>
-  );
-
-  // Render the orders section
-  const renderOrders = () => (
-    <div className="dashboard-orders">
-      <div className="dashboard-section">
-        <div className="section-header">
-          <h3>Order History</h3>
-        </div>
-        <div className="order-list">
-          {mockData.recentOrders.length > 0 ? (
-            mockData.recentOrders.map(order => (
-              <div className="order-card" key={order.id}>
-                <div className="order-header">
-                  <div>
-                    <span className="order-id">{order.id}</span>
-                    <span className={`order-status status-${order.status.toLowerCase()}`}>{order.status}</span>
-                  </div>
-                  <span className="order-date">{order.date}</span>
-                </div>
-                <div className="order-items">
-                  {order.items.map((item, index) => (
-                    <div className="order-item" key={index}>
-                      <span className="item-name">{item.name}</span>
-                      <span className="item-details">
-                        {item.color}, Size: {item.size}, Qty: {item.quantity}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-                <div className="order-footer">
-                  <span className="order-total">{formatPrice(order.total)}</span>
-                  <div className="order-actions">
-                    <Link to={`/orders/${order.id}`} className="view-details-btn">
-                      View Details
-                    </Link>
-                    {order.status === "Delivered" && (
-                      <button className="reorder-btn">
-                        Reorder
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))
-          ) : (
-            <p>You haven't placed any orders yet.</p>
-          )}
         </div>
       </div>
     </div>
@@ -993,8 +955,6 @@ const UserDash = () => {
     switch (activeSection) {
       case 'overview':
         return renderOverview();
-      case 'orders':
-        return renderOrders();
       case 'profile':
         return renderProfile();
       case 'wishlist':
@@ -1048,10 +1008,7 @@ const UserDash = () => {
               <span className="nav-text">Overview</span>
             </button>
             
-            <button
-              className={`nav-item ${activeSection === 'orders' ? 'active' : ''}`}
-              onClick={() => setActiveSection('orders')}
-            >
+            <Link to="/orders" className="nav-item">
               <span className="nav-icon">
                 <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" strokeWidth="2" fill="none">
                   <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
@@ -1062,7 +1019,7 @@ const UserDash = () => {
                 </svg>
               </span>
               <span className="nav-text">My Orders</span>
-            </button>
+            </Link>
             
             <button
               className={`nav-item ${activeSection === 'profile' ? 'active' : ''}`}

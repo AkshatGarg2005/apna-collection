@@ -317,7 +317,7 @@ const Header = () => {
                   </div>
                   <Link to="/account">My Account</Link>
                   <Link to="/orders">My Orders</Link>
-                  <Link to="/wishlist">My Wishlist</Link>
+                  <Link to="/account?section=wishlist">My Wishlist</Link>
                   {unreadCount > 0 ? (
                     <Link to="/notifications" className="notification-link">
                       Notifications
