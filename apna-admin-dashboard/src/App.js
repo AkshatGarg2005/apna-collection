@@ -13,6 +13,7 @@ import EditProduct from './pages/EditProduct';
 import Orders from './pages/Orders';
 import Customers from './pages/Customers';
 import FestiveProducts from './pages/FestiveProducts';
+import WeddingProducts from './pages/WeddingProducts';
 
 function App() {
   return (
@@ -51,10 +52,16 @@ function App() {
                 <Customers />
               </AdminRoute>
             } />
-            {/* New route for festive products management */}
+            {/* Route for festive products management */}
             <Route path="/festive-products" element={
               <AdminRoute>
                 <FestiveProducts />
+              </AdminRoute>
+            } />
+            {/* New route for wedding products management */}
+            <Route path="/wedding-products" element={
+              <AdminRoute>
+                <WeddingProducts />
               </AdminRoute>
             } />
           </Routes>

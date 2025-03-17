@@ -13,7 +13,8 @@ import {
   FaBars,
   FaTimes,
   FaUserCircle,
-  FaStar
+  FaStar,
+  FaRing
 } from 'react-icons/fa';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import NotificationsCenter from '../notifications/NotificationsCenter';
@@ -79,13 +80,22 @@ const DashboardLayout = ({ children, title }) => {
             <span>Customers</span>
           </SidebarMenuItem>
           
-          {/* New Festive Products Menu Item */}
+          {/* Festive Products Menu Item */}
           <SidebarMenuItem 
             to="/festive-products" 
             className={isActive('/festive-products') ? 'active' : ''}
           >
             <FaStar className="menu-icon" />
             <span>Festive Collection</span>
+          </SidebarMenuItem>
+          
+          {/* Wedding Products Menu Item */}
+          <SidebarMenuItem 
+            to="/wedding-products" 
+            className={isActive('/wedding-products') ? 'active' : ''}
+          >
+            <FaRing className="menu-icon" />
+            <span>Wedding Collection</span>
           </SidebarMenuItem>
           
           <SidebarMenuItem 
