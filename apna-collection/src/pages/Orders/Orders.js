@@ -14,6 +14,8 @@ import { db } from '../../firebase/config';
 import { useAuth } from '../../context/AuthContext';
 import OrderTracker from '../../components/Orders/OrderTracker';
 import AddressDisplay from '../../components/AddressDisplay';
+import AddReview from '../../components/Reviews/AddReview';
+import { hasUserReviewedProduct } from '../../services/reviewService';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
   faSearch, 
@@ -31,7 +33,8 @@ import {
   faArrowRight,
   faInfoCircle,
   faFilter,
-  faTag
+  faTag,
+  faStar
 } from '@fortawesome/free-solid-svg-icons';
 import './Orders.css';
 
@@ -53,6 +56,12 @@ const Orders = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
+  
+  // Review state
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [reviewProductId, setReviewProductId] = useState(null);
+  const [reviewProductName, setReviewProductName] = useState('');
+  const [itemReviewStatus, setItemReviewStatus] = useState({});
   
   // Refs for animations
   const orderRefs = useRef({});
@@ -166,6 +175,39 @@ const Orders = () => {
     setFilteredOrders(result);
   }, [activeFilter, searchTerm, orders]);
 
+  // Check review status for delivered items
+  useEffect(() => {
+    const checkReviewStatus = async () => {
+      if (!currentUser) return;
+      
+      // Get all delivered orders
+      const deliveredOrders = orders.filter(order => order.status === 'Delivered');
+      
+      // Check each product in each order
+      const reviewStatusMap = {};
+      
+      for (const order of deliveredOrders) {
+        if (!order.items || !Array.isArray(order.items)) continue;
+        
+        for (const item of order.items) {
+          if (!item.id) continue;
+          
+          // If we haven't checked this product yet
+          if (reviewStatusMap[item.id] === undefined) {
+            const { hasReviewed } = await hasUserReviewedProduct(currentUser.uid, item.id);
+            reviewStatusMap[item.id] = hasReviewed;
+          }
+        }
+      }
+      
+      setItemReviewStatus(reviewStatusMap);
+    };
+    
+    if (orders.length > 0) {
+      checkReviewStatus();
+    }
+  }, [orders, currentUser]);
+
   // Utility Functions
   const formatDate = (date) => {
     return date.toLocaleDateString('en-IN', {
@@ -255,6 +297,31 @@ const Orders = () => {
     setTimeout(() => {
       setShowToast(false);
     }, 3000);
+  };
+  
+  // Handle review button click
+  const handleReviewProduct = (productId, productName) => {
+    setReviewProductId(productId);
+    setReviewProductName(productName);
+    setShowReviewModal(true);
+  };
+  
+  // Handle review form close
+  const handleCloseReviewForm = () => {
+    setShowReviewModal(false);
+    setReviewProductId(null);
+    setReviewProductName('');
+  };
+  
+  // Handle review added
+  const handleReviewAdded = () => {
+    // Update the review status for this product
+    setItemReviewStatus(prev => ({
+      ...prev,
+      [reviewProductId]: true
+    }));
+    
+    showToastNotification('Your review has been submitted!');
   };
 
   // UI Helper Functions
@@ -539,6 +606,24 @@ const Orders = () => {
                           <div className="item-price">
                             {formatPrice(item.price)}
                           </div>
+                          
+                          {/* Review button - only show for delivered orders */}
+                          {order.status === 'Delivered' && (
+                            <div className="item-review">
+                              {itemReviewStatus[item.id] ? (
+                                <div className="reviewed-badge">
+                                  <FontAwesomeIcon icon={faStar} /> Reviewed
+                                </div>
+                              ) : (
+                                <button 
+                                  className="review-item-btn"
+                                  onClick={() => handleReviewProduct(item.id, item.name)}
+                                >
+                                  <FontAwesomeIcon icon={faStar} /> Write Review
+                                </button>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -671,6 +756,27 @@ const Orders = () => {
                             Size: {item.size} | Color: {item.color} | Qty: {item.quantity}
                           </div>
                           <div className="item-price">{formatPrice(item.price * item.quantity)}</div>
+                          
+                          {/* Review button in order details */}
+                          {selectedOrder.status === 'Delivered' && (
+                            <div className="item-review-details">
+                              {itemReviewStatus[item.id] ? (
+                                <div className="reviewed-badge">
+                                  <FontAwesomeIcon icon={faStar} /> Reviewed
+                                </div>
+                              ) : (
+                                <button 
+                                  className="review-item-btn"
+                                  onClick={() => {
+                                    handleCloseOrderDetails();
+                                    handleReviewProduct(item.id, item.name);
+                                  }}
+                                >
+                                  <FontAwesomeIcon icon={faStar} /> Write Review
+                                </button>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -870,6 +976,18 @@ const Orders = () => {
               </button>
             </div>
           </div>
+        </div>
+      )}
+      
+      {/* Review Modal */}
+      {showReviewModal && reviewProductId && (
+        <div className="review-form-overlay">
+          <AddReview 
+            productId={reviewProductId}
+            productName={reviewProductName}
+            onReviewAdded={handleReviewAdded}
+            onClose={handleCloseReviewForm}
+          />
         </div>
       )}
       

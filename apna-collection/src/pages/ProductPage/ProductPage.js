@@ -1,13 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useCart } from '../../context/CartContext';
+import { useAuth } from '../../context/AuthContext';
 import { doc, getDoc, collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { db } from '../../firebase/config';
+import ReviewList from '../../components/Reviews/ReviewList';
+import { 
+  getProductReviews, 
+  calculateProductRating, 
+  getRatingDistribution, 
+  hasUserPurchasedProduct 
+} from '../../services/reviewService';
 import './ProductPage.css';
 
 const ProductPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { currentUser } = useAuth();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(0);
@@ -18,6 +27,14 @@ const ProductPage = () => {
   const [relatedProducts, setRelatedProducts] = useState([]);
   const [useFallbackData, setUseFallbackData] = useState(false);
   const { addToCart } = useCart();
+  
+  // Review state
+  const [reviews, setReviews] = useState([]);
+  const [averageRating, setAverageRating] = useState(0);
+  const [totalReviews, setTotalReviews] = useState(0);
+  const [ratingDistribution, setRatingDistribution] = useState([]);
+  const [canUserReview, setCanUserReview] = useState(false);
+  const [reviewsLoading, setReviewsLoading] = useState(true);
 
   // Sample product data for fallback
   const sampleProductData = {
@@ -246,6 +263,50 @@ const ProductPage = () => {
     
     fetchProductData();
   }, [id]);
+  
+  // Fetch product reviews
+  useEffect(() => {
+    const fetchReviews = async () => {
+      if (!id) return;
+      
+      setReviewsLoading(true);
+      
+      try {
+        // Fetch reviews for this product
+        const productReviews = await getProductReviews(id);
+        setReviews(productReviews);
+        
+        // Get rating stats
+        const { averageRating: avgRating, totalReviews: totalRevs } = await calculateProductRating(id);
+        setAverageRating(avgRating);
+        setTotalReviews(totalRevs);
+        
+        // Get rating distribution
+        const distribution = await getRatingDistribution(id);
+        setRatingDistribution(distribution);
+        
+        // Check if current user can review the product
+        if (currentUser) {
+          const hasPurchased = await hasUserPurchasedProduct(currentUser.uid, id);
+          setCanUserReview(hasPurchased);
+        }
+      } catch (error) {
+        console.error('Error fetching reviews:', error);
+        
+        // If no reviews found, use sample reviews
+        if (useFallbackData && sampleProductData.reviews) {
+          setReviews(sampleProductData.reviews);
+          setAverageRating(sampleProductData.rating || 4.5);
+          setTotalReviews(sampleProductData.reviewCount || 10);
+          setRatingDistribution(sampleProductData.ratingDistribution || []);
+        }
+      } finally {
+        setReviewsLoading(false);
+      }
+    };
+    
+    fetchReviews();
+  }, [id, currentUser, useFallbackData]);
 
   // Handle quantity changes
   const decreaseQuantity = () => {
@@ -292,6 +353,26 @@ const ProductPage = () => {
     // Add to cart first, then redirect to checkout
     handleAddToCart();
     navigate('/checkout');
+  };
+  
+  // Handle review refresh
+  const handleReviewChange = async () => {
+    try {
+      // Fetch reviews for this product
+      const productReviews = await getProductReviews(id);
+      setReviews(productReviews);
+      
+      // Get rating stats
+      const { averageRating: avgRating, totalReviews: totalRevs } = await calculateProductRating(id);
+      setAverageRating(avgRating);
+      setTotalReviews(totalRevs);
+      
+      // Get rating distribution
+      const distribution = await getRatingDistribution(id);
+      setRatingDistribution(distribution);
+    } catch (error) {
+      console.error('Error refreshing reviews:', error);
+    }
   };
 
   // Helper function to ensure array exists
@@ -371,16 +452,16 @@ const ProductPage = () => {
                   <i 
                     key={star} 
                     className={
-                      star <= Math.floor(product.rating || 4.5) 
+                      star <= Math.floor(averageRating) 
                         ? "fas fa-star" 
-                        : star <= (product.rating || 4.5)
+                        : star <= averageRating
                           ? "fas fa-star-half-alt" 
                           : "far fa-star"
                     }
                   ></i>
                 ))}
               </div>
-              <span className="rating-count">{product.rating || 4.5}/5 ({product.reviewCount || 10} reviews)</span>
+              <span className="rating-count">{averageRating}/5 ({totalReviews} {totalReviews === 1 ? 'review' : 'reviews'})</span>
             </div>
             <p className="product-description">{product.description}</p>
           </div>
@@ -571,97 +652,19 @@ const ProductPage = () => {
 
         {/* Customer Reviews Tab */}
         <div className={`tab-content ${activeTab === 'reviews' ? 'active' : ''}`} id="tab-reviews">
-          <div className="review-header">
-            <div className="review-total">
-              <div className="review-average">{product.rating || 4.5}</div>
-              <div className="rating-stars">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <i 
-                    key={star} 
-                    className={
-                      star <= Math.floor(product.rating || 4.5) 
-                        ? "fas fa-star" 
-                        : star <= (product.rating || 4.5)
-                          ? "fas fa-star-half-alt" 
-                          : "far fa-star"
-                    }
-                  ></i>
-                ))}
-              </div>
-              <div>Based on {product.reviewCount || 10} reviews</div>
-            </div>
-            
-            <div className="review-distribution">
-              {ensureArray(product.ratingDistribution, [
-                { rating: 5, count: 7, percentage: 70 },
-                { rating: 4, count: 2, percentage: 20 },
-                { rating: 3, count: 1, percentage: 10 },
-                { rating: 2, count: 0, percentage: 0 },
-                { rating: 1, count: 0, percentage: 0 }
-              ]).map((dist) => (
-                <div className="review-bar" key={dist.rating}>
-                  <div className="review-stars">{dist.rating} <i className="fas fa-star"></i></div>
-                  <div className="review-progress">
-                    <div 
-                      className="review-progress-fill" 
-                      style={{ width: `${dist.percentage}%` }}
-                    ></div>
-                  </div>
-                  <div className="review-count">{dist.count}</div>
-                </div>
-              ))}
-            </div>
-            
-            <button className="write-review-btn">Write a Review</button>
-          </div>
-          
-          <div className="review-list">
-            {ensureArray(product.reviews, [
-              {
-                name: "Customer Review",
-                date: new Date().toLocaleDateString(),
-                rating: 5,
-                text: "Great product quality and fit. Very happy with my purchase!",
-                photos: []
-              }
-            ]).map((review, index) => (
-              <div className="review-item" key={index}>
-                <div className="review-user">
-                  <div className="review-avatar">
-                    <i className="fas fa-user"></i>
-                  </div>
-                  <div className="review-user-info">
-                    <div className="review-user-name">{review.name}</div>
-                    <div className="review-date">{review.date}</div>
-                  </div>
-                </div>
-                <div className="review-rating">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <i 
-                      key={star} 
-                      className={
-                        star <= Math.floor(review.rating) 
-                          ? "fas fa-star" 
-                          : star <= review.rating 
-                            ? "fas fa-star-half-alt" 
-                            : "far fa-star"
-                      }
-                    ></i>
-                  ))}
-                </div>
-                <div className="review-text">{review.text}</div>
-                {review.photos && review.photos.length > 0 && (
-                  <div className="review-photos">
-                    {review.photos.map((photo, photoIndex) => (
-                      <div className="review-photo" key={photoIndex}>
-                        <img src={photo} alt="Customer Photo" />
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
+          {reviewsLoading ? (
+            <div className="reviews-loading">Loading reviews...</div>
+          ) : (
+            <ReviewList 
+              reviews={reviews}
+              ratingDistribution={ratingDistribution}
+              averageRating={averageRating}
+              productId={id}
+              productName={product.name}
+              onReviewChange={handleReviewChange}
+              canUserReview={canUserReview}
+            />
+          )}
         </div>
       </div>
 

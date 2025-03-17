@@ -1174,3 +1174,51 @@
       font-size: 1.5rem;
     }
   }
+
+  .item-price {
+    font-weight: 700;
+    color: var(--primary-color);
+    font-size: 1.1rem;
+    margin-top: 8px;
+    margin-bottom: 8px;
+    transition: var(--transition-normal);
+  }
+  
+  /* Review button styles */
+  .item-review, .item-review-details {
+    margin-top: 10px;
+  }
+  
+  .review-item-btn {
+    background-color: var(--light-color);
+    color: #ffc107;
+    border: 1px solid #ffc107;
+    border-radius: 20px;
+    padding: 6px 12px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  
+  .review-item-btn:hover {
+    background-color: #ffc107;
+    color: var(--light-color);
+    transform: translateY(-2px);
+    box-shadow: 0 3px 8px rgba(255, 193, 7, 0.3);
+  }
+  
+  .reviewed-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: #4caf50;
+    font-size: 0.85rem;
+    font-weight: 500;
+    background-color: rgba(76, 175, 80, 0.1);
+    padding: 6px 12px;
+    border-radius: 20px;
+  }
