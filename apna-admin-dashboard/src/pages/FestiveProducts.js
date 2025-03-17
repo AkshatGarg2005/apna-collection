@@ -86,7 +86,23 @@ const FestiveProducts = () => {
   };
   
   // Get all unique categories
-  const categories = ['all', ...new Set(products.map(product => product.category))];
+  const categories = [
+    'all',
+    'kurta',
+    'festive-shirts',
+    'bottom-wear',
+    'ethnic-sets',
+    'shirts',
+    'jeans',
+    'tshirt',
+    'undergarments'
+  ];
+
+  // Format category name for display
+  const formatCategoryName = (category) => {
+    if (category === 'all') return 'All Categories';
+    return category.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+  };
 
   return (
     <DashboardLayout title="Festive Collection Management">
@@ -116,7 +132,7 @@ const FestiveProducts = () => {
           >
             {categories.map(category => (
               <option key={category} value={category}>
-                {category === 'all' ? 'All Categories' : category.charAt(0).toUpperCase() + category.slice(1)}
+                {formatCategoryName(category)}
               </option>
             ))}
           </CategorySelect>
@@ -135,12 +151,12 @@ const FestiveProducts = () => {
             {filteredProducts.map(product => (
               <ProductCard key={product.id}>
                 <ProductImage>
-                  <img src={product.image || 'https://via.placeholder.com/200x200'} alt={product.name} />
+                  <img src={product.image || '/api/placeholder/200/200'} alt={product.name} />
                   {product.isNew && <ProductBadge>New</ProductBadge>}
                 </ProductImage>
                 <ProductDetails>
                   <ProductName>{product.name}</ProductName>
-                  <ProductCategory>{product.category}</ProductCategory>
+                  <ProductCategory>{formatCategoryName(product.category)}</ProductCategory>
                   <ProductPrice>{formatPrice(product.price)}</ProductPrice>
                   <ProductInfo>
                     <StockInfo className={product.stock > 10 ? 'in-stock' : 'low-stock'}>

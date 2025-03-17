@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
-import { FaUpload, FaImage, FaSave, FaTimes } from 'react-icons/fa';
+import { FaUpload, FaImage, FaSave, FaTimes, FaStar, FaRing } from 'react-icons/fa';
 import { collection, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { uploadImage } from '../services/cloudinary';
@@ -11,7 +11,11 @@ import DashboardLayout from '../components/layout/DashboardLayout';
 const UploadProduct = () => {
   const navigate = useNavigate();
   const [categories, setCategories] = useState([
-    'shirts', 'jeans', 'kurta', 'tshirt', 'undergarments'
+    'shirts', 'jeans', 'kurta', 'tshirt', 'undergarments', 
+    // Wedding categories
+    'sherwanis', 'weddingsuits', 'waistcoats', 'accessories',
+    // Festive categories
+    'festive-shirts', 'bottom-wear', 'ethnic-sets'
   ]);
   
   const [formData, setFormData] = useState({
@@ -33,9 +37,13 @@ const UploadProduct = () => {
       Blue: false,
       Red: false,
       Green: false,
-      Beige: false
+      Beige: false,
+      Maroon: false,
+      Gold: false  // Added for festive/wedding collection
     },
-    isNew: false
+    isNew: false,
+    isFestive: false,   // Flag for festive collection
+    isWedding: false    // Flag for wedding collection
   });
   
   const [selectedImage, setSelectedImage] = useState(null);
@@ -152,6 +160,8 @@ const UploadProduct = () => {
         sizes: selectedSizes,
         colors: selectedColors,
         isNew: formData.isNew,
+        isFestive: formData.isFestive,
+        isWedding: formData.isWedding,
         image: uploadResult.url,
         imagePublicId: uploadResult.publicId,
         createdAt: serverTimestamp(),
@@ -181,9 +191,13 @@ const UploadProduct = () => {
           Blue: false,
           Red: false,
           Green: false,
-          Beige: false
+          Beige: false,
+          Maroon: false,
+          Gold: false
         },
-        isNew: false
+        isNew: false,
+        isFestive: false,
+        isWedding: false
       });
       setSelectedImage(null);
       setImagePreview(null);
@@ -201,6 +215,13 @@ const UploadProduct = () => {
     } finally {
       setLoading(false);
     }
+  };
+  
+  // Group categories for better organization
+  const categoryGroups = {
+    'Regular Wear': ['shirts', 'jeans', 'tshirt', 'undergarments'],
+    'Wedding Collection': ['sherwanis', 'weddingsuits', 'waistcoats', 'accessories'], 
+    'Festive Collection': ['kurta', 'festive-shirts', 'bottom-wear', 'ethnic-sets']
   };
   
   return (
@@ -236,10 +257,14 @@ const UploadProduct = () => {
                   onChange={handleInputChange}
                   required
                 >
-                  {categories.map(category => (
-                    <option key={category} value={category}>
-                      {category.charAt(0).toUpperCase() + category.slice(1)}
-                    </option>
+                  {Object.entries(categoryGroups).map(([groupName, groupCategories]) => (
+                    <optgroup key={groupName} label={groupName}>
+                      {groupCategories.map(category => (
+                        <option key={category} value={category}>
+                          {category.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                        </option>
+                      ))}
+                    </optgroup>
                   ))}
                 </Select>
               </FormGroup>
@@ -340,18 +365,51 @@ const UploadProduct = () => {
               </SelectionCard>
             </FormRow>
             
-            <CheckboxGroup>
-              <Checkbox 
-                type="checkbox" 
-                id="isNew" 
-                name="isNew" 
-                checked={formData.isNew}
-                onChange={handleInputChange}
-              />
-              <CheckboxLabel htmlFor="isNew">
-                Mark as New Arrival
-              </CheckboxLabel>
-            </CheckboxGroup>
+            <CollectionOptionsContainer>
+              <CollectionOptionsTitle>Collection Tags</CollectionOptionsTitle>
+              <CollectionOptions>
+                <CheckboxGroup>
+                  <Checkbox 
+                    type="checkbox" 
+                    id="isNew" 
+                    name="isNew" 
+                    checked={formData.isNew}
+                    onChange={handleInputChange}
+                  />
+                  <CheckboxLabel htmlFor="isNew">
+                    Mark as New Arrival
+                  </CheckboxLabel>
+                </CheckboxGroup>
+                
+                <CheckboxGroup>
+                  <Checkbox 
+                    type="checkbox" 
+                    id="isFestive" 
+                    name="isFestive" 
+                    checked={formData.isFestive}
+                    onChange={handleInputChange}
+                  />
+                  <CheckboxLabel htmlFor="isFestive">
+                    <FaStar style={{ marginRight: '8px', color: '#c59b6d' }} />
+                    Add to Festive Collection
+                  </CheckboxLabel>
+                </CheckboxGroup>
+                
+                <CheckboxGroup>
+                  <Checkbox 
+                    type="checkbox" 
+                    id="isWedding" 
+                    name="isWedding" 
+                    checked={formData.isWedding}
+                    onChange={handleInputChange}
+                  />
+                  <CheckboxLabel htmlFor="isWedding">
+                    <FaRing style={{ marginRight: '8px', color: '#8e44ad' }} />
+                    Add to Wedding Collection
+                  </CheckboxLabel>
+                </CheckboxGroup>
+              </CollectionOptions>
+            </CollectionOptionsContainer>
           </FormSection>
           
           <FormSection>
@@ -639,10 +697,39 @@ const ColorName = styled.div`
   color: #666;
 `;
 
+const CollectionOptionsContainer = styled.div`
+  margin-top: 25px;
+  background-color: #f9f9f9;
+  border-radius: 12px;
+  padding: 20px;
+`;
+
+const CollectionOptionsTitle = styled.h4`
+  font-size: 16px;
+  color: #555;
+  margin-bottom: 20px;
+  font-weight: 500;
+`;
+
+const CollectionOptions = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 15px;
+`;
+
 const CheckboxGroup = styled.div`
   display: flex;
   align-items: center;
-  margin-top: 15px;
+  padding: 12px 15px;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  }
 `;
 
 const Checkbox = styled.input`
@@ -655,6 +742,9 @@ const Checkbox = styled.input`
 const CheckboxLabel = styled.label`
   font-size: 14px;
   color: #555;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
 `;
 
 const ImageUploadContainer = styled.div`
