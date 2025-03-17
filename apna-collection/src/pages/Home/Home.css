@@ -63,7 +63,7 @@ a {
 }
 
 .hero-image img {
-  height: 100%;
+  height: 97%;
   object-fit: cover;
 }
 
@@ -356,5 +356,51 @@ a {
   
   .hero-title {
     font-size: 2.5rem;
+  }
+}
+
+/* Add this CSS to your Home.css file - using more specific selectors */
+
+/* Target only the Home page banners with more specific selectors */
+.home-container .special-offers .offer-banner {
+  display: flex;
+  align-items: stretch;
+  background-color: #E1D9D2;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 60px;
+  min-height: 450px;
+}
+
+.home-container .special-offers .offer-content {
+  padding: 50px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.home-container .special-offers .offer-image {
+  flex: 1;
+  height: auto;
+  min-height: 450px;
+  overflow: hidden;
+}
+
+.home-container .special-offers .offer-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Responsive adjustments */
+@media (max-width: 992px) {
+  .home-container .special-offers .offer-banner {
+    flex-direction: column;
+    min-height: auto;
+  }
+  
+  .home-container .special-offers .offer-image {
+    min-height: 350px;
   }
 }

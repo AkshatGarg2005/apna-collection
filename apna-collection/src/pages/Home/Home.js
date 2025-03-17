@@ -5,6 +5,11 @@ import './Home.css';
 import { collection, query, where, getDocs, limit, orderBy } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 
+// Import the images
+import heroImage from '../../images/heroimg.jpeg';
+import festiveImage from '../../images/festive.png';
+import weddingImage from '../../images/wedding.jpg';
+
 const Home = () => {
   const [newArrivals, setNewArrivals] = useState([]);
   const [bestSellers, setBestSellers] = useState([]);
@@ -15,7 +20,6 @@ const Home = () => {
     const fetchProducts = async () => {
       try {
         setLoading(true);
-        console.log("Fetching products from Firestore...");
         
         // Fetch New Arrivals
         const newArrivalsQuery = query(
@@ -24,9 +28,7 @@ const Home = () => {
           limit(8)
         );
         
-        console.log("Executing New Arrivals query...");
         const newArrivalsSnapshot = await getDocs(newArrivalsQuery);
-        console.log(`Found ${newArrivalsSnapshot.docs.length} New Arrivals`);
         
         const newArrivalsData = newArrivalsSnapshot.docs.map(doc => ({
           id: doc.id,
@@ -42,9 +44,7 @@ const Home = () => {
           limit(8)
         );
         
-        console.log("Executing Best Sellers query...");
         const bestSellersSnapshot = await getDocs(bestSellersQuery);
-        console.log(`Found ${bestSellersSnapshot.docs.length} Best Sellers`);
         
         const bestSellersData = bestSellersSnapshot.docs.map(doc => ({
           id: doc.id,
@@ -91,7 +91,7 @@ const Home = () => {
           </div>
         </div>
         <div className="hero-image">
-          <img src="/api/placeholder/600/800" alt="Men's Fashion Models" />
+          <img src={heroImage} alt="Men's Fashion Models" />
         </div>
       </section>
 
@@ -106,7 +106,7 @@ const Home = () => {
             newArrivals.map(product => (
               <Link to={`/product/${product.id}`} key={product.id}>
                 <div className="featured-item">
-                  <img src={product.image || "/api/placeholder/400/500"} alt={product.name} className="featured-img" />
+                  <img src={product.image} alt={product.name} className="featured-img" />
                   <div className="featured-overlay">
                     <h3 className="featured-name">{product.name || "Untitled Product"}</h3>
                     <p className="featured-price">{formatPrice(product.price)}</p>
@@ -131,7 +131,7 @@ const Home = () => {
             bestSellers.map(product => (
               <Link to={`/product/${product.id}`} key={product.id}>
                 <div className="featured-item">
-                  <img src={product.image || "/api/placeholder/400/500"} alt={product.name} className="featured-img" />
+                  <img src={product.image} alt={product.name} className="featured-img" />
                   <div className="featured-overlay">
                     <h3 className="featured-name">{product.name || "Untitled Product"}</h3>
                     <p className="featured-price">{formatPrice(product.price)}</p>
@@ -155,12 +155,12 @@ const Home = () => {
             <Link to="/festive-collection" className="btn">Shop Now</Link>
           </div>
           <div className="offer-image">
-            <img src="/api/placeholder/600/400" alt="Festival Collection" />
+            <img src={festiveImage} alt="Festival Collection" />
           </div>
         </div>
         <div className="offer-banner">
           <div className="offer-image">
-            <img src="/api/placeholder/600/400" alt="Wedding Collection" />
+            <img src={weddingImage} alt="Wedding Collection" />
           </div>
           <div className="offer-content">
             <h3 className="offer-title">Wedding Season Special</h3>
