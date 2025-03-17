@@ -279,7 +279,63 @@ const Shop = () => {
                     className={`category-button ${currentCategory === 'undergarments' ? 'active' : ''}`} 
                     onClick={() => handleCategoryClick('undergarments')}
                   >
-                    <i className="fas fa-underwear category-icon"></i>Undergarments
+                    <i className="fas fa-socks category-icon"></i>Undergarments
+                  </button>
+                </li>
+                <li className="category-item">
+                  <button 
+                    className={`category-button ${currentCategory === 'sherwanis' ? 'active' : ''}`} 
+                    onClick={() => handleCategoryClick('sherwanis')}
+                  >
+                    <i className="fas fa-user-tie category-icon"></i>Sherwanis
+                  </button>
+                </li>
+                <li className="category-item">
+                  <button 
+                    className={`category-button ${currentCategory === 'weddingsuits' ? 'active' : ''}`} 
+                    onClick={() => handleCategoryClick('weddingsuits')}
+                  >
+                    <i className="fas fa-user-tie category-icon"></i>Wedding Suits
+                  </button>
+                </li>
+                <li className="category-item">
+                  <button 
+                    className={`category-button ${currentCategory === 'waistcoats' ? 'active' : ''}`} 
+                    onClick={() => handleCategoryClick('waistcoats')}
+                  >
+                    <i className="fas fa-vest category-icon"></i>Waistcoats
+                  </button>
+                </li>
+                <li className="category-item">
+                  <button 
+                    className={`category-button ${currentCategory === 'accessories' ? 'active' : ''}`} 
+                    onClick={() => handleCategoryClick('accessories')}
+                  >
+                    <i className="fas fa-gem category-icon"></i>Accessories
+                  </button>
+                </li>
+                <li className="category-item">
+                  <button 
+                    className={`category-button ${currentCategory === 'festive-shirts' ? 'active' : ''}`} 
+                    onClick={() => handleCategoryClick('festive-shirts')}
+                  >
+                    <i className="fas fa-tshirt category-icon"></i>Festive Shirts
+                  </button>
+                </li>
+                <li className="category-item">
+                  <button 
+                    className={`category-button ${currentCategory === 'bottom-wear' ? 'active' : ''}`} 
+                    onClick={() => handleCategoryClick('bottom-wear')}
+                  >
+                    <i className="fas fa-grip-lines-vertical category-icon"></i>Bottom Wear
+                  </button>
+                </li>
+                <li className="category-item">
+                  <button 
+                    className={`category-button ${currentCategory === 'ethnic-sets' ? 'active' : ''}`} 
+                    onClick={() => handleCategoryClick('ethnic-sets')}
+                  >
+                    <i className="fas fa-vest-patches category-icon"></i>Ethnic Sets
                   </button>
                 </li>
               </ul>
