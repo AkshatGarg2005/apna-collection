@@ -14,7 +14,8 @@ import Orders from './pages/Orders';
 import Customers from './pages/Customers';
 import FestiveProducts from './pages/FestiveProducts';
 import WeddingProducts from './pages/WeddingProducts';
-import EndOfSeasonProducts from './pages/EndOfSeasonProducts'; // Import the new component
+import EndOfSeasonProducts from './pages/EndOfSeasonProducts';
+import FeaturedProducts from './pages/FeaturedProducts';
 
 function App() {
   return (
@@ -63,10 +64,14 @@ function App() {
                 <WeddingProducts />
               </AdminRoute>
             } />
-            {/* New route for end of season sale management */}
             <Route path="/end-of-season-products" element={
               <AdminRoute>
                 <EndOfSeasonProducts />
+              </AdminRoute>
+            } />
+            <Route path="/featured-products" element={
+              <AdminRoute>
+                <FeaturedProducts />
               </AdminRoute>
             } />
           </Routes>

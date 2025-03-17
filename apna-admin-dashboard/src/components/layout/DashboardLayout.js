@@ -15,7 +15,8 @@ import {
   FaUserCircle,
   FaStar,
   FaRing,
-  FaTag
+  FaTag,
+  FaHome
 } from 'react-icons/fa';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import NotificationsCenter from '../notifications/NotificationsCenter';
@@ -79,6 +80,14 @@ const DashboardLayout = ({ children, title }) => {
           >
             <FaUsers className="menu-icon" />
             <span>Customers</span>
+          </SidebarMenuItem>
+          
+          <SidebarMenuItem 
+            to="/featured-products" 
+            className={isActive('/featured-products') ? 'active' : ''}
+          >
+            <FaHome className="menu-icon" />
+            <span>Homepage Featured</span>
           </SidebarMenuItem>
           
           {/* End of Season Sale Menu Item */}

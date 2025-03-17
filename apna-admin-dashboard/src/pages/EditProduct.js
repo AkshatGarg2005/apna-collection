@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import styled from 'styled-components';
-import { FaEdit, FaImage, FaSave, FaTimes, FaStar, FaRing } from 'react-icons/fa';
+import { FaEdit, FaImage, FaSave, FaTimes, FaStar, FaRing, FaFireAlt } from 'react-icons/fa';
 import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { uploadImage } from '../services/cloudinary';
@@ -43,6 +43,7 @@ const EditProduct = () => {
       Gold: false
     },
     isNew: false,
+    isBestSeller: false,
     isFestive: false,
     isWedding: false
   });
@@ -122,6 +123,7 @@ const EditProduct = () => {
           sizes: sizesObj,
           colors: colorsObj,
           isNew: productData.isNew || false,
+          isBestSeller: productData.isBestSeller || false,
           isFestive: productData.isFestive || false,
           isWedding: productData.isWedding || false
         });
@@ -252,6 +254,7 @@ const EditProduct = () => {
         sizes: selectedSizes,
         colors: selectedColors,
         isNew: formData.isNew,
+        isBestSeller: formData.isBestSeller,
         isFestive: formData.isFestive,
         isWedding: formData.isWedding,
         image: imageUrl,
@@ -443,6 +446,20 @@ const EditProduct = () => {
                   />
                   <CheckboxLabel htmlFor="isNew">
                     Mark as New Arrival
+                  </CheckboxLabel>
+                </CheckboxGroup>
+                
+                <CheckboxGroup>
+                  <Checkbox 
+                    type="checkbox" 
+                    id="isBestSeller" 
+                    name="isBestSeller" 
+                    checked={formData.isBestSeller}
+                    onChange={handleInputChange}
+                  />
+                  <CheckboxLabel htmlFor="isBestSeller">
+                    <FaFireAlt style={{ marginRight: '8px', color: '#e74c3c' }} />
+                    Add to Best Sellers
                   </CheckboxLabel>
                 </CheckboxGroup>
                 
