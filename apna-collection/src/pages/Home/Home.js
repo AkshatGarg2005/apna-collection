@@ -81,7 +81,7 @@ const Home = () => {
           <div className="offer-content">
             <h3 className="offer-title">Festival Collection</h3>
             <p className="offer-desc">Celebrate with style. Exclusive festival wear with up to 30% discount on selected items.</p>
-            <Link to="/shop" className="btn">Shop Now</Link>
+            <Link to="/festive-collection" className="btn">Shop Now</Link>
           </div>
           <div className="offer-image">
             <img src="/api/placeholder/600/400" alt="Festival Collection" />
