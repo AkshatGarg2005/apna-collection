@@ -1,22 +1,79 @@
-import React from 'react';
+// src/pages/Home/Home.js
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import './Home.css';
+import { collection, query, where, getDocs, limit, orderBy } from 'firebase/firestore';
+import { db } from '../../firebase/config';
 
 const Home = () => {
-  // Sample product data - replace with actual data later
-  const newArrivals = [
-    { id: 1, name: "Premium Cotton Formal Shirt", price: 1299, image: "/api/placeholder/400/500" },
-    { id: 2, name: "Slim Fit Trousers", price: 1599, image: "/api/placeholder/400/500" },
-    { id: 3, name: "Designer Blazer", price: 3499, image: "/api/placeholder/400/500" },
-    { id: 4, name: "Formal Shoes", price: 2199, image: "/api/placeholder/400/500" }
-  ];
+  const [newArrivals, setNewArrivals] = useState([]);
+  const [bestSellers, setBestSellers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const bestSellers = [
-    { id: 5, name: "Classic White Shirt", price: 1199, image: "/api/placeholder/400/500" },
-    { id: 6, name: "Navy Blue Suit", price: 7999, image: "/api/placeholder/400/500" },
-    { id: 7, name: "Casual Linen Shirt", price: 1499, image: "/api/placeholder/400/500" },
-    { id: 8, name: "Traditional Kurta", price: 1899, image: "/api/placeholder/400/500" }
-  ];
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        setLoading(true);
+        console.log("Fetching products from Firestore...");
+        
+        // Fetch New Arrivals
+        const newArrivalsQuery = query(
+          collection(db, 'products'),
+          where('isNew', '==', true),
+          limit(8)
+        );
+        
+        console.log("Executing New Arrivals query...");
+        const newArrivalsSnapshot = await getDocs(newArrivalsQuery);
+        console.log(`Found ${newArrivalsSnapshot.docs.length} New Arrivals`);
+        
+        const newArrivalsData = newArrivalsSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        
+        setNewArrivals(newArrivalsData);
+        
+        // Fetch Best Sellers
+        const bestSellersQuery = query(
+          collection(db, 'products'),
+          where('isBestSeller', '==', true),
+          limit(8)
+        );
+        
+        console.log("Executing Best Sellers query...");
+        const bestSellersSnapshot = await getDocs(bestSellersQuery);
+        console.log(`Found ${bestSellersSnapshot.docs.length} Best Sellers`);
+        
+        const bestSellersData = bestSellersSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        
+        setBestSellers(bestSellersData);
+        setError(null);
+      } catch (err) {
+        console.error("Error fetching featured products:", err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchProducts();
+  }, []);
+
+  // Format price function
+  const formatPrice = (price) => {
+    if (!price && price !== 0) return "₹0";
+    
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      maximumFractionDigits: 0
+    }).format(price);
+  };
 
   return (
     <div className="home-container">
@@ -38,39 +95,53 @@ const Home = () => {
         </div>
       </section>
 
-      {/* Featured Collections / New Arrivals */}
+      {/* New Arrivals Section */}
       <section className="featured">
         <h2 className="section-title">New Arrivals</h2>
+        {error && <div className="error-message">Error loading products: {error}</div>}
         <div className="featured-grid">
-          {newArrivals.map(product => (
-            <Link to={`/product/${product.id}`} key={product.id}>
-              <div className="featured-item">
-                <img src={product.image} alt={product.name} className="featured-img" />
-                <div className="featured-overlay">
-                  <h3 className="featured-name">{product.name}</h3>
-                  <p className="featured-price">₹{product.price.toLocaleString()}</p>
+          {loading ? (
+            <div className="loading-message">Loading new arrivals...</div>
+          ) : newArrivals.length > 0 ? (
+            newArrivals.map(product => (
+              <Link to={`/product/${product.id}`} key={product.id}>
+                <div className="featured-item">
+                  <img src={product.image || "/api/placeholder/400/500"} alt={product.name} className="featured-img" />
+                  <div className="featured-overlay">
+                    <h3 className="featured-name">{product.name || "Untitled Product"}</h3>
+                    <p className="featured-price">{formatPrice(product.price)}</p>
+                  </div>
                 </div>
-              </div>
-            </Link>
-          ))}
+              </Link>
+            ))
+          ) : (
+            <div className="empty-message">No new arrivals to show</div>
+          )}
         </div>
       </section>
 
-      {/* Best Sellers */}
+      {/* Best Sellers Section */}
       <section className="new-arrivals">
         <h2 className="section-title">Best Sellers</h2>
+        {error && <div className="error-message">Error loading products: {error}</div>}
         <div className="featured-grid">
-          {bestSellers.map(product => (
-            <Link to={`/product/${product.id}`} key={product.id}>
-              <div className="featured-item">
-                <img src={product.image} alt={product.name} className="featured-img" />
-                <div className="featured-overlay">
-                  <h3 className="featured-name">{product.name}</h3>
-                  <p className="featured-price">₹{product.price.toLocaleString()}</p>
+          {loading ? (
+            <div className="loading-message">Loading best sellers...</div>
+          ) : bestSellers.length > 0 ? (
+            bestSellers.map(product => (
+              <Link to={`/product/${product.id}`} key={product.id}>
+                <div className="featured-item">
+                  <img src={product.image || "/api/placeholder/400/500"} alt={product.name} className="featured-img" />
+                  <div className="featured-overlay">
+                    <h3 className="featured-name">{product.name || "Untitled Product"}</h3>
+                    <p className="featured-price">{formatPrice(product.price)}</p>
+                  </div>
                 </div>
-              </div>
-            </Link>
-          ))}
+              </Link>
+            ))
+          ) : (
+            <div className="empty-message">No best sellers to show</div>
+          )}
         </div>
       </section>
 

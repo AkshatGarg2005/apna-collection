@@ -249,6 +249,52 @@ a {
   color: #c59b6d;
 }
 
+/* Loading and Error States */
+.loading-message,
+.empty-message,
+.error-message {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 40px 0;
+  font-size: 16px;
+}
+
+.loading-message {
+  color: #777;
+  position: relative;
+}
+
+.loading-message::after {
+  content: "";
+  display: block;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 4px solid #e0e0e0;
+  border-top-color: #8e44ad;
+  margin: 20px auto 0;
+  animation: spinner 1s linear infinite;
+}
+
+.empty-message {
+  color: #777;
+  font-style: italic;
+}
+
+.error-message {
+  color: #e74c3c;
+  background-color: rgba(231, 76, 60, 0.1);
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+@keyframes spinner {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 /* Responsive Media Queries */
 @media (max-width: 1200px) {
   .hero-title {
