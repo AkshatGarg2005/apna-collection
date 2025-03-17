@@ -1,3 +1,4 @@
+// src/pages/Orders/Orders.js
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
@@ -12,6 +13,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { useAuth } from '../../context/AuthContext';
+import { useCart } from '../../context/CartContext';
 import OrderTracker from '../../components/Orders/OrderTracker';
 import AddressDisplay from '../../components/AddressDisplay';
 import AddReview from '../../components/Reviews/AddReview';
@@ -41,6 +43,7 @@ import './Orders.css';
 const Orders = () => {
   const navigate = useNavigate();
   const { currentUser, userProfile } = useAuth();
+  const { addToCart } = useCart();
   
   // Order state
   const [orders, setOrders] = useState([]);
@@ -237,10 +240,12 @@ const Orders = () => {
   const handleShowOrderDetails = (order) => {
     setSelectedOrder(order);
     setShowOrderDetails(true);
+    document.body.style.overflow = 'hidden'; // Prevent background scrolling
   };
 
   const handleCloseOrderDetails = () => {
     setShowOrderDetails(false);
+    document.body.style.overflow = ''; // Restore scrolling
   };
 
   const handleTrackOrder = (orderId) => {
@@ -281,8 +286,27 @@ const Orders = () => {
   };
 
   const handleOrderAgain = (items) => {
-    // In a real app, this would add the items to cart via context
-    // For now, just show a toast
+    if (!items || items.length === 0) {
+      showToastNotification('No items to add to cart');
+      return;
+    }
+    
+    // Add each item to the cart using the addToCart function from cart context
+    items.forEach(item => {
+      const cartItem = {
+        id: item.id,
+        name: item.name,
+        price: item.price,
+        image: item.image,
+        quantity: item.quantity || 1,
+        size: item.size,
+        color: item.color
+      };
+      
+      addToCart(cartItem);
+    });
+    
+    // Show success message
     showToastNotification(`Added ${items.length} ${items.length === 1 ? 'item' : 'items'} to your cart`);
     
     // Redirect to cart page after a short delay
@@ -588,7 +612,7 @@ const Orders = () => {
                           </div>
                         </div>
                         <div className="item-details">
-                          <h3 className="item-name">{item.name}</h3>
+                          <h3 className="item-name" onClick={() => navigate(`/product/${item.id}`)}>{item.name}</h3>
                           <div className="item-meta">
                             <span className="meta-item">Size: {item.size}</span>
                             <span className="meta-item">
@@ -751,7 +775,7 @@ const Orders = () => {
                           <img src={item.image} alt={item.name} />
                         </div>
                         <div className="item-details">
-                          <div className="item-name">{item.name}</div>
+                          <div className="item-name" onClick={() => navigate(`/product/${item.id}`)}>{item.name}</div>
                           <div className="item-meta">
                             Size: {item.size} | Color: {item.color} | Qty: {item.quantity}
                           </div>
@@ -835,7 +859,10 @@ const Orders = () => {
                 )}
                 <button 
                   className="reorder-button"
-                  onClick={() => handleOrderAgain(selectedOrder.items || [])}
+                  onClick={() => {
+                    handleOrderAgain(selectedOrder.items || []);
+                    handleCloseOrderDetails();
+                  }}
                 >
                   <FontAwesomeIcon icon={faShoppingCart} /> Reorder
                 </button>
