@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { useLocation } from 'react-router-dom';
 import { 
   collection, 
   query, 
@@ -18,6 +19,12 @@ const Notifications = () => {
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState('all');
   const [error, setError] = useState(null);
+  
+  // Get highlight parameter from URL
+  const location = useLocation();
+  const queryParams = new URLSearchParams(location.search);
+  const highlightedNotificationId = queryParams.get('highlight');
+  const highlightedNotificationRef = useRef(null);
 
   // Fetch notifications directly from Firestore
   useEffect(() => {
@@ -72,6 +79,34 @@ const Notifications = () => {
 
     fetchNotifications();
   }, [currentUser]);
+  
+  // Effect to handle highlighted notification
+  useEffect(() => {
+    if (highlightedNotificationId && notifications.length > 0) {
+      // Find the notification in the list
+      const notification = notifications.find(n => n.id === highlightedNotificationId);
+      
+      // If found and not read, mark it as read
+      if (notification && !notification.read) {
+        handleMarkAsRead(highlightedNotificationId);
+      }
+      
+      // Scroll to the notification after a short delay to ensure rendering
+      setTimeout(() => {
+        if (highlightedNotificationRef.current) {
+          highlightedNotificationRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          
+          // Add a temporary highlight effect
+          highlightedNotificationRef.current.classList.add('highlight-animation');
+          setTimeout(() => {
+            if (highlightedNotificationRef.current) {
+              highlightedNotificationRef.current.classList.remove('highlight-animation');
+            }
+          }, 2000);
+        }
+      }, 500);
+    }
+  }, [highlightedNotificationId, notifications]);
 
   // Mark a single notification as read
   const handleMarkAsRead = async (notificationId) => {
@@ -265,7 +300,8 @@ const Notifications = () => {
               {filteredNotifications.map(notification => (
                 <div 
                   key={notification.id} 
-                  className={`notification-item ${!notification.read ? 'unread' : ''}`}
+                  className={`notification-item ${!notification.read ? 'unread' : ''} ${notification.id === highlightedNotificationId ? 'highlighted' : ''}`}
+                  ref={notification.id === highlightedNotificationId ? highlightedNotificationRef : null}
                 >
                   <div className="notification-icon">
                     <i className={`fas ${getNotificationIcon(notification.type)}`}></i>

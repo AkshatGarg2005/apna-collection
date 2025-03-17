@@ -59,13 +59,8 @@ const NotificationsCenter = () => {
       );
     }
     
-    // Handle navigation based on notification type
-    if (notification.type === 'order' && notification.orderId) {
-      navigate(`/orders/${notification.orderId}`);
-    } else {
-      navigate('/notifications');
-    }
-    
+    // Always navigate to notifications page with highlight parameter
+    navigate(`/notifications?highlight=${notification.id}`);
     setIsOpen(false);
   };
 
@@ -165,12 +160,12 @@ const Header = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { currentUser, logout } = useAuth();
-  const { cart } = useCart(); // Changed from cartItems to cart
+  const { cart } = useCart();
   
   // UI state
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [showSearchOverlay, setShowSearchOverlay] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0); // Added unreadCount state
+  const [unreadCount, setUnreadCount] = useState(0);
   
   // Refs
   const dropdownRef = useRef(null);
