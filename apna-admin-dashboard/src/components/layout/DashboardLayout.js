@@ -12,7 +12,8 @@ import {
   FaUsers,
   FaBars,
   FaTimes,
-  FaUserCircle
+  FaUserCircle,
+  FaStar
 } from 'react-icons/fa';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import NotificationsCenter from '../notifications/NotificationsCenter';
@@ -76,6 +77,15 @@ const DashboardLayout = ({ children, title }) => {
           >
             <FaUsers className="menu-icon" />
             <span>Customers</span>
+          </SidebarMenuItem>
+          
+          {/* New Festive Products Menu Item */}
+          <SidebarMenuItem 
+            to="/festive-products" 
+            className={isActive('/festive-products') ? 'active' : ''}
+          >
+            <FaStar className="menu-icon" />
+            <span>Festive Collection</span>
           </SidebarMenuItem>
           
           <SidebarMenuItem 

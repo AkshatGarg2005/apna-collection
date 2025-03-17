@@ -1,4 +1,4 @@
-// src/App.js
+// src/App.js update for admin dashboard
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AdminAuthProvider } from './context/AdminAuthContext';
@@ -12,6 +12,7 @@ import UploadProduct from './pages/UploadProduct';
 import EditProduct from './pages/EditProduct';
 import Orders from './pages/Orders';
 import Customers from './pages/Customers';
+import FestiveProducts from './pages/FestiveProducts';
 
 function App() {
   return (
@@ -48,6 +49,12 @@ function App() {
             <Route path="/customers" element={
               <AdminRoute>
                 <Customers />
+              </AdminRoute>
+            } />
+            {/* New route for festive products management */}
+            <Route path="/festive-products" element={
+              <AdminRoute>
+                <FestiveProducts />
               </AdminRoute>
             } />
           </Routes>
