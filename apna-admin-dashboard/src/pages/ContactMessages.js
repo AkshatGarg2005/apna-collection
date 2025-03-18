@@ -10,18 +10,16 @@ import {
   FaCheck, 
   FaTimes,
   FaCalendarAlt,
-  FaClock
+  FaExternalLinkAlt
 } from 'react-icons/fa';
 import { 
   collection, 
-  getDocs, 
   query, 
   orderBy, 
   updateDoc, 
   doc, 
   onSnapshot,
   deleteDoc, 
-  where,
   serverTimestamp
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
@@ -34,8 +32,6 @@ const ContactMessages = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedMessage, setSelectedMessage] = useState(null);
   const [showModal, setShowModal] = useState(false);
-  const [replyText, setReplyText] = useState('');
-  const [submitting, setSubmitting] = useState(false);
 
   // Fetch contact messages with real-time updates
   useEffect(() => {
@@ -96,51 +92,14 @@ const ContactMessages = () => {
     }
   };
   
-  // Open reply modal
-  const openReplyModal = (message) => {
+  // Open message details modal
+  const openMessageDetails = (message) => {
     setSelectedMessage(message);
-    
-    // Create a default reply template
-    const defaultReply = `Dear ${message.name},\n\nThank you for reaching out to Apna Collection. In response to your inquiry:\n\n[Your response here]\n\nPlease let us know if you have any other questions.\n\nBest regards,\nApna Collection Team`;
-    
-    setReplyText(defaultReply);
     setShowModal(true);
     
     // Mark as read if it's new
     if (message.status === 'new') {
       markAsRead(message.id);
-    }
-  };
-  
-  // Handle sending reply
-  const handleSendReply = async () => {
-    if (!replyText.trim()) {
-      alert('Please enter a reply message');
-      return;
-    }
-    
-    try {
-      setSubmitting(true);
-      
-      // In a production environment, you would actually send the email here
-      // For now, we're just updating the status in Firestore
-      
-      await updateDoc(doc(db, 'contactMessages', selectedMessage.id), {
-        status: 'replied',
-        repliedAt: serverTimestamp(),
-        reply: replyText
-      });
-      
-      setShowModal(false);
-      setSelectedMessage(null);
-      setReplyText('');
-      
-      alert('Reply marked as sent! In a production environment, this would send an actual email.');
-    } catch (error) {
-      console.error('Error sending reply:', error);
-      alert('Failed to send reply.');
-    } finally {
-      setSubmitting(false);
     }
   };
 
@@ -249,31 +208,40 @@ const ContactMessages = () => {
                   {getStatusIcon(message.status)}
                 </MessageHeader>
                 
-                <MessageInfo>
-                  <MessageInfoItem>
-                    <FaEnvelope className="icon" /> {message.email || 'No email'}
-                  </MessageInfoItem>
-                  {message.phone && (
-                    <MessageInfoItem>
-                      <FaPhone className="icon" /> {message.phone}
-                    </MessageInfoItem>
+                <ContactDetails>
+                  {message.email && (
+                    <ContactItem>
+                      <ContactLabel><FaEnvelope /> Email:</ContactLabel>
+                      <ContactValue>
+                        <a href={`mailto:${message.email}`} title="Send email">
+                          {message.email}
+                          <FaExternalLinkAlt className="external-icon" />
+                        </a>
+                      </ContactValue>
+                    </ContactItem>
                   )}
-                  <MessageInfoItem>
-                    <FaCalendarAlt className="icon" /> {formatDate(message.createdAt)}
-                  </MessageInfoItem>
-                </MessageInfo>
+                  
+                  {message.phone && (
+                    <ContactItem>
+                      <ContactLabel><FaPhone /> Phone:</ContactLabel>
+                      <ContactValue>
+                        <a href={`tel:${message.phone}`} title="Call this number">
+                          {message.phone}
+                          <FaExternalLinkAlt className="external-icon" />
+                        </a>
+                      </ContactValue>
+                    </ContactItem>
+                  )}
+                  
+                  <ContactItem>
+                    <ContactLabel><FaCalendarAlt /> Received:</ContactLabel>
+                    <ContactValue>{formatDate(message.createdAt)}</ContactValue>
+                  </ContactItem>
+                </ContactDetails>
                 
                 <MessageContent>
                   {message.message}
                 </MessageContent>
-                
-                {message.reply && (
-                  <MessageReply>
-                    <h4>Your Reply:</h4>
-                    <p>{message.reply}</p>
-                    <small>Sent: {formatDate(message.repliedAt)}</small>
-                  </MessageReply>
-                )}
                 
                 <MessageActions>
                   {message.status === 'new' && (
@@ -286,10 +254,10 @@ const ContactMessages = () => {
                   )}
                   
                   <ActionButton 
-                    className="reply"
-                    onClick={() => openReplyModal(message)}
+                    className="view"
+                    onClick={() => openMessageDetails(message)}
                   >
-                    <FaReply /> Reply
+                    <FaEnvelope /> View Details
                   </ActionButton>
                   
                   <ActionButton 
@@ -309,12 +277,12 @@ const ContactMessages = () => {
         </MessagesContainer>
       )}
       
-      {/* Reply Modal */}
+      {/* Message Details Modal */}
       {showModal && selectedMessage && (
         <ModalOverlay>
           <ModalContent>
             <ModalHeader>
-              <h3>Reply to {selectedMessage.name}</h3>
+              <h3>Message from {selectedMessage.name}</h3>
               <CloseButton onClick={() => setShowModal(false)}>
                 <FaTimes />
               </CloseButton>
@@ -324,13 +292,18 @@ const ContactMessages = () => {
               <MessageDetails>
                 <DetailItem>
                   <DetailLabel>From:</DetailLabel>
-                  <DetailValue>{selectedMessage.name} ({selectedMessage.email})</DetailValue>
+                  <DetailValue>
+                    {selectedMessage.name} 
+                    (<a href={`mailto:${selectedMessage.email}`}>{selectedMessage.email}</a>)
+                  </DetailValue>
                 </DetailItem>
                 
                 {selectedMessage.phone && (
                   <DetailItem>
                     <DetailLabel>Phone:</DetailLabel>
-                    <DetailValue>{selectedMessage.phone}</DetailValue>
+                    <DetailValue>
+                      <a href={`tel:${selectedMessage.phone}`}>{selectedMessage.phone}</a>
+                    </DetailValue>
                   </DetailItem>
                 )}
                 
@@ -344,27 +317,12 @@ const ContactMessages = () => {
                   <DetailValue className="message">{selectedMessage.message}</DetailValue>
                 </DetailItem>
               </MessageDetails>
-              
-              <ReplyForm>
-                <label htmlFor="reply">Your Reply:</label>
-                <ReplyTextarea 
-                  id="reply"
-                  value={replyText}
-                  onChange={(e) => setReplyText(e.target.value)}
-                  rows="10"
-                  required
-                  placeholder="Enter your reply here..."
-                ></ReplyTextarea>
-              </ReplyForm>
             </ModalBody>
             
             <ModalFooter>
-              <CancelButton onClick={() => setShowModal(false)}>
-                Cancel
-              </CancelButton>
-              <SendButton onClick={handleSendReply} disabled={submitting}>
-                {submitting ? 'Sending...' : 'Send Reply'}
-              </SendButton>
+              <CloseModalButton onClick={() => setShowModal(false)}>
+                Close
+              </CloseModalButton>
             </ModalFooter>
           </ModalContent>
         </ModalOverlay>
@@ -599,23 +557,58 @@ const MessageName = styled.h3`
   }
 `;
 
-const MessageInfo = styled.div`
+// Contact details section
+const ContactDetails = styled.div`
   padding: 15px 20px;
+  background-color: #fafafa;
+  border-bottom: 1px solid #eee;
   display: flex;
   flex-wrap: wrap;
-  gap: 15px;
-  border-bottom: 1px solid #eee;
 `;
 
-const MessageInfoItem = styled.div`
+const ContactItem = styled.div`
+  margin-right: 25px;
+  margin-bottom: 10px;
   font-size: 14px;
-  color: #666;
+  
+  &:last-child {
+    margin-right: 0;
+  }
+`;
+
+const ContactLabel = styled.span`
   display: flex;
   align-items: center;
+  font-weight: 500;
+  color: #666;
+  margin-bottom: 4px;
   
-  .icon {
-    margin-right: 8px;
+  svg {
+    margin-right: 6px;
     color: #8e44ad;
+  }
+`;
+
+const ContactValue = styled.span`
+  color: #333;
+  
+  a {
+    color: #2196f3;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    
+    &:hover {
+      color: #0b7dda;
+      text-decoration: underline;
+    }
+    
+    .external-icon {
+      font-size: 10px;
+      margin-left: 5px;
+      opacity: 0.7;
+    }
   }
 `;
 
@@ -627,30 +620,6 @@ const MessageContent = styled.div`
   flex-grow: 1;
   border-bottom: 1px solid #eee;
   white-space: pre-line;
-`;
-
-const MessageReply = styled.div`
-  padding: 15px 20px;
-  background-color: #f5f0ff;
-  font-size: 14px;
-  line-height: 1.6;
-  
-  h4 {
-    font-size: 14px;
-    font-weight: 600;
-    margin-bottom: 10px;
-    color: #8e44ad;
-  }
-  
-  p {
-    margin-bottom: 8px;
-    white-space: pre-line;
-  }
-  
-  small {
-    font-size: 12px;
-    color: #777;
-  }
 `;
 
 const MessageActions = styled.div`
@@ -686,12 +655,12 @@ const ActionButton = styled.button`
     }
   }
   
-  &.reply {
-    background-color: rgba(142, 68, 173, 0.1);
-    color: #8e44ad;
+  &.view {
+    background-color: rgba(33, 150, 243, 0.1);
+    color: #2196f3;
     
     &:hover {
-      background-color: #8e44ad;
+      background-color: #2196f3;
       color: white;
     }
   }
@@ -808,6 +777,15 @@ const DetailValue = styled.div`
   font-size: 14px;
   color: #333;
   
+  a {
+    color: #2196f3;
+    text-decoration: none;
+    
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+  
   &.message {
     white-space: pre-line;
     padding: 15px;
@@ -818,66 +796,14 @@ const DetailValue = styled.div`
   }
 `;
 
-const ReplyForm = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  
-  label {
-    font-weight: 600;
-    font-size: 14px;
-    color: #555;
-  }
-`;
-
-const ReplyTextarea = styled.textarea`
-  width: 100%;
-  padding: 15px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  font-size: 14px;
-  resize: vertical;
-  
-  &:focus {
-    outline: none;
-    border-color: #8e44ad;
-    box-shadow: 0 0 0 2px rgba(142, 68, 173, 0.1);
-  }
-`;
-
 const ModalFooter = styled.div`
   display: flex;
   justify-content: flex-end;
-  gap: 15px;
   padding: 20px 25px;
   border-top: 1px solid #eee;
-  
-  @media (max-width: 576px) {
-    flex-direction: column;
-  }
 `;
 
-const CancelButton = styled.button`
-  padding: 12px 25px;
-  background-color: #f5f5f5;
-  color: #555;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  
-  &:hover {
-    background-color: #eee;
-  }
-  
-  @media (max-width: 576px) {
-    order: 2;
-  }
-`;
-
-const SendButton = styled.button`
+const CloseModalButton = styled.button`
   padding: 12px 25px;
   background-color: #8e44ad;
   color: white;
@@ -890,16 +816,6 @@ const SendButton = styled.button`
   
   &:hover {
     background-color: #7d3c98;
-  }
-  
-  &:disabled {
-    background-color: #c39bd3;
-    cursor: not-allowed;
-  }
-  
-  @media (max-width: 576px) {
-    order: 1;
-    margin-bottom: 10px;
   }
 `;
 
