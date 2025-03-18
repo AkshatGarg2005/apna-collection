@@ -34,8 +34,8 @@ const Footer = () => {
             <li>Shop No. D1, Shri Giriraj Shopping Complex,</li>
             <li>Infront of Tyagi Building, Englishpura,</li>
             <li>Sehore, Madhya Pradesh 466001</li>
-            <li>Phone: 1234567890</li>
-            <li>Email: info@apnacollection.com</li>
+            <li>Phone: +91 8817537448</li>
+            <li>Email: apnacollectionsehore@gmail.com</li>
           </ul>
         </div>
         

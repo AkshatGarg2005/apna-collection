@@ -117,9 +117,9 @@ const AboutUs = () => {
         <div className="visit-content">
           <div className="address">
             <h3>Store Address</h3>
-            <p>123 Fashion Street, City Center</p>
-            <p>New Delhi, 110001</p>
-            <p>India</p>
+            <p>Shop No. D1, Shri Giriraj Shopping Complex,</p>
+            <p>Infront of Tyagi Building, Englishpura,</p>
+            <p>Sehore, Madhya Pradesh 466001</p>
           </div>
           <div className="hours">
             <h3>Opening Hours</h3>
@@ -137,16 +137,24 @@ const AboutUs = () => {
           <h3>Connect With Us</h3>
           <div className="social-links">
             <a href="https://www.instagram.com/apna_collection24?utm_source=qr&igsh=c25lM3hmc21vNGk5" target="_blank" rel="noopener noreferrer" className="social-link">
-              <i className="fab fa-instagram"></i> Instagram
+              <div className="social-icon">
+                <i className="fab fa-instagram"></i>
+              </div>
             </a>
             <a href="https://www.facebook.com/share/1LZHbgMYgE/" target="_blank" rel="noopener noreferrer" className="social-link">
-              <i className="fab fa-facebook"></i> Facebook
+              <div className="social-icon">
+                <i className="fab fa-facebook-f"></i>
+              </div>
             </a>
             <a href="https://wa.me/919039930216" target="_blank" rel="noopener noreferrer" className="social-link">
-              <i className="fab fa-whatsapp"></i> WhatsApp
+              <div className="social-icon">
+                <i className="fab fa-whatsapp"></i>
+              </div>
             </a>
             <a href="https://x.com/collec85104?s=11" target="_blank" rel="noopener noreferrer" className="social-link">
-              <i className="fab fa-twitter"></i> X
+              <div className="social-icon">
+                <i className="fab fa-twitter"></i>
+              </div>
             </a>
           </div>
         </div>

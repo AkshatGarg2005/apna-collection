@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import './Contact.css';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../../firebase/config'; // Make sure you have this import
 
 const Contact = () => {
   // Form state
@@ -11,8 +13,10 @@ const Contact = () => {
     message: ''
   });
 
-  // Success message state
+  // Loading and message states
+  const [loading, setLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [error, setError] = useState(null);
 
   // Handle input changes
   const handleChange = (e) => {
@@ -24,27 +28,41 @@ const Contact = () => {
   };
 
   // Handle form submission
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Here you would typically send the data to a server via API call
-    console.log('Form submitted:', formData);
-    
-    // Show success message
-    setShowSuccess(true);
-    
-    // Reset form
-    setFormData({
-      name: '',
-      email: '',
-      phone: '',
-      message: ''
-    });
-    
-    // Hide success message after 5 seconds
-    setTimeout(() => {
-      setShowSuccess(false);
-    }, 5000);
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Add to Firebase
+      await addDoc(collection(db, 'contactMessages'), {
+        ...formData,
+        status: 'new', // new, read, replied
+        createdAt: serverTimestamp()
+      });
+      
+      // Show success message
+      setShowSuccess(true);
+      
+      // Reset form
+      setFormData({
+        name: '',
+        email: '',
+        phone: '',
+        message: ''
+      });
+      
+      // Hide success message after 5 seconds
+      setTimeout(() => {
+        setShowSuccess(false);
+      }, 5000);
+    } catch (err) {
+      console.error('Error submitting contact form:', err);
+      setError('There was an error submitting your message. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -65,6 +83,13 @@ const Contact = () => {
         
         <div className="contact-container">
           <div className="contact-form-container">
+            {error && (
+              <div className="error-message show">
+                <i className="fas fa-exclamation-circle"></i>
+                {error}
+              </div>
+            )}
+            
             {showSuccess && (
               <div className="success-message show">
                 <i className="fas fa-check-circle"></i>
@@ -85,6 +110,7 @@ const Contact = () => {
                   value={formData.name}
                   onChange={handleChange}
                   required 
+                  disabled={loading}
                 />
               </div>
               
@@ -98,6 +124,7 @@ const Contact = () => {
                   value={formData.email}
                   onChange={handleChange}
                   required 
+                  disabled={loading}
                 />
               </div>
               
@@ -110,6 +137,7 @@ const Contact = () => {
                   placeholder="Enter your phone number" 
                   value={formData.phone}
                   onChange={handleChange}
+                  disabled={loading}
                 />
               </div>
               
@@ -122,11 +150,16 @@ const Contact = () => {
                   value={formData.message}
                   onChange={handleChange}
                   required
+                  disabled={loading}
                 ></textarea>
               </div>
               
-              <button type="submit" className="btn-submit">
-                <i className="fas fa-paper-plane"></i> Send Message
+              <button type="submit" className="btn-submit" disabled={loading}>
+                {loading ? (
+                  <span><i className="fas fa-spinner fa-spin"></i> Sending...</span>
+                ) : (
+                  <span><i className="fas fa-paper-plane"></i> Send Message</span>
+                )}
               </button>
               
               <div className="form-footer">
@@ -154,8 +187,8 @@ const Contact = () => {
               </div>
               <div className="info-content">
                 <h4>Call Us</h4>
-                <p>+91 1234567890</p>
-                <p>Monday - Saturday: 10:00 AM - 8:00 PM</p>
+                <p>+91 88175 37448</p>
+                <p>+91 90399 30216</p>
               </div>
             </div>
             
@@ -165,7 +198,7 @@ const Contact = () => {
               </div>
               <div className="info-content">
                 <h4>Email Us</h4>
-                <p>info@apnacollection.com</p>
+                <p>apnacollectionsehore@gmail.com</p>
                 <p>For inquiries & customer support</p>
               </div>
             </div>
@@ -176,16 +209,15 @@ const Contact = () => {
               </div>
               <div className="info-content">
                 <h4>Business Hours</h4>
-                <p>Monday - Saturday: 10:00 AM - 8:00 PM<br />
-                Sunday: 11:00 AM - 6:00 PM</p>
+                <p>All Days: 10:00 AM - 10:00 PM</p>
               </div>
             </div>
             
             <div className="social-links">
-              <a href="#" aria-label="Facebook"><i className="fab fa-facebook-f"></i></a>
-              <a href="#" aria-label="Instagram"><i className="fab fa-instagram"></i></a>
-              <a href="#" aria-label="Twitter"><i className="fab fa-twitter"></i></a>
-              <a href="#" aria-label="WhatsApp"><i className="fab fa-whatsapp"></i></a>
+              <a href="https://www.facebook.com/share/1LZHbgMYgE/" target="_blank" rel="noopener noreferrer" aria-label="Facebook"><i className="fab fa-facebook-f"></i></a>
+              <a href="https://www.instagram.com/apna_collection24?utm_source=qr&igsh=c25lM3hmc21vNGk5" target="_blank" rel="noopener noreferrer" aria-label="Instagram"><i className="fab fa-instagram"></i></a>
+              <a href="https://x.com/collec85104?s=11" target="_blank" rel="noopener noreferrer" aria-label="Twitter"><i className="fab fa-twitter"></i></a>
+              <a href="https://wa.me/919039930216" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp"><i className="fab fa-whatsapp"></i></a>
             </div>
           </div>
         </div>

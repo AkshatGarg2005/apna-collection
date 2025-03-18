@@ -423,3 +423,29 @@ textarea.form-control {
     height: 300px;
   }
 }
+
+/* Error Message */
+.error-message {
+  display: block;
+  background-color: #ffebee;
+  color: #c62828;
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  text-align: center;
+  border-left: 4px solid #c62828;
+  animation: slideDown 0.5s ease forwards;
+  position: relative;
+}
+
+.error-message i {
+  font-size: 1.5rem;
+  margin-right: 10px;
+  color: #c62828;
+}
+
+/* Loader animation for the button */
+.btn-submit:disabled {
+  background-color: #d5b28a;
+  cursor: not-allowed;
+}
