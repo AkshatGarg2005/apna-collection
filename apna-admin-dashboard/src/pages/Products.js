@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
-import { FaEdit, FaTrash, FaPlus, FaSearch } from 'react-icons/fa';
+import { FaEdit, FaTrash, FaPlus, FaSearch, FaImage } from 'react-icons/fa';
 import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import DashboardLayout from '../components/layout/DashboardLayout';
@@ -119,36 +119,12 @@ const Products = () => {
         <>
           <ProductsGrid>
             {filteredProducts.map(product => (
-              <ProductCard key={product.id}>
-                <ProductImage>
-                  <img src={product.image || '/api/placeholder/200/200'} alt={product.name} />
-                  {product.isNew && <ProductBadge>New</ProductBadge>}
-                </ProductImage>
-                <ProductDetails>
-                  <ProductName>{product.name}</ProductName>
-                  <ProductCategory>{product.category}</ProductCategory>
-                  <ProductPrice>{formatPrice(product.price)}</ProductPrice>
-                  <ProductInfo>
-                    <StockInfo className={product.stock > 10 ? 'in-stock' : 'low-stock'}>
-                      {product.stock > 10 ? 'In Stock' : 'Low Stock'}: {product.stock}
-                    </StockInfo>
-                  </ProductInfo>
-                </ProductDetails>
-                <ProductActions>
-                  <ActionButton 
-                    className="edit"
-                    onClick={() => handleEditProduct(product.id)}
-                  >
-                    <FaEdit /> Edit
-                  </ActionButton>
-                  <ActionButton 
-                    className="delete"
-                    onClick={() => handleDeleteProduct(product.id)}
-                  >
-                    <FaTrash /> Delete
-                  </ActionButton>
-                </ProductActions>
-              </ProductCard>
+              <ProductCard 
+                key={product.id} 
+                product={product}
+                onEdit={() => handleEditProduct(product.id)}
+                onDelete={() => handleDeleteProduct(product.id)}
+              />
             ))}
           </ProductsGrid>
           
@@ -160,6 +136,69 @@ const Products = () => {
         </>
       )}
     </DashboardLayout>
+  );
+};
+
+// ProductCard Component
+const ProductCard = ({ product, onEdit, onDelete }) => {
+  // Check if product has multiple images
+  const hasMultipleImages = product.images && Array.isArray(product.images) && product.images.length > 1;
+  
+  // Format category name for display
+  const formatCategoryName = (category) => {
+    if (!category) return '';
+    return category.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+  };
+  
+  // Format price to Indian Rupee
+  const formatPrice = (price) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      maximumFractionDigits: 0
+    }).format(price);
+  };
+  
+  return (
+    <ProductCardContainer>
+      <ProductImage>
+        <img src={product.image || (product.images && product.images[0]?.url) || '/api/placeholder/200/200'} alt={product.name} />
+        {product.isNew && <ProductBadge>New</ProductBadge>}
+        
+        {/* Show image count indicator if product has multiple images */}
+        {hasMultipleImages && (
+          <ImageCountBadge>
+            <FaImage /> <span>{product.images.length}</span>
+          </ImageCountBadge>
+        )}
+      </ProductImage>
+      
+      <ProductDetails>
+        <ProductName>{product.name}</ProductName>
+        <ProductCategory>{formatCategoryName(product.category)}</ProductCategory>
+        <ProductPrice>{formatPrice(product.price)}</ProductPrice>
+        <ProductInfo>
+          <StockInfo className={product.stock > 10 ? 'in-stock' : 'low-stock'}>
+            {product.stock > 10 ? 'In Stock' : 'Low Stock'}: {product.stock}
+          </StockInfo>
+        </ProductInfo>
+      </ProductDetails>
+      
+      <ProductActions>
+        <ActionButton 
+          className="edit"
+          onClick={onEdit}
+        >
+          <FaEdit /> Edit
+        </ActionButton>
+        <ActionButton 
+          className="delete"
+          onClick={onDelete}
+        >
+          <FaTrash /> Delete
+        </ActionButton>
+      </ProductActions>
+    </ProductCardContainer>
   );
 };
 
@@ -281,7 +320,7 @@ const ProductsGrid = styled.div`
   gap: 25px;
 `;
 
-const ProductCard = styled.div`
+const ProductCardContainer = styled.div`
   background-color: #fff;
   border-radius: 12px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
@@ -307,7 +346,7 @@ const ProductImage = styled.div`
     transition: transform 0.3s ease;
   }
   
-  ${ProductCard}:hover & img {
+  ${ProductCardContainer}:hover & img {
     transform: scale(1.05);
   }
 `;
@@ -322,6 +361,21 @@ const ProductBadge = styled.div`
   border-radius: 20px;
   font-size: 12px;
   font-weight: 600;
+`;
+
+const ImageCountBadge = styled.div`
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  background-color: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 5px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 5px;
 `;
 
 const ProductDetails = styled.div`

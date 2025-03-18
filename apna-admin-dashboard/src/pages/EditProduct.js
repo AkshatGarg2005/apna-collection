@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import styled from 'styled-components';
-import { FaEdit, FaImage, FaSave, FaTimes, FaStar, FaRing, FaFireAlt } from 'react-icons/fa';
+import { FaEdit, FaImage, FaSave, FaTimes, FaStar, FaRing, FaFireAlt, FaPlus } from 'react-icons/fa';
 import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { uploadImage } from '../services/cloudinary';
@@ -48,9 +48,8 @@ const EditProduct = () => {
     isWedding: false
   });
   
-  const [selectedImage, setSelectedImage] = useState(null);
-  const [imagePreview, setImagePreview] = useState(null);
-  const [originalImage, setOriginalImage] = useState(null);
+  // Updated to handle multiple images
+  const [productImages, setProductImages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submitLoading, setSubmitLoading] = useState(false);
   const [error, setError] = useState('');
@@ -128,9 +127,23 @@ const EditProduct = () => {
           isWedding: productData.isWedding || false
         });
         
-        if (productData.image) {
-          setImagePreview(productData.image);
-          setOriginalImage(productData.image);
+        // Handle multiple images
+        if (productData.images && Array.isArray(productData.images)) {
+          // If product has the images array, use it
+          setProductImages(productData.images.map((img, index) => ({
+            url: img.url,
+            publicId: img.publicId,
+            id: `existing-${index}`,
+            isExisting: true
+          })));
+        } else if (productData.image) {
+          // For backward compatibility - if product has only a single image
+          setProductImages([{
+            url: productData.image,
+            publicId: productData.imagePublicId || null,
+            id: 'existing-0',
+            isExisting: true
+          }]);
         }
         
       } catch (error) {
@@ -184,22 +197,34 @@ const EditProduct = () => {
   // Handle image selection
   const handleImageChange = (e) => {
     const file = e.target.files[0];
-    if (file) {
-      setSelectedImage(file);
-      
-      // Create image preview
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result);
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+    
+    // Check if we already have 4 images
+    if (productImages.length >= 4) {
+      setError('Maximum 4 images allowed. Please remove an image first.');
+      return;
     }
+    
+    // Create image preview
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      // Add new image to the array
+      setProductImages(prev => [...prev, {
+        file: file,
+        preview: reader.result,
+        id: `new-${Date.now()}`, // Use timestamp as temporary ID
+        isExisting: false
+      }]);
+    };
+    reader.readAsDataURL(file);
+    
+    // Reset the file input
+    e.target.value = null;
   };
   
   // Handle image removal
-  const handleRemoveImage = () => {
-    setSelectedImage(null);
-    setImagePreview(null);
+  const handleRemoveImage = (imageId) => {
+    setProductImages(prev => prev.filter(img => img.id !== imageId));
   };
   
   // Handle form submission
@@ -212,8 +237,8 @@ const EditProduct = () => {
       return;
     }
     
-    if (!imagePreview) {
-      setError('Please upload a product image');
+    if (productImages.length === 0) {
+      setError('Please upload at least one product image');
       return;
     }
     
@@ -221,19 +246,32 @@ const EditProduct = () => {
       setSubmitLoading(true);
       setError('');
       
-      let imageUrl = originalImage;
-      let imagePublicId = null;
+      // Prepare updated images array
+      let updatedImages = [];
       
-      // Upload new image if selected
-      if (selectedImage) {
-        const uploadResult = await uploadImage(selectedImage);
+      // Keep existing images
+      const existingImages = productImages.filter(img => img.isExisting);
+      updatedImages = [...existingImages];
+      
+      // Upload any new images
+      const newImages = productImages.filter(img => !img.isExisting);
+      if (newImages.length > 0) {
+        const uploadPromises = newImages.map(img => uploadImage(img.file));
+        const uploadResults = await Promise.all(uploadPromises);
         
-        if (!uploadResult.success) {
-          throw new Error('Failed to upload image');
+        // Check if any uploads failed
+        const failedUploads = uploadResults.some(result => !result.success);
+        if (failedUploads) {
+          throw new Error('Failed to upload one or more images');
         }
         
-        imageUrl = uploadResult.url;
-        imagePublicId = uploadResult.publicId;
+        // Add newly uploaded images to the array
+        const newlyUploadedImages = uploadResults.map(result => ({
+          url: result.url,
+          publicId: result.publicId
+        }));
+        
+        updatedImages = [...updatedImages, ...newlyUploadedImages];
       }
       
       // Prepare product data
@@ -257,14 +295,13 @@ const EditProduct = () => {
         isBestSeller: formData.isBestSeller,
         isFestive: formData.isFestive,
         isWedding: formData.isWedding,
-        image: imageUrl,
+        // Store array of images
+        images: updatedImages,
+        // For backward compatibility with existing code
+        image: updatedImages[0]?.url || null,
+        imagePublicId: updatedImages[0]?.publicId || null,
         updatedAt: serverTimestamp()
       };
-      
-      // Only add the new public ID if a new image was uploaded
-      if (imagePublicId) {
-        productData.imagePublicId = imagePublicId;
-      }
       
       // Update product in Firestore
       await updateDoc(doc(db, 'products', productId), productData);
@@ -495,34 +532,50 @@ const EditProduct = () => {
           </FormSection>
           
           <FormSection>
-            <SectionTitle>Product Image</SectionTitle>
+            <SectionTitle>Product Images (Up to 4)</SectionTitle>
             
-            <ImageUploadContainer>
-              {!imagePreview ? (
-                <ImageUploadArea>
-                  <input 
-                    type="file" 
-                    id="image-upload" 
-                    name="image" 
-                    onChange={handleImageChange}
-                    accept="image/*" 
-                    style={{ display: 'none' }}
-                  />
-                  <label htmlFor="image-upload">
-                    <FaImage className="upload-icon" />
-                    <p>Click to upload image or drag & drop</p>
-                    <span>JPG, PNG or WEBP (max. 5MB)</span>
-                  </label>
-                </ImageUploadArea>
-              ) : (
-                <ImagePreviewContainer>
-                  <ImagePreview src={imagePreview} alt="Product preview" />
-                  <RemoveImageButton onClick={handleRemoveImage}>
-                    <FaTimes />
-                  </RemoveImageButton>
-                </ImagePreviewContainer>
-              )}
-            </ImageUploadContainer>
+            <MultiImageUploadContainer>
+              {/* Image Grid */}
+              <ImageGrid>
+                {/* Existing Images */}
+                {productImages.map((img, index) => (
+                  <ImagePreviewContainer key={img.id}>
+                    <ImagePreview 
+                      src={img.isExisting ? img.url : img.preview} 
+                      alt={`Product ${index + 1}`} 
+                    />
+                    <ImageLabel>{index === 0 ? 'Main Image' : `Image ${index + 1}`}</ImageLabel>
+                    <RemoveImageButton onClick={() => handleRemoveImage(img.id)}>
+                      <FaTimes />
+                    </RemoveImageButton>
+                  </ImagePreviewContainer>
+                ))}
+                
+                {/* Add Image Button - Show only if less than 4 images */}
+                {productImages.length < 4 && (
+                  <AddImageContainer>
+                    <input 
+                      type="file" 
+                      id="image-upload" 
+                      name="image" 
+                      onChange={handleImageChange}
+                      accept="image/*" 
+                      style={{ display: 'none' }}
+                    />
+                    <label htmlFor="image-upload">
+                      <FaPlus className="add-icon" />
+                      <span>Add Image</span>
+                    </label>
+                  </AddImageContainer>
+                )}
+              </ImageGrid>
+              
+              <ImageInstructions>
+                <p><strong>Note:</strong> First image will be used as the main product image.</p>
+                <p>Upload high-quality images for best presentation. JPG, PNG or WEBP formats (max. 5MB each).</p>
+                <p>You can rearrange images by removing and adding them in your preferred order.</p>
+              </ImageInstructions>
+            </MultiImageUploadContainer>
           </FormSection>
           
           <FormActions>
@@ -838,51 +891,51 @@ const CheckboxLabel = styled.label`
   cursor: pointer;
 `;
 
-const ImageUploadContainer = styled.div`
-  margin-top: 10px;
+// Multi-Image Upload Components
+const MultiImageUploadContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 `;
 
-const ImageUploadArea = styled.div`
-  border: 2px dashed #ddd;
-  border-radius: 12px;
-  padding: 40px;
-  text-align: center;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  
-  &:hover {
-    border-color: #8e44ad;
-    background-color: rgba(142, 68, 173, 0.03);
-  }
-  
-  .upload-icon {
-    font-size: 40px;
-    color: #8e44ad;
-    margin-bottom: 15px;
-  }
-  
-  p {
-    font-size: 16px;
-    color: #666;
-    margin-bottom: 8px;
-  }
-  
-  span {
-    font-size: 12px;
-    color: #888;
-  }
+const ImageGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 20px;
 `;
 
 const ImagePreviewContainer = styled.div`
   position: relative;
-  max-width: 300px;
-  margin: 0 auto;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  overflow: hidden;
+  aspect-ratio: 3/4;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  
+  &:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+  }
 `;
 
 const ImagePreview = styled.img`
   width: 100%;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  height: 100%;
+  object-fit: cover;
+`;
+
+const ImageLabel = styled.div`
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 8px;
+  font-size: 12px;
+  text-align: center;
+  font-weight: 500;
 `;
 
 const RemoveImageButton = styled.button`
@@ -900,11 +953,70 @@ const RemoveImageButton = styled.button`
   cursor: pointer;
   color: #f44336;
   transition: all 0.3s ease;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
   
   &:hover {
-    background-color: #fff;
-    color: #d32f2f;
-    transform: scale(1.1);
+    background-color: #f44336;
+    color: white;
+  }
+`;
+
+const AddImageContainer = styled.div`
+  background-color: #f5f5f5;
+  border: 2px dashed #ddd;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  aspect-ratio: 3/4;
+  transition: all 0.3s ease;
+  
+  &:hover {
+    border-color: #8e44ad;
+    background-color: #f9f5fd;
+  }
+  
+  label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 20px;
+    cursor: pointer;
+    text-align: center;
+  }
+  
+  .add-icon {
+    font-size: 24px;
+    color: #8e44ad;
+  }
+  
+  span {
+    font-size: 14px;
+    color: #666;
+    font-weight: 500;
+  }
+`;
+
+const ImageInstructions = styled.div`
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  padding: 15px;
+  margin-top: 10px;
+  
+  p {
+    font-size: 13px;
+    color: #666;
+    margin-bottom: 5px;
+    
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+  
+  strong {
+    color: #8e44ad;
   }
 `;
 
