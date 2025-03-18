@@ -1034,3 +1034,69 @@
     margin-top: 5px;
   }
 }
+
+/* Add these styles to your ProductPage.css file */
+
+/* Updated color options */
+.color-white {
+  background-color: #ffffff;
+  border: 1px solid #ddd;
+}
+
+.color-black {
+  background-color: #000000;
+}
+
+.color-blue {
+  background: linear-gradient(135deg, #4da8ec, #3498db);
+}
+
+.color-red {
+  background: linear-gradient(135deg, #e74c3c, #c0392b);
+}
+
+.color-green {
+  background: linear-gradient(135deg, #2ecc71, #27ae60);
+}
+
+.color-beige {
+  background: linear-gradient(135deg, #E8E1DA, #D9D1C8);
+  border: 1px solid #ddd;
+}
+
+.color-maroon {
+  background: linear-gradient(135deg, #800000, #a52a2a);
+}
+
+.color-gold {
+  background: linear-gradient(135deg, #ffd700, #daa520);
+  border: 1px solid #ddd;
+}
+
+/* Fix for color display in options */
+.color-option {
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.color-option:hover {
+  transform: scale(1.15);
+}
+
+.color-option.active {
+  box-shadow: 0 0 0 2px #fff, 0 0 0 5px #c59b6d, 0 8px 15px rgba(0, 0, 0, 0.1);
+  transform: scale(1.1);
+}
+
+/* Selected color text display */
+.selected-color-name {
+  margin-top: 12px;
+  font-size: 14px;
+  color: #666;
+  font-weight: 500;
+}

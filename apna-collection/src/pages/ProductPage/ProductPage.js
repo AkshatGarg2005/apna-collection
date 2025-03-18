@@ -28,6 +28,9 @@ const ProductPage = () => {
   const [useFallbackData, setUseFallbackData] = useState(false);
   const { addToCart } = useCart();
   
+  // Updated state to properly handle image objects
+  const [imageList, setImageList] = useState([]);
+  
   // Review state
   const [reviews, setReviews] = useState([]);
   const [averageRating, setAverageRating] = useState(0);
@@ -183,6 +186,9 @@ const ProductPage = () => {
           setProduct(sampleProductData);
           setRelatedProducts(sampleRelatedProducts);
           
+          // Use sample images
+          setImageList(sampleProductData.images);
+          
           // Set default selected size and color from sample data
           if (sampleProductData.sizes && sampleProductData.sizes.length > 0) {
             setSelectedSize(sampleProductData.sizes[0]);
@@ -211,6 +217,21 @@ const ProductPage = () => {
         }
         
         setProduct(productData);
+        
+        // Process images array - FIXED PART FOR HANDLING MULTIPLE IMAGES
+        if (productData.images && Array.isArray(productData.images)) {
+          // Check if images are objects with url property or direct strings
+          if (productData.images[0] && typeof productData.images[0] === 'object' && productData.images[0].url) {
+            // Images are objects with urls - extract the urls
+            setImageList(productData.images.map(img => img.url));
+          } else {
+            // Images are already strings
+            setImageList(productData.images);
+          }
+        } else if (productData.image) {
+          // Fallback to single image
+          setImageList([productData.image]);
+        }
         
         // Fetch related products in the same category
         if (productData.category) {
@@ -247,6 +268,9 @@ const ProductPage = () => {
         setUseFallbackData(true);
         setProduct(sampleProductData);
         setRelatedProducts(sampleRelatedProducts);
+        
+        // Use sample images
+        setImageList(sampleProductData.images);
         
         // Set default selected size and color from sample data
         if (sampleProductData.sizes && sampleProductData.sizes.length > 0) {
@@ -325,10 +349,8 @@ const ProductPage = () => {
   const handleAddToCart = () => {
     if (!product) return;
     
-    // Get the product image (either from selected image index or default image)
-    const productImage = product.images && product.images.length > 0 
-      ? product.images[selectedImage] 
-      : product.image;
+    // Get the product image from our imageList array
+    const productImage = imageList[selectedImage] || product.image;
     
     // Create a properly formatted product object with selected options
     const productToAdd = {
@@ -344,8 +366,7 @@ const ProductPage = () => {
     // Add to cart using context
     addToCart(productToAdd);
     
-    // Show feedback to user
-    alert(`Added to cart: ${product.name}\nSize: ${selectedSize}\nColor: ${selectedColor}\nQuantity: ${quantity}`);
+    // No alert - silent add to cart
   };
 
   // Handle buy now
@@ -394,9 +415,6 @@ const ProductPage = () => {
   const originalPrice = product.originalPrice || Math.round(product.price * 1.2);
   const discount = product.discount || Math.round(((originalPrice - product.price) / originalPrice) * 100) + '%';
 
-  // Ensure images array exists
-  const productImages = product.images || [product.image];
-
   return (
     <div className="product-page">
       {/* Display notice for sample data */}
@@ -421,10 +439,10 @@ const ProductPage = () => {
         {/* Product Gallery */}
         <div className="product-gallery">
           <div className="main-image">
-            <img src={productImages[selectedImage] || product.image} alt={product.name} />
+            <img src={imageList[selectedImage]} alt={product.name} />
           </div>
           <div className="image-thumbnails">
-            {productImages.map((image, index) => (
+            {imageList.map((image, index) => (
               <div 
                 key={index} 
                 className={`thumbnail ${selectedImage === index ? 'active' : ''}`} 
@@ -495,9 +513,13 @@ const ProductPage = () => {
                       className={`color-option color-${color.toLowerCase()} ${selectedColor === color ? 'active' : ''}`}
                       data-color={color}
                       onClick={() => setSelectedColor(color)}
-                    ></div>
+                      title={color}
+                    >
+                      {/* Adding a title makes the color name show on hover */}
+                    </div>
                   ))}
                 </div>
+                <div className="selected-color-name">Selected: {selectedColor}</div>
               </div>
             )}
 
@@ -677,7 +699,13 @@ const ProductPage = () => {
               <div className="related-item" key={relatedProduct.id}>
                 <Link to={`/product/${relatedProduct.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
                   <div className="related-img">
-                    <img src={relatedProduct.image} alt={relatedProduct.name} />
+                    <img 
+                      src={relatedProduct.image || 
+                          (relatedProduct.images && relatedProduct.images[0] && 
+                           typeof relatedProduct.images[0] === 'object' ? 
+                           relatedProduct.images[0].url : relatedProduct.images?.[0])} 
+                      alt={relatedProduct.name} 
+                    />
                   </div>
                   <div className="related-info">
                     <h3 className="related-name">{relatedProduct.name}</h3>
