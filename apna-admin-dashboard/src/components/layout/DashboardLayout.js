@@ -16,7 +16,8 @@ import {
   FaStar,
   FaRing,
   FaTag,
-  FaHome
+  FaHome,
+  FaEnvelope
 } from 'react-icons/fa';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import NotificationsCenter from '../notifications/NotificationsCenter';
@@ -80,6 +81,14 @@ const DashboardLayout = ({ children, title }) => {
           >
             <FaUsers className="menu-icon" />
             <span>Customers</span>
+          </SidebarMenuItem>
+          
+          <SidebarMenuItem 
+            to="/contact-messages" 
+            className={isActive('/contact-messages') ? 'active' : ''}
+          >
+            <FaEnvelope className="menu-icon" />
+            <span>Contact Messages</span>
           </SidebarMenuItem>
           
           <SidebarMenuItem 

@@ -16,6 +16,7 @@ import FestiveProducts from './pages/FestiveProducts';
 import WeddingProducts from './pages/WeddingProducts';
 import EndOfSeasonProducts from './pages/EndOfSeasonProducts';
 import FeaturedProducts from './pages/FeaturedProducts';
+import ContactMessages from './pages/ContactMessages';
 
 function App() {
   return (
@@ -52,6 +53,11 @@ function App() {
             <Route path="/customers" element={
               <AdminRoute>
                 <Customers />
+              </AdminRoute>
+            } />
+            <Route path="/contact-messages" element={
+              <AdminRoute>
+                <ContactMessages />
               </AdminRoute>
             } />
             <Route path="/festive-products" element={
