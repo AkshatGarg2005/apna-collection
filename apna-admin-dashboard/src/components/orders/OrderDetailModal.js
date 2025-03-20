@@ -1,7 +1,7 @@
 // src/components/orders/OrderDetailModal.js
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { FaTimes, FaCheckCircle, FaTruck, FaTimesCircle } from 'react-icons/fa';
+import { FaTimes, FaCheckCircle, FaTruck, FaTimesCircle, FaTicketAlt } from 'react-icons/fa';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 
@@ -203,6 +203,19 @@ const OrderDetailModal = ({ order, onClose, onStatusUpdate }) => {
                 <SummaryLabel>Shipping Fee:</SummaryLabel>
                 <SummaryValue>{formatPrice(order.shippingFee || 0)}</SummaryValue>
               </SummaryItem>
+              
+              {/* Display coupon discount if applied */}
+              {order.couponDiscount > 0 && (
+                <SummaryItem>
+                  <SummaryLabel>
+                    <CouponIcon><FaTicketAlt /></CouponIcon>
+                    Coupon Discount:
+                    {order.couponCode && <CouponCode>{order.couponCode}</CouponCode>}
+                  </SummaryLabel>
+                  <SummaryValue className="discount">-{formatPrice(order.couponDiscount || 0)}</SummaryValue>
+                </SummaryItem>
+              )}
+              
               <SummaryItem>
                 <SummaryLabel>Discount:</SummaryLabel>
                 <SummaryValue>{formatPrice(order.discount || 0)}</SummaryValue>
@@ -574,10 +587,34 @@ const SummaryItem = styled.div`
 const SummaryLabel = styled.div`
   font-weight: 500;
   color: #555;
+  display: flex;
+  align-items: center;
+`;
+
+const CouponIcon = styled.span`
+  color: #8e44ad;
+  margin-right: 8px;
+  display: flex;
+  align-items: center;
+`;
+
+const CouponCode = styled.span`
+  background-color: #f0f0f0;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  margin-left: 8px;
+  font-family: monospace;
+  color: #8e44ad;
 `;
 
 const SummaryValue = styled.div`
   color: #666;
+  
+  &.discount {
+    color: #f44336;
+    font-weight: 600;
+  }
 `;
 
 const SummaryTotal = styled.div`

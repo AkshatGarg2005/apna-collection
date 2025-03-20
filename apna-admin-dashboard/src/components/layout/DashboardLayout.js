@@ -17,7 +17,8 @@ import {
   FaRing,
   FaTag,
   FaHome,
-  FaEnvelope
+  FaEnvelope,
+  FaTicketAlt // New icon for coupons
 } from 'react-icons/fa';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import NotificationsCenter from '../notifications/NotificationsCenter';
@@ -81,6 +82,15 @@ const DashboardLayout = ({ children, title }) => {
           >
             <FaUsers className="menu-icon" />
             <span>Customers</span>
+          </SidebarMenuItem>
+          
+          {/* New Coupons Menu Item */}
+          <SidebarMenuItem 
+            to="/coupons" 
+            className={isActive('/coupons') ? 'active' : ''}
+          >
+            <FaTicketAlt className="menu-icon" />
+            <span>Coupons</span>
           </SidebarMenuItem>
           
           <SidebarMenuItem 

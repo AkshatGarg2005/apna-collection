@@ -17,6 +17,7 @@ import WeddingProducts from './pages/WeddingProducts';
 import EndOfSeasonProducts from './pages/EndOfSeasonProducts';
 import FeaturedProducts from './pages/FeaturedProducts';
 import ContactMessages from './pages/ContactMessages';
+import Coupons from './pages/Coupons'; // Import the new Coupons page
 
 function App() {
   return (
@@ -78,6 +79,12 @@ function App() {
             <Route path="/featured-products" element={
               <AdminRoute>
                 <FeaturedProducts />
+              </AdminRoute>
+            } />
+            {/* Add new route for coupons */}
+            <Route path="/coupons" element={
+              <AdminRoute>
+                <Coupons />
               </AdminRoute>
             } />
           </Routes>

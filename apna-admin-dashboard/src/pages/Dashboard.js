@@ -8,7 +8,8 @@ import {
   FaChartLine,
   FaBoxOpen,
   FaTruck,
-  FaCheckCircle
+  FaCheckCircle,
+  FaTicketAlt
 } from 'react-icons/fa';
 import { 
   collection, 
@@ -22,6 +23,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import DashboardLayout from '../components/layout/DashboardLayout';
+import { getCouponUsageStats } from '../services/orderUtils';
 
 const Dashboard = () => {
   const [stats, setStats] = useState({
@@ -33,6 +35,13 @@ const Dashboard = () => {
     totalRevenue: 0,
     totalProducts: 0,
     totalCustomers: 0
+  });
+  
+  const [couponStats, setCouponStats] = useState({
+    totalCoupons: 0,
+    activeCoupons: 0,
+    ordersWithCoupons: 0,
+    totalDiscount: 0
   });
   
   const [recentOrders, setRecentOrders] = useState([]);
@@ -89,6 +98,12 @@ const Dashboard = () => {
             return acc + (order.total || 0);
           }, 0);
           
+          // Calculate coupon-related stats
+          const ordersWithCoupons = orders.filter(order => order.couponCode).length;
+          const totalDiscount = orders.reduce((acc, order) => {
+            return acc + (order.couponDiscount || 0);
+          }, 0);
+          
           setStats(prev => ({
             ...prev,
             totalOrders,
@@ -97,6 +112,12 @@ const Dashboard = () => {
             shippedOrders,
             deliveredOrders,
             totalRevenue
+          }));
+          
+          setCouponStats(prev => ({
+            ...prev,
+            ordersWithCoupons,
+            totalDiscount
           }));
         });
         
@@ -113,6 +134,20 @@ const Dashboard = () => {
           }));
           
           setRecentOrders(recentOrdersData);
+        });
+        
+        // Fetch coupon data
+        const couponsQuery = collection(db, 'coupons');
+        const couponsUnsubscribe = onSnapshot(couponsQuery, (snapshot) => {
+          const allCoupons = snapshot.docs.length;
+          const activeCoupons = snapshot.docs.filter(doc => doc.data().active).length;
+          
+          setCouponStats(prev => ({
+            ...prev,
+            totalCoupons: allCoupons,
+            activeCoupons
+          }));
+          
           setLoading(false);
         });
         
@@ -122,6 +157,7 @@ const Dashboard = () => {
           customersUnsubscribe();
           ordersUnsubscribe();
           recentOrdersUnsubscribe();
+          couponsUnsubscribe();
         };
       } catch (error) {
         console.error('Error setting up dashboard listeners:', error);
@@ -209,6 +245,44 @@ const Dashboard = () => {
             </StatCard>
           </StatsGrid>
           
+          {/* Coupon Stats */}
+          <CouponStatsSection>
+            <SectionTitle>Coupon Statistics</SectionTitle>
+            <CouponStatsGrid>
+              <CouponStatCard>
+                <CouponStatIcon><FaTicketAlt /></CouponStatIcon>
+                <CouponStatContent>
+                  <CouponStatValue>{couponStats.totalCoupons}</CouponStatValue>
+                  <CouponStatLabel>Total Coupons</CouponStatLabel>
+                </CouponStatContent>
+              </CouponStatCard>
+              
+              <CouponStatCard>
+                <CouponStatIcon><FaCheckCircle /></CouponStatIcon>
+                <CouponStatContent>
+                  <CouponStatValue>{couponStats.activeCoupons}</CouponStatValue>
+                  <CouponStatLabel>Active Coupons</CouponStatLabel>
+                </CouponStatContent>
+              </CouponStatCard>
+              
+              <CouponStatCard>
+                <CouponStatIcon><FaShoppingBag /></CouponStatIcon>
+                <CouponStatContent>
+                  <CouponStatValue>{couponStats.ordersWithCoupons}</CouponStatValue>
+                  <CouponStatLabel>Orders With Coupons</CouponStatLabel>
+                </CouponStatContent>
+              </CouponStatCard>
+              
+              <CouponStatCard>
+                <CouponStatIcon><FaRupeeSign /></CouponStatIcon>
+                <CouponStatContent>
+                  <CouponStatValue>{formatPrice(couponStats.totalDiscount)}</CouponStatValue>
+                  <CouponStatLabel>Total Discount Given</CouponStatLabel>
+                </CouponStatContent>
+              </CouponStatCard>
+            </CouponStatsGrid>
+          </CouponStatsSection>
+          
           {/* Order Status Cards */}
           <OrderStatusSection>
             <SectionTitle>Order Status</SectionTitle>
@@ -265,7 +339,14 @@ const Dashboard = () => {
                     <OrderColumnID>#{order.orderNumber || order.id.slice(0, 8)}</OrderColumnID>
                     <OrderColumn>{order.shippingAddress?.name || 'N/A'}</OrderColumn>
                     <OrderColumn>{formatDate(order.createdAt)}</OrderColumn>
-                    <OrderColumn>{formatPrice(order.total || 0)}</OrderColumn>
+                    <OrderColumn>
+                      {formatPrice(order.total || 0)}
+                      {order.couponCode && (
+                        <CouponBadge title={`Coupon applied: ${order.couponCode}`}>
+                          <FaTicketAlt />
+                        </CouponBadge>
+                      )}
+                    </OrderColumn>
                     <OrderColumn>
                       <OrderStatus className={order.status?.toLowerCase() || 'processing'}>
                         {order.status || 'Processing'}
@@ -339,6 +420,7 @@ const StatIconWrapper = styled.div`
   font-size: 24px;
   color: white;
   margin-right: 20px;
+  flex-shrink: 0;
   
   &.orders {
     background: linear-gradient(135deg, #4caf50, #2e7d32);
@@ -369,6 +451,71 @@ const StatValue = styled.div`
 `;
 
 const StatLabel = styled.div`
+  font-size: 14px;
+  color: #777;
+`;
+
+// New Coupon Stats Styles
+const CouponStatsSection = styled.div`
+  margin-top: 10px;
+`;
+
+const CouponStatsGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+  
+  @media (max-width: 1200px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  @media (max-width: 576px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const CouponStatCard = styled.div`
+  background-color: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  transition: all 0.3s ease;
+  border-left: 4px solid #8e44ad;
+  
+  &:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
+  }
+`;
+
+const CouponStatIcon = styled.div`
+  width: 50px;
+  height: 50px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  color: #8e44ad;
+  background-color: rgba(142, 68, 173, 0.1);
+  margin-right: 15px;
+  flex-shrink: 0;
+`;
+
+const CouponStatContent = styled.div`
+  flex: 1;
+`;
+
+const CouponStatValue = styled.div`
+  font-size: 22px;
+  font-weight: 700;
+  color: #333;
+  margin-bottom: 5px;
+`;
+
+const CouponStatLabel = styled.div`
   font-size: 14px;
   color: #777;
 `;
@@ -492,6 +639,8 @@ const OrdersTableHeader = styled.div`
 
 const OrderColumn = styled.div`
   padding: 5px;
+  display: flex;
+  align-items: center;
   
   @media (max-width: 768px) {
     padding: 8px 0;
@@ -576,6 +725,20 @@ const OrderStatus = styled.span`
     background-color: rgba(244, 67, 54, 0.15);
     color: #f44336;
   }
+`;
+
+const CouponBadge = styled.span`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  background-color: #8e44ad;
+  color: white;
+  border-radius: 50%;
+  font-size: 10px;
+  margin-left: 8px;
+  cursor: help;
 `;
 
 const EmptyMessage = styled.div`
