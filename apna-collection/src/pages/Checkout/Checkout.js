@@ -115,25 +115,35 @@ const Checkout = () => {
     icon: 'fas fa-lock'
   });
   
-  // Coupon state
-  const [couponCode, setCouponCode] = useState('');
-  const [couponError, setCouponError] = useState('');
-  const [couponSuccess, setCouponSuccess] = useState('');
-  const [isCouponApplied, setIsCouponApplied] = useState(false);
-  const [isCouponLoading, setIsCouponLoading] = useState(false);
-  const [appliedCoupon, setAppliedCoupon] = useState(null);
+  // Enhanced coupon state with ID and discount type
+  const [coupon, setCoupon] = useState({
+    code: '',
+    message: '',
+    isValid: false,
+    discount: 0,
+    id: null,
+    discountType: null,
+    discountValue: 0
+  });
+  
+  // Loading state for coupon validation
+  const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
   
   // Load coupon from localStorage if it was applied in cart
   useEffect(() => {
-    const storedCoupon = localStorage.getItem('appliedCoupon');
-    if (storedCoupon) {
+    const appliedCoupon = localStorage.getItem('appliedCoupon');
+    if (appliedCoupon) {
       try {
-        const couponData = JSON.parse(storedCoupon);
-        if (couponData && couponData.code) {
-          setAppliedCoupon(couponData);
-          setIsCouponApplied(true);
-          setCouponSuccess(`Coupon ${couponData.code} applied!`);
-        }
+        const couponData = JSON.parse(appliedCoupon);
+        setCoupon({
+          code: couponData.code || '',
+          message: 'Coupon applied from cart',
+          isValid: true,
+          discount: couponData.discount || 0,
+          id: couponData.id || null,
+          discountType: couponData.discountType || 'percentage',
+          discountValue: couponData.discountValue || 0
+        });
         
         // Remove from localStorage to prevent reuse
         localStorage.removeItem('appliedCoupon');
@@ -146,14 +156,14 @@ const Checkout = () => {
   // Calculate order summary
   useEffect(() => {
     calculateOrderSummary();
-  }, [cartItems, appliedCoupon, isCouponApplied]);
+  }, [cartItems, coupon.isValid, coupon.discount]);
   
   const calculateOrderSummary = () => {
     // Calculate subtotal
     const subtotal = cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
     
-    // Calculate discount (only if coupon is applied)
-    const discount = isCouponApplied && appliedCoupon ? (appliedCoupon.discount || 0) : 0;
+    // Calculate discount (only if coupon is valid)
+    const discount = coupon.isValid ? (coupon.discount || 0) : 0;
     
     // Calculate amount after discount
     const afterDiscount = subtotal - discount;
@@ -409,97 +419,140 @@ const Checkout = () => {
   
   // Apply coupon with server validation
   const handleApplyCoupon = async () => {
-    if (!couponCode.trim()) {
-      setCouponError('Please enter a coupon code');
+    const couponCode = coupon.code.trim();
+    
+    if (!couponCode) {
+      showCouponMessage('Please enter a coupon code', false);
       return;
     }
     
-    setCouponError('');
-    setCouponSuccess('');
-    setIsCouponLoading(true);
+    // Add a loading effect to the input
+    const couponInput = document.querySelector('.coupon-form .form-input');
+    if (couponInput) {
+      couponInput.style.transition = 'all 0.3s ease';
+      couponInput.style.backgroundColor = '#f9f9f9';
+      couponInput.style.boxShadow = '0 0 0 2px rgba(0, 0, 0, 0.05)';
+      couponInput.disabled = true;
+    }
+    
+    setIsValidatingCoupon(true);
     
     try {
-      // Call the validateCoupon service
+      // Validate coupon with the service
       const result = await validateCoupon(
-        couponCode.trim().toUpperCase(),
-        summary.subtotal,
+        couponCode, 
+        summary.subtotal, 
         currentUser?.uid
       );
       
+      // Update the input style
+      if (couponInput) {
+        couponInput.style.backgroundColor = '';
+        couponInput.style.boxShadow = '';
+        couponInput.disabled = false;
+      }
+      
       if (result.valid) {
-        // Coupon is valid
-        setIsCouponApplied(true);
-        setCouponSuccess(`Coupon applied successfully! ${result.message}`);
-        
-        // Store the coupon data with the required fields
-        const couponData = {
-          code: result.coupon.code,
-          id: result.coupon.id || null,    // Ensure id is not undefined
-          discount: result.discountAmount || 0,
-          discountType: result.coupon.discountType || 'percentage',
-          discountValue: result.coupon.discount || 0
-        };
-        
-        // Log coupon data for debugging
-        console.log("Applied coupon data:", couponData);
-        
-        setAppliedCoupon(couponData);
-        
-        // Show success animation on the discount row
-        const discountRow = document.querySelector('.summary-row:nth-child(2)');
-        if (discountRow) {
-          discountRow.style.transition = 'all 0.5s ease';
-          discountRow.style.backgroundColor = 'rgba(40, 167, 69, 0.1)';
-          discountRow.style.borderLeft = '3px solid #28a745';
-          
-          setTimeout(() => {
-            discountRow.style.backgroundColor = '';
-            discountRow.style.borderLeft = '';
-          }, 3000);
-        }
-        
-        // Clear the input
-        setCouponCode('');
+        showCouponSuccess(
+          `Coupon applied! ${result.coupon.discountType === 'percentage' ? 
+            `${result.coupon.discount}% discount` : 
+            `₹${result.discountAmount} discount`}`,
+          result.discountAmount,
+          result.coupon.id,
+          result.coupon
+        );
       } else {
-        // Coupon is invalid
-        setCouponError(result.message);
-        
-        // Shake animation for error
-        const couponInput = document.querySelector('.coupon-form .form-input');
-        if (couponInput) {
-          couponInput.style.transition = 'all 0.1s ease';
-          couponInput.style.borderColor = '#dc3545';
-          
-          let position = 1;
-          const shake = setInterval(() => {
-            couponInput.style.transform = position ? 'translateX(2px)' : 'translateX(-2px)';
-            position = !position;
-          }, 50);
-          
-          setTimeout(() => {
-            clearInterval(shake);
-            couponInput.style.transform = '';
-            
-            setTimeout(() => {
-              couponInput.style.borderColor = '';
-            }, 500);
-          }, 300);
-        }
+        showCouponError(result.message);
       }
     } catch (error) {
-      console.error('Error validating coupon:', error);
-      setCouponError('Failed to validate coupon. Please try again.');
+      console.error('Error applying coupon:', error);
+      showCouponError('Failed to validate coupon. Please try again.');
     } finally {
-      setIsCouponLoading(false);
+      setIsValidatingCoupon(false);
+      
+      if (couponInput) {
+        couponInput.style.backgroundColor = '';
+        couponInput.style.boxShadow = '';
+        couponInput.disabled = false;
+      }
     }
   };
   
-  // Remove applied coupon
-  const handleRemoveCoupon = () => {
-    setIsCouponApplied(false);
-    setAppliedCoupon(null);
-    setCouponSuccess('');
-    setCouponCode('');
+  // Show success animation for coupon
+  const showCouponSuccess = (message, discountAmount, couponId, couponObj) => {
+    // Show message
+    showCouponMessage(message, true);
+    
+    // Update discount info
+    setCoupon(prev => ({
+      ...prev,
+      isValid: true,
+      discount: discountAmount,
+      id: couponId,
+      discountType: couponObj.discountType,
+      discountValue: couponObj.discount
+    }));
+    
+    // Highlight the summary section
+    const discountRow = document.querySelector('.summary-row:nth-child(2)');
+    if (discountRow) {
+      discountRow.style.transition = 'all 0.5s ease';
+      discountRow.style.backgroundColor = 'rgba(40, 167, 69, 0.1)';
+      discountRow.style.borderLeft = '3px solid #28a745';
+      
+      setTimeout(() => {
+        discountRow.style.backgroundColor = '';
+        discountRow.style.borderLeft = '';
+      }, 3000);
+    }
+  };
+  
+  // Show error animation for coupon
+  const showCouponError = (message) => {
+    showCouponMessage(message, false);
+    
+    // Shake effect on the input
+    const couponInput = document.querySelector('.coupon-form .form-input');
+    if (couponInput) {
+      couponInput.style.transition = 'all 0.1s ease';
+      couponInput.style.borderColor = '#dc3545';
+      
+      // Create shake animation
+      let position = 1;
+      const shake = setInterval(() => {
+        couponInput.style.transform = position ? 'translateX(2px)' : 'translateX(-2px)';
+        position = !position;
+      }, 50);
+      
+      // Stop after a short time
+      setTimeout(() => {
+        clearInterval(shake);
+        couponInput.style.transform = '';
+        
+        setTimeout(() => {
+          couponInput.style.borderColor = '';
+        }, 500);
+      }, 300);
+      
+      setCoupon(prev => ({
+        ...prev,
+        isValid: false
+      }));
+    }
+  };
+  
+  // Show coupon message
+  const showCouponMessage = (message, isSuccess) => {
+    setCoupon(prev => ({
+      ...prev,
+      message,
+      isValid: prev.isValid || isSuccess
+    }));
+    
+    // Hide message after 5 seconds
+    setTimeout(() => {
+      setCoupon(prev => ({ ...prev, message: '' }));
+    }, 5000);
   };
   
   // Progress animation for order processing
@@ -622,7 +675,7 @@ const Checkout = () => {
     }, 5000);
   };
   
-  // Place order function with coupon support - FIXED undefined couponId issue
+  // Enhanced place order with coupon handling
   const handlePlaceOrder = async () => {
     // Reset any previous error
     setPhoneError('');
@@ -749,14 +802,10 @@ const Checkout = () => {
       };
       
       // Add coupon information if a coupon was applied
-      // FIX: Only add coupon fields when both isCouponApplied and appliedCoupon.id exist
-      if (isCouponApplied && appliedCoupon && appliedCoupon.code) {
-        orderData.couponCode = appliedCoupon.code;
-        // Only add couponId if it's not null/undefined
-        if (appliedCoupon.id) {
-          orderData.couponId = appliedCoupon.id;
-        }
-        orderData.couponDiscount = appliedCoupon.discount || 0;
+      if (coupon.isValid && coupon.id) {
+        orderData.couponCode = coupon.code;
+        orderData.couponId = coupon.id;
+        orderData.couponDiscount = orderSummary.discount;
       }
       
       console.log("Saving order with data:", JSON.stringify(orderData));
@@ -1200,108 +1249,68 @@ const Checkout = () => {
             <div className="coupon-form">
               <div className="form-group">
                 <label className="form-label">Apply Coupon</label>
-                {!isCouponApplied ? (
-                  <>
-                    <div style={{ display: 'flex' }} className="coupon-form">
-                      <input 
-                        type="text" 
-                        className="form-input" 
-                        placeholder="Enter coupon code" 
-                        style={{ borderRadius: '12px 0 0 12px', borderRight: 'none' }}
-                        value={couponCode}
-                        onChange={(e) => setCouponCode(e.target.value)}
-                        disabled={isCouponLoading}
-                      />
-                      <button 
-                        onClick={handleApplyCoupon}
+                <div style={{ display: 'flex' }} className="coupon-form">
+                  <input 
+                    type="text" 
+                    className="form-input" 
+                    placeholder="Enter coupon code" 
+                    style={{ borderRadius: '12px 0 0 12px', borderRight: 'none' }}
+                    value={coupon.code}
+                    onChange={(e) => setCoupon(prev => ({ ...prev, code: e.target.value }))}
+                    disabled={isValidatingCoupon || coupon.isValid}
+                  />
+                  <button 
+                    onClick={coupon.isValid ? null : handleApplyCoupon}
+                    style={{ 
+                      padding: '0 20px', 
+                      background: coupon.isValid ? '#4caf50' : 'linear-gradient(135deg, #d4af7a, #c59b6d)', 
+                      color: 'white', 
+                      border: 'none', 
+                      borderRadius: '0 12px 12px 0', 
+                      cursor: coupon.isValid ? 'default' : (isValidatingCoupon ? 'wait' : 'pointer'), 
+                      fontWeight: '600', 
+                      transition: 'all 0.3s ease',
+                      position: 'relative',
+                      overflow: 'hidden'
+                    }}
+                    disabled={isValidatingCoupon || coupon.isValid}
+                  >
+                    <span style={{ position: 'relative', zIndex: 2 }}>
+                      {coupon.isValid ? (
+                        <i className="fas fa-check"></i>
+                      ) : isValidatingCoupon ? 'Validating...' : 'Apply'}
+                    </span>
+                    {!coupon.isValid && !isValidatingCoupon && (
+                      <span 
                         style={{ 
-                          padding: '0 20px', 
-                          background: 'linear-gradient(135deg, #d4af7a, #c59b6d)', 
-                          color: 'white', 
-                          border: 'none', 
-                          borderRadius: '0 12px 12px 0', 
-                          cursor: isCouponLoading ? 'wait' : 'pointer', 
-                          fontWeight: '600', 
-                          transition: 'all 0.3s ease',
-                          position: 'relative',
-                          overflow: 'hidden'
+                          position: 'absolute', 
+                          top: 0, 
+                          left: '-100%', 
+                          width: '100%', 
+                          height: '100%', 
+                          background: 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent)', 
+                          transition: 'all 0.6s ease',
+                          zIndex: 1
                         }}
-                        disabled={isCouponLoading}
-                        type="button"
-                      >
-                        <span style={{ position: 'relative', zIndex: 2 }}>
-                          {isCouponLoading ? 'Validating...' : 'Apply'}
-                        </span>
-                        <span 
-                          style={{ 
-                            position: 'absolute', 
-                            top: 0, 
-                            left: '-100%', 
-                            width: '100%', 
-                            height: '100%', 
-                            background: 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent)', 
-                            transition: 'all 0.6s ease',
-                            zIndex: 1
-                          }}
-                          className="btn-shine"
-                          onMouseEnter={(e) => { e.currentTarget.style.left = '100%' }}
-                        ></span>
-                      </button>
-                    </div>
-                    {couponError && (
-                      <div 
-                        style={{ 
-                          marginTop: '8px', 
-                          fontSize: '0.9rem', 
-                          color: '#dc3545',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '5px'
-                        }}
-                      >
-                        <i className="fas fa-exclamation-circle"></i>
-                        {couponError}
-                      </div>
+                        className="btn-shine"
+                        onMouseEnter={(e) => { e.currentTarget.style.left = '100%' }}
+                      ></span>
                     )}
-                  </>
-                ) : (
+                  </button>
+                </div>
+                {coupon.message && (
                   <div 
                     style={{ 
+                      marginTop: '8px', 
+                      fontSize: '0.9rem', 
+                      color: coupon.isValid ? '#28a745' : '#dc3545',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '10px',
-                      backgroundColor: 'rgba(76, 175, 80, 0.1)',
-                      padding: '15px',
-                      borderRadius: '8px'
+                      gap: '5px'
                     }}
                   >
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 600, color: '#4caf50' }}>
-                        <i className="fas fa-check-circle" style={{ marginRight: '5px' }}></i>
-                        {appliedCoupon ? appliedCoupon.code : 'Coupon applied'}
-                      </div>
-                      <div style={{ fontSize: '0.9rem', marginTop: '3px' }}>
-                        {couponSuccess || `Discount: ₹${summary.discount}`}
-                      </div>
-                    </div>
-                    <button 
-                      onClick={handleRemoveCoupon}
-                      style={{
-                        background: 'none',
-                        border: '1px solid #dc3545',
-                        color: '#dc3545',
-                        padding: '5px 10px',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        fontSize: '0.9rem',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '5px'
-                      }}
-                    >
-                      <i className="fas fa-times"></i>
-                      Remove
-                    </button>
+                    <i className={`fas ${coupon.isValid ? 'fa-check-circle' : 'fa-exclamation-circle'}`}></i>
+                    {coupon.message}
                   </div>
                 )}
               </div>
