@@ -4,7 +4,6 @@ import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 import { collection, addDoc, updateDoc, doc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../firebase/config';
-import { validateCoupon } from '../../services/couponService';
 import './Checkout.css';
 
 const Checkout = () => {
@@ -125,9 +124,6 @@ const Checkout = () => {
     discountType: null,
     discountValue: 0
   });
-  
-  // Loading state for coupon validation
-  const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
   
   // Load coupon from localStorage if it was applied in cart
   useEffect(() => {
@@ -415,130 +411,6 @@ const Checkout = () => {
       ...prev,
       [name]: value
     }));
-  };
-  
-  // Apply coupon with server validation
-  const handleApplyCoupon = async () => {
-    const couponCode = coupon.code.trim();
-    
-    if (!couponCode) {
-      showCouponMessage('Please enter a coupon code', false);
-      return;
-    }
-    
-    // Add a loading effect to the input
-    const couponInput = document.querySelector('.coupon-form .form-input');
-    if (couponInput) {
-      couponInput.style.transition = 'all 0.3s ease';
-      couponInput.style.backgroundColor = '#f9f9f9';
-      couponInput.style.boxShadow = '0 0 0 2px rgba(0, 0, 0, 0.05)';
-      couponInput.disabled = true;
-    }
-    
-    setIsValidatingCoupon(true);
-    
-    try {
-      // Validate coupon with the service
-      const result = await validateCoupon(
-        couponCode, 
-        summary.subtotal, 
-        currentUser?.uid
-      );
-      
-      // Update the input style
-      if (couponInput) {
-        couponInput.style.backgroundColor = '';
-        couponInput.style.boxShadow = '';
-        couponInput.disabled = false;
-      }
-      
-      if (result.valid) {
-        showCouponSuccess(
-          `Coupon applied! ${result.coupon.discountType === 'percentage' ? 
-            `${result.coupon.discount}% discount` : 
-            `₹${result.discountAmount} discount`}`,
-          result.discountAmount,
-          result.coupon.id,
-          result.coupon
-        );
-      } else {
-        showCouponError(result.message);
-      }
-    } catch (error) {
-      console.error('Error applying coupon:', error);
-      showCouponError('Failed to validate coupon. Please try again.');
-    } finally {
-      setIsValidatingCoupon(false);
-      
-      if (couponInput) {
-        couponInput.style.backgroundColor = '';
-        couponInput.style.boxShadow = '';
-        couponInput.disabled = false;
-      }
-    }
-  };
-  
-  // Show success animation for coupon
-  const showCouponSuccess = (message, discountAmount, couponId, couponObj) => {
-    // Show message
-    showCouponMessage(message, true);
-    
-    // Update discount info
-    setCoupon(prev => ({
-      ...prev,
-      isValid: true,
-      discount: discountAmount,
-      id: couponId,
-      discountType: couponObj.discountType,
-      discountValue: couponObj.discount
-    }));
-    
-    // Highlight the summary section
-    const discountRow = document.querySelector('.summary-row:nth-child(2)');
-    if (discountRow) {
-      discountRow.style.transition = 'all 0.5s ease';
-      discountRow.style.backgroundColor = 'rgba(40, 167, 69, 0.1)';
-      discountRow.style.borderLeft = '3px solid #28a745';
-      
-      setTimeout(() => {
-        discountRow.style.backgroundColor = '';
-        discountRow.style.borderLeft = '';
-      }, 3000);
-    }
-  };
-  
-  // Show error animation for coupon
-  const showCouponError = (message) => {
-    showCouponMessage(message, false);
-    
-    // Shake effect on the input
-    const couponInput = document.querySelector('.coupon-form .form-input');
-    if (couponInput) {
-      couponInput.style.transition = 'all 0.1s ease';
-      couponInput.style.borderColor = '#dc3545';
-      
-      // Create shake animation
-      let position = 1;
-      const shake = setInterval(() => {
-        couponInput.style.transform = position ? 'translateX(2px)' : 'translateX(-2px)';
-        position = !position;
-      }, 50);
-      
-      // Stop after a short time
-      setTimeout(() => {
-        clearInterval(shake);
-        couponInput.style.transform = '';
-        
-        setTimeout(() => {
-          couponInput.style.borderColor = '';
-        }, 500);
-      }, 300);
-      
-      setCoupon(prev => ({
-        ...prev,
-        isValid: false
-      }));
-    }
   };
   
   // Show coupon message
@@ -1245,77 +1117,82 @@ const Checkout = () => {
             </div>
           </div>
           
-          <div className="checkout-section">
-            <div className="coupon-form">
-              <div className="form-group">
-                <label className="form-label">Apply Coupon</label>
-                <div style={{ display: 'flex' }} className="coupon-form">
-                  <input 
-                    type="text" 
-                    className="form-input" 
-                    placeholder="Enter coupon code" 
-                    style={{ borderRadius: '12px 0 0 12px', borderRight: 'none' }}
-                    value={coupon.code}
-                    onChange={(e) => setCoupon(prev => ({ ...prev, code: e.target.value }))}
-                    disabled={isValidatingCoupon || coupon.isValid}
-                  />
-                  <button 
-                    onClick={coupon.isValid ? null : handleApplyCoupon}
-                    style={{ 
-                      padding: '0 20px', 
-                      background: coupon.isValid ? '#4caf50' : 'linear-gradient(135deg, #d4af7a, #c59b6d)', 
-                      color: 'white', 
-                      border: 'none', 
-                      borderRadius: '0 12px 12px 0', 
-                      cursor: coupon.isValid ? 'default' : (isValidatingCoupon ? 'wait' : 'pointer'), 
-                      fontWeight: '600', 
-                      transition: 'all 0.3s ease',
-                      position: 'relative',
-                      overflow: 'hidden'
-                    }}
-                    disabled={isValidatingCoupon || coupon.isValid}
-                  >
-                    <span style={{ position: 'relative', zIndex: 2 }}>
-                      {coupon.isValid ? (
-                        <i className="fas fa-check"></i>
-                      ) : isValidatingCoupon ? 'Validating...' : 'Apply'}
-                    </span>
-                    {!coupon.isValid && !isValidatingCoupon && (
-                      <span 
-                        style={{ 
-                          position: 'absolute', 
-                          top: 0, 
-                          left: '-100%', 
-                          width: '100%', 
-                          height: '100%', 
-                          background: 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent)', 
-                          transition: 'all 0.6s ease',
-                          zIndex: 1
-                        }}
-                        className="btn-shine"
-                        onMouseEnter={(e) => { e.currentTarget.style.left = '100%' }}
-                      ></span>
-                    )}
-                  </button>
+          {/* Display coupon information if applied, but don't allow new coupon entry */}
+          {coupon.isValid && (
+            <div className="checkout-section">
+              <h2 className="section-title">Applied Coupon</h2>
+              <div className="coupon-display" style={{
+                padding: '15px',
+                background: 'rgba(76, 175, 80, 0.1)',
+                borderRadius: '10px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                border: '1px dashed #4caf50'
+              }}>
+                <div style={{ 
+                  backgroundColor: '#4caf50', 
+                  color: 'white', 
+                  width: '40px', 
+                  height: '40px', 
+                  borderRadius: '50%', 
+                  display: 'flex', 
+                  justifyContent: 'center', 
+                  alignItems: 'center'
+                }}>
+                  <i className="fas fa-tag"></i>
                 </div>
-                {coupon.message && (
-                  <div 
-                    style={{ 
-                      marginTop: '8px', 
-                      fontSize: '0.9rem', 
-                      color: coupon.isValid ? '#28a745' : '#dc3545',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '5px'
-                    }}
-                  >
-                    <i className={`fas ${coupon.isValid ? 'fa-check-circle' : 'fa-exclamation-circle'}`}></i>
-                    {coupon.message}
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 'bold', marginBottom: '5px' }}>{coupon.code}</div>
+                  <div style={{ fontSize: '0.9rem' }}>
+                    {coupon.discountType === 'percentage' 
+                      ? `${coupon.discountValue}% off` 
+                      : `₹${coupon.discount} off`}
                   </div>
-                )}
+                </div>
+                <div style={{ fontWeight: 'bold', color: '#4caf50' }}>
+                  -₹{summary.discount}
+                </div>
+              </div>
+              <div style={{
+                marginTop: '10px',
+                fontSize: '0.85rem',
+                color: '#666',
+                textAlign: 'center'
+              }}>
+                <i className="fas fa-info-circle"></i> Coupon applied from cart
               </div>
             </div>
-          </div>
+          )}
+          
+          {/* No coupon but link to cart to add one */}
+          {!coupon.isValid && (
+            <div className="checkout-section">
+              <div style={{ textAlign: 'center', padding: '15px' }}>
+                <div style={{ marginBottom: '15px' }}>
+                  <i className="fas fa-tag" style={{ fontSize: '2rem', color: '#ddd' }}></i>
+                </div>
+                <h3 style={{ marginBottom: '10px', fontWeight: '500' }}>No coupon applied</h3>
+                <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '15px' }}>
+                  To apply a coupon, please return to your cart
+                </p>
+                <Link to="/cart" style={{
+                  display: 'inline-block',
+                  padding: '8px 15px',
+                  backgroundColor: '#f0f0f0',
+                  color: '#333',
+                  borderRadius: '5px',
+                  textDecoration: 'none',
+                  fontSize: '0.9rem',
+                  fontWeight: '500',
+                  transition: 'all 0.3s ease'
+                }}>
+                  <i className="fas fa-arrow-left" style={{ marginRight: '5px' }}></i>
+                  Return to Cart
+                </Link>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
