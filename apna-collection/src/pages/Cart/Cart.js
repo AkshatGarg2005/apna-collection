@@ -1,9 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../../context/CartContext';
+import { useAuth } from '../../context/AuthContext';
+import { validateCoupon } from '../../services/couponService';
 
 const Cart = () => {
   const { cart, removeFromCart, updateCartItemQuantity } = useCart();
+  const { currentUser } = useAuth();
   const [promoCode, setPromoCode] = useState('');
   const [discount, setDiscount] = useState(0);
   const [shippingFee, setShippingFee] = useState(99);
@@ -11,6 +14,7 @@ const Cart = () => {
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [promoError, setPromoError] = useState('');
   const [promoSuccess, setPromoSuccess] = useState('');
+  const [isLoadingPromo, setIsLoadingPromo] = useState(false);
   const navigate = useNavigate();
   
   // References for animated values
@@ -35,6 +39,16 @@ const Cart = () => {
     
     setIsCheckingOut(true);
     
+    // If a coupon was applied, store it for checkout
+    if (isPromoApplied && promoSuccess) {
+      localStorage.setItem('appliedCoupon', JSON.stringify({
+        code: promoCode.trim().toUpperCase(),
+        discount: discount,
+        discountType: discount > 100 ? 'fixed' : 'percentage',
+        discountValue: discount > 100 ? discount : (discount / calculateSubtotal()) * 100
+      }));
+    }
+    
     // Simulate processing and redirect after animation completes
     setTimeout(() => {
       navigate('/checkout');
@@ -51,8 +65,8 @@ const Cart = () => {
     return '₹' + amount.toLocaleString('en-IN');
   };
 
-  // Apply promo code
-  const applyPromoCode = () => {
+  // Apply promo code - Updated to use coupon service
+  const applyPromoCode = async () => {
     // Reset previous messages
     setPromoError('');
     setPromoSuccess('');
@@ -62,30 +76,41 @@ const Cart = () => {
       return;
     }
     
-    // Validate against specific promo codes
-    const code = promoCode.trim().toUpperCase();
     const subtotal = calculateSubtotal();
+    const code = promoCode.trim().toUpperCase();
     
-    if (code === 'WELCOME10') {
-      const discountAmount = Math.floor(subtotal * 0.1); // 10% discount
-      setDiscount(discountAmount);
-      setIsPromoApplied(true);
-      setPromoSuccess('Promo code applied successfully!');
-    } else if (code === 'APNA20') {
-      const discountAmount = Math.floor(subtotal * 0.2); // 20% discount
-      setDiscount(discountAmount);
-      setIsPromoApplied(true);
-      setPromoSuccess('Promo code applied successfully!');
-    } else if (code === 'FLAT500') {
-      setDiscount(500);
-      setIsPromoApplied(true);
-      setPromoSuccess('Promo code applied successfully!');
-    } else {
-      setPromoError('Invalid promo code. Please try another code.');
-      return;
+    try {
+      setIsLoadingPromo(true);
+      
+      // Call the coupon validation service
+      const result = await validateCoupon(code, subtotal, currentUser?.uid);
+      
+      if (result.valid) {
+        // Set the discount amount
+        setDiscount(result.discountAmount);
+        setIsPromoApplied(true);
+        setPromoSuccess(`Coupon applied! ${result.coupon.discountType === 'percentage' ? 
+          `${result.coupon.discount}% discount` : 
+          `₹${result.discountAmount} discount`}`);
+        
+        // Store coupon info in localStorage for checkout
+        localStorage.setItem('appliedCoupon', JSON.stringify({
+          code: code,
+          id: result.coupon.id,
+          discount: result.discountAmount,
+          discountType: result.coupon.discountType,
+          discountValue: result.coupon.discount
+        }));
+      } else {
+        setPromoError(result.message);
+      }
+    } catch (error) {
+      console.error('Error applying coupon:', error);
+      setPromoError('Failed to apply coupon. Please try again.');
+    } finally {
+      setIsLoadingPromo(false);
+      setPromoCode(''); // Clear the input field
     }
-    
-    setPromoCode(''); // Clear the input field after successful application
   };
 
   // Animation for counting up/down
@@ -589,29 +614,34 @@ const Cart = () => {
                 value={promoCode}
                 onChange={(e) => setPromoCode(e.target.value)}
                 className="promo-input"
+                disabled={isLoadingPromo}
                 style={{
                   flex: 1,
                   padding: '12px 15px',
                   border: '1px solid #e1d9d2',
                   borderRadius: '4px 0 0 4px',
-                  fontSize: '0.9rem'
+                  fontSize: '0.9rem',
+                  backgroundColor: isLoadingPromo ? '#f9f9f9' : 'white'
                 }}
               />
               <button 
                 type="button" 
                 className="promo-btn"
                 onClick={applyPromoCode}
+                disabled={isLoadingPromo}
                 style={{
                   padding: '0 15px',
-                  backgroundColor: '#c59b6d',
+                  backgroundColor: isLoadingPromo ? '#d0b895' : '#c59b6d',
                   color: 'white',
                   border: 'none',
                   borderRadius: '0 4px 4px 0',
                   fontWeight: 500,
-                  cursor: 'pointer',
+                  cursor: isLoadingPromo ? 'wait' : 'pointer',
                   transition: 'background-color 0.3s'
                 }}
-              >Apply</button>
+              >
+                {isLoadingPromo ? 'Applying...' : 'Apply'}
+              </button>
             </div>
             
             {promoError && (
