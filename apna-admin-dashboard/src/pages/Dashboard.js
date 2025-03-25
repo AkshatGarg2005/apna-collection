@@ -264,22 +264,6 @@ const Dashboard = () => {
                   <CouponStatLabel>Active Coupons</CouponStatLabel>
                 </CouponStatContent>
               </CouponStatCard>
-              
-              <CouponStatCard>
-                <CouponStatIcon><FaShoppingBag /></CouponStatIcon>
-                <CouponStatContent>
-                  <CouponStatValue>{couponStats.ordersWithCoupons}</CouponStatValue>
-                  <CouponStatLabel>Orders With Coupons</CouponStatLabel>
-                </CouponStatContent>
-              </CouponStatCard>
-              
-              <CouponStatCard>
-                <CouponStatIcon><FaRupeeSign /></CouponStatIcon>
-                <CouponStatContent>
-                  <CouponStatValue>{formatPrice(couponStats.totalDiscount)}</CouponStatValue>
-                  <CouponStatLabel>Total Discount Given</CouponStatLabel>
-                </CouponStatContent>
-              </CouponStatCard>
             </CouponStatsGrid>
           </CouponStatsSection>
           
@@ -462,7 +446,7 @@ const CouponStatsSection = styled.div`
 
 const CouponStatsGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 20px;
   
   @media (max-width: 1200px) {
