@@ -18,6 +18,7 @@ import EndOfSeasonProducts from './pages/EndOfSeasonProducts';
 import FeaturedProducts from './pages/FeaturedProducts';
 import ContactMessages from './pages/ContactMessages';
 import Coupons from './pages/Coupons'; // Import the new Coupons page
+import OrdersDebug from './pages/OrdersDebug';
 
 function App() {
   return (
@@ -87,6 +88,11 @@ function App() {
                 <Coupons />
               </AdminRoute>
             } />
+            <Route path="/orders-debug" element={
+  <AdminRoute>
+    <OrdersDebug />
+  </AdminRoute>
+} />
           </Routes>
         </div>
       </Router>

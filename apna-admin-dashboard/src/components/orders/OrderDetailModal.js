@@ -119,6 +119,28 @@ const OrderDetailModal = ({ order, onClose, onStatusUpdate }) => {
             </OrderInfoGrid>
           </ModalSection>
           
+          {/* Discount/Coupon Section */}
+          {(order.discount > 0 || order.couponDiscount > 0 || order.couponCode) && (
+            <ModalSection>
+              <SectionTitle>
+                {order.couponCode ? 'Coupon Applied' : 'Discount Applied'}
+              </SectionTitle>
+              <CouponContainer>
+                <CouponCard>
+                  <CouponIcon><FaTicketAlt /></CouponIcon>
+                  <CouponDetails>
+                    <CouponCode>
+                      {order.couponCode || "Discount"}
+                    </CouponCode>
+                    <CouponDiscount>
+                      Amount: {formatPrice(order.couponDiscount || order.discount || 0)}
+                    </CouponDiscount>
+                  </CouponDetails>
+                </CouponCard>
+              </CouponContainer>
+            </ModalSection>
+          )}
+          
           <ModalSection>
             <SectionTitle>Customer Information</SectionTitle>
             <CustomerInfo>
@@ -201,24 +223,26 @@ const OrderDetailModal = ({ order, onClose, onStatusUpdate }) => {
               </SummaryItem>
               <SummaryItem>
                 <SummaryLabel>Shipping Fee:</SummaryLabel>
-                <SummaryValue>{formatPrice(order.shippingFee || 0)}</SummaryValue>
+                <SummaryValue>{formatPrice(order.shipping || 0)}</SummaryValue>
               </SummaryItem>
               
-              {/* Display coupon discount if applied */}
-              {order.couponDiscount > 0 && (
+              {/* Display discount if applied - from either coupon or regular discount */}
+              {(order.discount > 0 || order.couponDiscount > 0) && (
                 <SummaryItem>
                   <SummaryLabel>
                     <CouponIcon><FaTicketAlt /></CouponIcon>
-                    Coupon Discount:
+                    {order.couponCode ? 'Coupon Discount:' : 'Discount:'}
                     {order.couponCode && <CouponCode>{order.couponCode}</CouponCode>}
                   </SummaryLabel>
-                  <SummaryValue className="discount">-{formatPrice(order.couponDiscount || 0)}</SummaryValue>
+                  <SummaryValue className="discount">
+                    -{formatPrice(order.couponDiscount || order.discount || 0)}
+                  </SummaryValue>
                 </SummaryItem>
               )}
               
               <SummaryItem>
-                <SummaryLabel>Discount:</SummaryLabel>
-                <SummaryValue>{formatPrice(order.discount || 0)}</SummaryValue>
+                <SummaryLabel>Tax:</SummaryLabel>
+                <SummaryValue>{formatPrice(order.tax || order.gst || 0)}</SummaryValue>
               </SummaryItem>
               <SummaryTotal>
                 <SummaryLabel>Total:</SummaryLabel>
@@ -455,6 +479,49 @@ const OrderStatus = styled.span`
   }
 `;
 
+const CouponContainer = styled.div`
+  padding: 5px;
+`;
+
+const CouponCard = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  background-color: rgba(142, 68, 173, 0.1);
+  padding: 15px;
+  border-radius: 8px;
+  border: 1px dashed #8e44ad;
+`;
+
+const CouponIcon = styled.div`
+  background-color: #8e44ad;
+  color: white;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+`;
+
+const CouponDetails = styled.div`
+  flex: 1;
+`;
+
+const CouponCode = styled.div`
+  font-weight: 600;
+  font-size: 16px;
+  margin-bottom: 5px;
+  color: #333;
+  font-family: monospace;
+`;
+
+const CouponDiscount = styled.div`
+  color: #f44336;
+  font-weight: 500;
+`;
+
 const CustomerInfo = styled.div`
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -589,23 +656,6 @@ const SummaryLabel = styled.div`
   color: #555;
   display: flex;
   align-items: center;
-`;
-
-const CouponIcon = styled.span`
-  color: #8e44ad;
-  margin-right: 8px;
-  display: flex;
-  align-items: center;
-`;
-
-const CouponCode = styled.span`
-  background-color: #f0f0f0;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 12px;
-  margin-left: 8px;
-  font-family: monospace;
-  color: #8e44ad;
 `;
 
 const SummaryValue = styled.div`
