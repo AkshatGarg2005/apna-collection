@@ -36,7 +36,9 @@ import {
   faInfoCircle,
   faFilter,
   faTag,
-  faStar
+  faStar,
+  faPercent,
+  faTicketAlt
 } from '@fortawesome/free-solid-svg-icons';
 import './Orders.css';
 
@@ -423,6 +425,16 @@ const Orders = () => {
     }
   };
 
+  // Function to check if order has discount
+  const hasDiscount = (order) => {
+    return (order.couponDiscount > 0 || order.discount > 0);
+  };
+
+  // Function to get discount amount from order
+  const getDiscountAmount = (order) => {
+    return order.couponDiscount || order.discount || 0;
+  };
+
   // Skeleton loading component
   const OrderSkeleton = () => (
     <div className="order-card skeleton">
@@ -580,6 +592,14 @@ const Orders = () => {
                       <div className="order-id">
                         <FontAwesomeIcon icon={faTag} className="order-icon" />
                         Order #{order.orderNumber || order.id.slice(0, 8)}
+                        
+                        {/* Show discount badge if order has discount */}
+                        {hasDiscount(order) && (
+                          <span className="discount-tag">
+                            <FontAwesomeIcon icon={order.couponCode ? faTicketAlt : faPercent} />
+                            {formatPrice(getDiscountAmount(order))} saved
+                          </span>
+                        )}
                       </div>
                       <div className={`order-status ${getStatusClass(order.status || 'Processing')}`}>
                         <FontAwesomeIcon icon={getStatusIcon(order.status || 'Processing')} />
@@ -661,6 +681,14 @@ const Orders = () => {
                     <div className="order-total">
                       <span className="total-label">Total:</span>
                       <span className="total-value">{formatPrice(order.total || 0)}</span>
+                      
+                      {/* Show discount info if order has discount */}
+                      {hasDiscount(order) && (
+                        <div className="order-savings">
+                          <FontAwesomeIcon icon={order.couponCode ? faTicketAlt : faPercent} />
+                          <span>{order.couponCode ? `Saved with coupon: ${order.couponCode}` : 'Discount applied'}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                   
@@ -765,6 +793,41 @@ const Orders = () => {
                 </div>
               </div>
               
+              {/* Savings summary - Redesigned */}
+              {(selectedOrder.couponCode || hasDiscount(selectedOrder)) && (
+                <div className="details-section savings-section">
+                  <h3>Savings Summary</h3>
+                  <div className="savings-content">
+                    {selectedOrder.couponCode && (
+                      <div className="savings-item">
+                        <FontAwesomeIcon icon={faTicketAlt} className="savings-icon" />
+                        <div className="savings-details">
+                          <div className="savings-title">Coupon Applied</div>
+                          <div className="savings-subtitle">{selectedOrder.couponCode}</div>
+                        </div>
+                        <div className="savings-amount">{formatPrice(getDiscountAmount(selectedOrder))}</div>
+                      </div>
+                    )}
+                    
+                    {!selectedOrder.couponCode && hasDiscount(selectedOrder) && (
+                      <div className="savings-item">
+                        <FontAwesomeIcon icon={faPercent} className="savings-icon" />
+                        <div className="savings-details">
+                          <div className="savings-title">Discount Applied</div>
+                          <div className="savings-subtitle">Special offer discount</div>
+                        </div>
+                        <div className="savings-amount">{formatPrice(getDiscountAmount(selectedOrder))}</div>
+                      </div>
+                    )}
+                    
+                    <div className="savings-total">
+                      <div className="total-savings-label">Total Savings</div>
+                      <div className="total-savings-value">{formatPrice(getDiscountAmount(selectedOrder))}</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
               <div className="order-details-sections">
                 <div className="details-section">
                   <h3>Items in Your Order</h3>
@@ -830,6 +893,20 @@ const Orders = () => {
                       <div className="price-label">Subtotal</div>
                       <div className="price-value">{formatPrice(selectedOrder.subtotal || 0)}</div>
                     </div>
+                    
+                    {/* Show discount row if discount applied - Redesigned */}
+                    {hasDiscount(selectedOrder) && (
+                      <div className="price-row savings-row">
+                        <div className="price-label">
+                          <FontAwesomeIcon icon={selectedOrder.couponCode ? faTicketAlt : faPercent} />
+                          {selectedOrder.couponCode ? `Coupon (${selectedOrder.couponCode})` : 'Discount'}
+                        </div>
+                        <div className="price-value savings-value">
+                          -{formatPrice(getDiscountAmount(selectedOrder))}
+                        </div>
+                      </div>
+                    )}
+                    
                     <div className="price-row">
                       <div className="price-label">Shipping</div>
                       <div className="price-value">
@@ -985,6 +1062,26 @@ const Orders = () => {
                     ))}
                   </div>
                 </div>
+                
+                {/* Show discount in tracking modal too - Redesigned */}
+                {hasDiscount(trackingOrder) && (
+                  <div className="track-savings">
+                    <h4>Your Savings</h4>
+                    <div className="track-savings-card">
+                      <div className="savings-icon-container">
+                        <FontAwesomeIcon icon={trackingOrder.couponCode ? faTicketAlt : faPercent} />
+                      </div>
+                      <div className="savings-details-container">
+                        <div className="savings-title">
+                          {trackingOrder.couponCode ? `Coupon Applied: ${trackingOrder.couponCode}` : 'Discount Applied'}
+                        </div>
+                        <div className="savings-amount">
+                          You saved {formatPrice(getDiscountAmount(trackingOrder))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
             <div className="modal-footer">
