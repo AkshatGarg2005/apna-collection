@@ -18,6 +18,14 @@ const FestiveCollection = () => {
   const [error, setError] = useState(null);
   const [favorites, setFavorites] = useState({});
   
+  // Mobile menu state
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  
+  // Toggle sidebar function for mobile
+  const toggleSidebar = () => {
+    setIsSidebarOpen(!isSidebarOpen);
+  };
+  
   // Load initial favorites state from wishlist
   useEffect(() => {
     const initialFavorites = {};
@@ -94,6 +102,21 @@ const FestiveCollection = () => {
       const filtered = products.filter(product => product.category === category);
       setFilteredProducts(filtered);
     }
+    
+    // Close sidebar on mobile after selecting a category
+    if (window.innerWidth < 992) {
+      setIsSidebarOpen(false);
+    }
+  };
+
+  // Function to handle occasion tag clicks
+  const handleOccasionClick = (e) => {
+    // Add your filter logic for occasions here
+    
+    // Close sidebar on mobile after selecting an occasion
+    if (window.innerWidth < 992) {
+      setIsSidebarOpen(false);
+    }
   };
 
   // Function to add product to cart
@@ -116,14 +139,16 @@ const FestiveCollection = () => {
     addToCart(productToAdd);
     
     // Animation effect
-    const button = e.target;
-    button.textContent = 'Added!';
-    button.style.backgroundColor = '#c59b6d';
-    
-    setTimeout(() => {
-      button.textContent = 'Add to Cart';
-      button.style.backgroundColor = '#333';
-    }, 1000);
+    const button = e.target.closest('button');
+    if (button) {
+      button.textContent = 'Added!';
+      button.style.backgroundColor = '#c59b6d';
+      
+      setTimeout(() => {
+        button.textContent = 'Add to Cart';
+        button.style.backgroundColor = '#333';
+      }, 1000);
+    }
   };
 
   // Function to toggle favorite status using WishlistContext
@@ -148,20 +173,6 @@ const FestiveCollection = () => {
       ...prev,
       [product.id]: isAdded
     }));
-    
-    // Update the icon appearance
-    const icon = e.target;
-    
-    // Toggle the icon classes
-    if (isAdded) {
-      icon.classList.remove('far');
-      icon.classList.add('fas');
-      icon.style.color = '#e74c3c';
-    } else {
-      icon.classList.remove('fas');
-      icon.classList.add('far');
-      icon.style.color = '#777';
-    }
   };
 
   // Helper function to capitalize first letter
@@ -209,6 +220,12 @@ const FestiveCollection = () => {
           </p>
         </div>
         
+        {/* Mobile Filter Toggle Button */}
+        <button className="mobile-filter-toggle" onClick={toggleSidebar}>
+          <i className={`fas ${isSidebarOpen ? 'fa-times' : 'fa-filter'}`}></i> 
+          {isSidebarOpen ? 'Close Filters' : 'Show Categories'}
+        </button>
+        
         {loading ? (
           <div className="loading-container">
             <div className="loading-spinner"></div>
@@ -217,8 +234,14 @@ const FestiveCollection = () => {
         ) : (
           <div className="festive-layout">
             {/* Category Sidebar */}
-            <aside className="category-sidebar">
-              <h2 className="sidebar-title">Festive Categories</h2>
+            <aside className={`category-sidebar ${isSidebarOpen ? 'active' : ''}`}>
+              <div className="sidebar-header">
+                <h2 className="sidebar-title">Festive Categories</h2>
+                <button className="sidebar-close" onClick={() => setIsSidebarOpen(false)}>
+                  <i className="fas fa-times"></i>
+                </button>
+              </div>
+              
               <ul className="category-list">
                 <li className="category-item">
                   <button 
@@ -257,11 +280,11 @@ const FestiveCollection = () => {
               <div className="festive-occasion">
                 <h3 className="occasion-title">Shop by Occasion</h3>
                 <div className="occasion-tags">
-                  <span className="occasion-tag">Diwali</span>
-                  <span className="occasion-tag">Holi</span>
-                  <span className="occasion-tag">Weddings</span>
-                  <span className="occasion-tag">Eid</span>
-                  <span className="occasion-tag">Durga Puja</span>
+                  <span className="occasion-tag" onClick={handleOccasionClick}>Diwali</span>
+                  <span className="occasion-tag" onClick={handleOccasionClick}>Holi</span>
+                  <span className="occasion-tag" onClick={handleOccasionClick}>Weddings</span>
+                  <span className="occasion-tag" onClick={handleOccasionClick}>Eid</span>
+                  <span className="occasion-tag" onClick={handleOccasionClick}>Durga Puja</span>
                 </div>
               </div>
             </aside>

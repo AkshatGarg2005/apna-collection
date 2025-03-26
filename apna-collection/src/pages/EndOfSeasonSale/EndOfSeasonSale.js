@@ -19,6 +19,14 @@ const EndOfSeasonSale = () => {
   const [favorites, setFavorites] = useState({});
   const [priceFilter, setPriceFilter] = useState('all');
   
+  // Mobile menu state
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  
+  // Toggle sidebar function for mobile
+  const toggleSidebar = () => {
+    setIsSidebarOpen(!isSidebarOpen);
+  };
+  
   // Load initial favorites state from wishlist
   useEffect(() => {
     const initialFavorites = {};
@@ -128,12 +136,22 @@ const EndOfSeasonSale = () => {
   const handleCategoryClick = (category) => {
     setCurrentCategory(category);
     applyFilters(products, category, priceFilter);
+    
+    // Close sidebar on mobile after selecting a category
+    if (window.innerWidth < 992) {
+      setIsSidebarOpen(false);
+    }
   };
 
   // Function to handle price filter change
   const handlePriceFilterChange = (range) => {
     setPriceFilter(range);
     applyFilters(products, currentCategory, range);
+    
+    // Close sidebar on mobile after selecting a price range
+    if (window.innerWidth < 992) {
+      setIsSidebarOpen(false);
+    }
   };
   
   // Function to get products by category
@@ -274,6 +292,12 @@ const EndOfSeasonSale = () => {
           </p>
         </div>
         
+        {/* Mobile Filter Toggle Button */}
+        <button className="mobile-filter-toggle" onClick={toggleSidebar}>
+          <i className={`fas ${isSidebarOpen ? 'fa-times' : 'fa-filter'}`}></i> 
+          {isSidebarOpen ? 'Close Filters' : 'Show Filters'}
+        </button>
+        
         {loading ? (
           <div className="loading-container">
             <div className="loading-spinner"></div>
@@ -282,8 +306,14 @@ const EndOfSeasonSale = () => {
         ) : (
           <div className="sale-layout">
             {/* Category Sidebar */}
-            <aside className="category-sidebar">
-              <h2 className="sidebar-title">Categories</h2>
+            <aside className={`category-sidebar ${isSidebarOpen ? 'active' : ''}`}>
+              <div className="sidebar-header">
+                <h2 className="sidebar-title">Categories</h2>
+                <button className="sidebar-close" onClick={() => setIsSidebarOpen(false)}>
+                  <i className="fas fa-times"></i>
+                </button>
+              </div>
+              
               <ul className="category-list">
                 <li className="category-item">
                   <button 

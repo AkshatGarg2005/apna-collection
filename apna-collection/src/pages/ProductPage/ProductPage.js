@@ -24,7 +24,6 @@ const ProductPage = () => {
   const [selectedColor, setSelectedColor] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [activeTab, setActiveTab] = useState('details');
-  const [relatedProducts, setRelatedProducts] = useState([]);
   const [useFallbackData, setUseFallbackData] = useState(false);
   const { addToCart } = useCart();
   
@@ -138,40 +137,8 @@ const ProductPage = () => {
       { rating: 1, count: 3, percentage: 2 }
     ]
   };
-  
-  // Sample related products for fallback
-  const sampleRelatedProducts = [
-    { 
-      id: 'related1', 
-      name: "Classic White Shirt", 
-      price: 1199, 
-      image: "/api/placeholder/400/500", 
-      colors: ["White", "Blue", "Black"] 
-    },
-    { 
-      id: 'related2', 
-      name: "Slim Fit Trousers", 
-      price: 1599, 
-      image: "/api/placeholder/400/500", 
-      colors: ["Black", "Beige"] 
-    },
-    { 
-      id: 'related3', 
-      name: "Designer Blazer", 
-      price: 3499, 
-      image: "/api/placeholder/400/500", 
-      colors: ["Black", "Blue"] 
-    },
-    { 
-      id: 'related4', 
-      name: "Formal Shoes", 
-      price: 2199, 
-      image: "/api/placeholder/400/500", 
-      colors: ["Black", "Beige"] 
-    }
-  ];
 
-  // Fetch product and related products from Firestore
+  // Fetch product from Firestore
   useEffect(() => {
     const fetchProductData = async () => {
       try {
@@ -184,7 +151,6 @@ const ProductPage = () => {
           console.log('Product not found in Firebase, using sample data');
           setUseFallbackData(true);
           setProduct(sampleProductData);
-          setRelatedProducts(sampleRelatedProducts);
           
           // Use sample images
           setImageList(sampleProductData.images);
@@ -233,41 +199,12 @@ const ProductPage = () => {
           setImageList([productData.image]);
         }
         
-        // Fetch related products in the same category
-        if (productData.category) {
-          try {
-            const relatedQuery = query(
-              collection(db, 'products'),
-              where('category', '==', productData.category),
-              where('id', '!=', productData.id),
-              limit(4)
-            );
-            
-            const relatedSnapshot = await getDocs(relatedQuery);
-            const relatedItems = relatedSnapshot.docs.map(doc => ({
-              id: doc.id,
-              ...doc.data()
-            }));
-            
-            if (relatedItems.length > 0) {
-              setRelatedProducts(relatedItems);
-            } else {
-              // If no related products found, use sample related products
-              setRelatedProducts(sampleRelatedProducts);
-            }
-          } catch (error) {
-            console.error('Error fetching related products:', error);
-            setRelatedProducts(sampleRelatedProducts);
-          }
-        }
-        
         setLoading(false);
       } catch (error) {
         console.error('Error fetching product data:', error);
         // On error, use sample data
         setUseFallbackData(true);
         setProduct(sampleProductData);
-        setRelatedProducts(sampleRelatedProducts);
         
         // Use sample images
         setImageList(sampleProductData.images);
@@ -689,42 +626,6 @@ const ProductPage = () => {
           )}
         </div>
       </div>
-
-      {/* Related Products */}
-      {relatedProducts.length > 0 && (
-        <div className="related-products">
-          <h2 className="related-title">You May Also Like</h2>
-          <div className="related-grid">
-            {relatedProducts.map((relatedProduct) => (
-              <div className="related-item" key={relatedProduct.id}>
-                <Link to={`/product/${relatedProduct.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                  <div className="related-img">
-                    <img 
-                      src={relatedProduct.image || 
-                          (relatedProduct.images && relatedProduct.images[0] && 
-                           typeof relatedProduct.images[0] === 'object' ? 
-                           relatedProduct.images[0].url : relatedProduct.images?.[0])} 
-                      alt={relatedProduct.name} 
-                    />
-                  </div>
-                  <div className="related-info">
-                    <h3 className="related-name">{relatedProduct.name}</h3>
-                    <div className="related-price">₹{relatedProduct.price.toLocaleString()}</div>
-                    <div className="related-colors">
-                      {ensureArray(relatedProduct.colors, ['Default']).map((color, colorIndex) => (
-                        <div 
-                          key={colorIndex} 
-                          className={`related-color color-${color.toLowerCase()}`}
-                        ></div>
-                      ))}
-                    </div>
-                  </div>
-                </Link>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 };

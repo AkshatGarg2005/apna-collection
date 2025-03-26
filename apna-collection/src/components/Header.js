@@ -258,92 +258,176 @@ const Header = () => {
     document.body.style.overflow = '';
   }, [location.pathname]);
 
+  // Render user account info for mobile menu
+  const renderMobileUserAccount = () => {
+    if (!currentUser) return null;
+    
+    return (
+      <div className="mobile-user-account">
+        <div className="mobile-user-header">
+          <div className="mobile-user-avatar">
+            {currentUser.displayName 
+              ? currentUser.displayName.charAt(0).toUpperCase() 
+              : currentUser.email ? currentUser.email.charAt(0).toUpperCase() : 'U'}
+          </div>
+          <div className="mobile-user-details">
+            <div className="mobile-username">{currentUser.displayName || currentUser.email || 'User'}</div>
+            <div className="mobile-email">{currentUser.email || ''}</div>
+          </div>
+        </div>
+        <div className="mobile-account-links">
+          <Link to="/account" onClick={() => setShowMobileMenu(false)}>My Account</Link>
+          <Link to="/orders" onClick={() => setShowMobileMenu(false)}>My Orders</Link>
+          <Link to="/account?section=wishlist" onClick={() => setShowMobileMenu(false)}>My Wishlist</Link>
+          <Link to="/notifications" onClick={() => setShowMobileMenu(false)} className="mobile-notification-link">
+            Notifications
+            {unreadCount > 0 && <span className="mobile-notification-badge">{unreadCount}</span>}
+          </Link>
+          <button onClick={handleLogout}>Logout</button>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <header className="site-header">
       <div className="header-container">
-        {/* Logo */}
-        <div className="logo">
-          <Link to="/">
-            Apna Collection
-          </Link>
-        </div>
-
-        {/* Navigation */}
-        <nav>
-          {/* Main Navigation */}
-          <ul className={`nav-links ${showMobileMenu ? 'show' : ''}`}>
-            <li><Link to="/" className={isActive('/') ? 'active' : ''}>Home</Link></li>
-            <li><Link to="/shop" className={isActive('/shop') ? 'active' : ''}>Shop</Link></li>
-            <li><Link to="/about" className={isActive('/about') ? 'active' : ''}>About Us</Link></li>
-            <li><Link to="/offers" className={isActive('/offers') ? 'active' : ''}>Offers</Link></li>
-            <li><Link to="/contact" className={isActive('/contact') ? 'active' : ''}>Contact</Link></li>
-          </ul>
-
-          {/* Nav Icons */}
-          <div className="nav-icons">
-            {/* Search Icon */}
+        {/* Mobile Header Layout */}
+        <div className="mobile-header">
+          {/* Mobile Menu Toggle (Left) */}
+          <div className="mobile-menu-toggle" onClick={toggleMobileMenu}>
+            <span className="sr-only">{showMobileMenu ? 'Close Menu' : 'Open Menu'}</span>
+            <i className={`fas ${showMobileMenu ? 'fa-times' : 'fa-bars'}`}></i>
+          </div>
+          
+          {/* Logo (Center for Mobile) */}
+          <div className="logo mobile-logo">
+            <Link to="/">
+              Apna Collection
+            </Link>
+          </div>
+          
+          {/* Mobile Action Icons */}
+          <div className="mobile-nav-icons">
             <div className="icon" onClick={toggleSearch}>
               <i className="fas fa-search"></i>
             </div>
             
-            {/* Notifications */}
             {currentUser && (
               <div className="icon">
                 <NotificationsCenter />
               </div>
             )}
             
-            {/* Cart Icon */}
             <div className="icon">
               <Link to="/cart">
                 <i className="fas fa-shopping-bag"></i>
                 {cartItemCount > 0 && <span className="cart-count">{cartItemCount}</span>}
               </Link>
             </div>
-            
-            {/* User/Account Icon */}
-            {currentUser ? (
-              <div className="icon user-icon-container" ref={dropdownRef}>
-                <Link to="/account">
-                  <div className="user-avatar">
-                    {currentUser.displayName 
-                      ? currentUser.displayName.charAt(0).toUpperCase() 
-                      : currentUser.email ? currentUser.email.charAt(0).toUpperCase() : 'U'}
-                  </div>
-                </Link>
-                <div className="user-dropdown">
-                  <div className="dropdown-username">
-                    {currentUser.displayName || currentUser.email || 'User'}
-                  </div>
-                  <Link to="/account">My Account</Link>
-                  <Link to="/orders">My Orders</Link>
-                  <Link to="/account?section=wishlist">My Wishlist</Link>
-                  {unreadCount > 0 ? (
-                    <Link to="/notifications" className="notification-link">
-                      Notifications
-                      <span className="dropdown-notification-badge">{unreadCount}</span>
-                    </Link>
-                  ) : (
-                    <Link to="/notifications">Notifications</Link>
-                  )}
-                  <button onClick={handleLogout}>Logout</button>
+          </div>
+        </div>
+        
+        {/* Desktop Header Layout */}
+        <div className="desktop-header">
+          {/* Logo */}
+          <div className="logo">
+            <Link to="/">
+              Apna Collection
+            </Link>
+          </div>
+
+          {/* Navigation */}
+          <nav>
+            {/* Main Navigation */}
+            <ul className="nav-links">
+              <li><Link to="/" className={isActive('/') ? 'active' : ''}>Home</Link></li>
+              <li><Link to="/shop" className={isActive('/shop') ? 'active' : ''}>Shop</Link></li>
+              <li><Link to="/about" className={isActive('/about') ? 'active' : ''}>About Us</Link></li>
+              <li><Link to="/offers" className={isActive('/offers') ? 'active' : ''}>Offers</Link></li>
+              <li><Link to="/contact" className={isActive('/contact') ? 'active' : ''}>Contact</Link></li>
+            </ul>
+
+            {/* Nav Icons */}
+            <div className="nav-icons">
+              {/* Search Icon */}
+              <div className="icon" onClick={toggleSearch}>
+                <i className="fas fa-search"></i>
+              </div>
+              
+              {/* Notifications */}
+              {currentUser && (
+                <div className="icon">
+                  <NotificationsCenter />
                 </div>
-              </div>
-            ) : (
+              )}
+              
+              {/* Cart Icon */}
               <div className="icon">
-                <Link to="/login">
-                  <i className="fas fa-user"></i>
+                <Link to="/cart">
+                  <i className="fas fa-shopping-bag"></i>
+                  {cartItemCount > 0 && <span className="cart-count">{cartItemCount}</span>}
                 </Link>
               </div>
-            )}
+              
+              {/* User/Account Icon */}
+              {currentUser ? (
+                <div className="icon user-icon-container" ref={dropdownRef}>
+                  <Link to="/account">
+                    <div className="user-avatar">
+                      {currentUser.displayName 
+                        ? currentUser.displayName.charAt(0).toUpperCase() 
+                        : currentUser.email ? currentUser.email.charAt(0).toUpperCase() : 'U'}
+                    </div>
+                  </Link>
+                  <div className="user-dropdown">
+                    <div className="dropdown-username">
+                      {currentUser.displayName || currentUser.email || 'User'}
+                    </div>
+                    <Link to="/account">My Account</Link>
+                    <Link to="/orders">My Orders</Link>
+                    <Link to="/account?section=wishlist">My Wishlist</Link>
+                    {unreadCount > 0 ? (
+                      <Link to="/notifications" className="notification-link">
+                        Notifications
+                        <span className="dropdown-notification-badge">{unreadCount}</span>
+                      </Link>
+                    ) : (
+                      <Link to="/notifications">Notifications</Link>
+                    )}
+                    <button onClick={handleLogout}>Logout</button>
+                  </div>
+                </div>
+              ) : (
+                <div className="icon">
+                  <Link to="/login">
+                    <i className="fas fa-user"></i>
+                  </Link>
+                </div>
+              )}
+            </div>
+          </nav>
+        </div>
+      </div>
+      
+      {/* Mobile Menu */}
+      <div className={`mobile-menu ${showMobileMenu ? 'show' : ''}`}>
+        {renderMobileUserAccount()}
+        
+        <ul className="mobile-nav-links">
+          <li><Link to="/" className={isActive('/') ? 'active' : ''} onClick={() => setShowMobileMenu(false)}>Home</Link></li>
+          <li><Link to="/shop" className={isActive('/shop') ? 'active' : ''} onClick={() => setShowMobileMenu(false)}>Shop</Link></li>
+          <li><Link to="/about" className={isActive('/about') ? 'active' : ''} onClick={() => setShowMobileMenu(false)}>About Us</Link></li>
+          <li><Link to="/offers" className={isActive('/offers') ? 'active' : ''} onClick={() => setShowMobileMenu(false)}>Offers</Link></li>
+          <li><Link to="/contact" className={isActive('/contact') ? 'active' : ''} onClick={() => setShowMobileMenu(false)}>Contact</Link></li>
+        </ul>
+        
+        {!currentUser && (
+          <div className="mobile-auth-buttons">
+            <Link to="/login" className="mobile-login-btn" onClick={() => setShowMobileMenu(false)}>Login</Link>
+            <Link to="/register" className="mobile-register-btn" onClick={() => setShowMobileMenu(false)}>Register</Link>
           </div>
-          
-          {/* Mobile Menu Toggle */}
-          <div className="mobile-menu-toggle" onClick={toggleMobileMenu}>
-            <span className="sr-only">{showMobileMenu ? 'Close Menu' : 'Open Menu'}</span>
-            <i className={`fas ${showMobileMenu ? 'fa-times' : 'fa-bars'}`}></i>
-          </div>
-        </nav>
+        )}
       </div>
       
       {/* Mobile Menu Overlay */}

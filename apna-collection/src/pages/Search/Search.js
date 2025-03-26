@@ -23,6 +23,14 @@ const Search = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
+  // Mobile sidebar state
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  
+  // Toggle sidebar function for mobile
+  const toggleSidebar = () => {
+    setIsSidebarOpen(!isSidebarOpen);
+  };
+  
   // Fetch all products from Firebase
   useEffect(() => {
     const fetchProducts = async () => {
@@ -121,13 +129,26 @@ const Search = () => {
   
   const handleCategoryChange = (e) => {
     setSelectedCategory(e.target.value);
+    
+    // Close sidebar on mobile after selecting a category
+    if (window.innerWidth < 992) {
+      setIsSidebarOpen(false);
+    }
   };
   
   const handleSortChange = (e) => {
     setSortOption(e.target.value);
+    
+    // Close sidebar on mobile after selecting a sort option
+    if (window.innerWidth < 992) {
+      setIsSidebarOpen(false);
+    }
   };
   
-  const toggleFavorite = (productId) => {
+  const toggleFavorite = (e, productId) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
     setFavorites(prev => ({
       ...prev,
       [productId]: !prev[productId]
@@ -135,7 +156,10 @@ const Search = () => {
   };
   
   // Handle adding to cart
-  const handleAddToCart = (product) => {
+  const handleAddToCart = (e, product) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
     const productToAdd = {
       id: product.id,
       name: product.name,
@@ -149,8 +173,17 @@ const Search = () => {
     // Add to cart using context
     addToCart(productToAdd);
     
-    // Optional: Show feedback to user
-    alert(`${product.name} added to cart!`);
+    // Animation effect
+    const button = e.target.closest('button');
+    if (button) {
+      button.textContent = 'Added!';
+      button.style.backgroundColor = '#c59b6d';
+      
+      setTimeout(() => {
+        button.textContent = 'Add to Cart';
+        button.style.backgroundColor = '#333';
+      }, 1000);
+    }
   };
   
   // Helper function to capitalize the first letter
@@ -250,27 +283,27 @@ const Search = () => {
             <img src={product.image} alt={product.name} />
             {product.isNew && <span className="product-badge">New</span>}
           </div>
-        </Link>
-        <div className="product-info">
-          <h3 className="product-name">
-            <Link to={`/product/${product.id}`}>{product.name}</Link>
-          </h3>
-          <p className="product-category">{capitalizeFirstLetter(product.category)}</p>
-          <p className="product-price">₹{product.price.toLocaleString()}</p>
-          <div className="product-actions">
-            <button 
-              className="add-to-cart"
-              onClick={() => handleAddToCart(product)}
-            >
-              Add to Cart
-            </button>
-            <i 
-              className={`${favorites[product.id] ? 'fas' : 'far'} fa-heart product-favorite`}
-              onClick={() => toggleFavorite(product.id)}
-              style={{ color: favorites[product.id] ? '#e74c3c' : '#777' }}
-            ></i>
+          <div className="product-info">
+            <h3 className="product-name">{product.name}</h3>
+            <p className="product-category">{capitalizeFirstLetter(product.category)}</p>
+            <p className="product-price">₹{product.price.toLocaleString()}</p>
+            <div className="product-actions">
+              <button 
+                className="add-to-cart"
+                onClick={(e) => handleAddToCart(e, product)}
+              >
+                Add to Cart
+              </button>
+              <div className="product-favorite">
+                <i 
+                  className={`${favorites[product.id] ? 'fas' : 'far'} fa-heart`}
+                  onClick={(e) => toggleFavorite(e, product.id)}
+                  style={{ color: favorites[product.id] ? '#e74c3c' : '#777' }}
+                ></i>
+              </div>
+            </div>
           </div>
-        </div>
+        </Link>
       </div>
     ));
   };
@@ -300,11 +333,17 @@ const Search = () => {
                 <input 
                   type="text" 
                   className="search-again-input" 
-                  placeholder="Refine your search..." 
+                  placeholder="Search products..." 
                   value={searchInput}
                   onChange={(e) => setSearchInput(e.target.value)}
+                  autoComplete="off"
+                  autoCapitalize="off"
+                  autoCorrect="off"
                 />
-                <button type="submit" className="search-again-button">Search</button>
+                <button type="submit" className="search-again-button" aria-label="Search">
+                  <i className="fas fa-arrow-right"></i>
+                  <span>Search</span>
+                </button>
               </div>
             </form>
           </div>
@@ -314,10 +353,21 @@ const Search = () => {
         </div>
       </div>
       
+      {/* Mobile Filter Toggle Button */}
+      <button className="mobile-filter-toggle" onClick={toggleSidebar}>
+        <i className={`fas ${isSidebarOpen ? 'fa-times' : 'fa-sliders-h'}`}></i> 
+        {isSidebarOpen ? 'Close' : `Filter & Sort (${searchResults.length} products)`}
+      </button>
+      
       <div className="search-layout">
         {/* Filters Sidebar */}
-        <aside className="filter-sidebar">
-          <h2 className="sidebar-title">Refine Results</h2>
+        <aside className={`filter-sidebar ${isSidebarOpen ? 'active' : ''}`}>
+          <div className="sidebar-header">
+            <h2 className="sidebar-title">Refine Results</h2>
+            <button className="sidebar-close" onClick={() => setIsSidebarOpen(false)}>
+              <i className="fas fa-times"></i>
+            </button>
+          </div>
           <div className="filter-options">
             <div className="filter-group">
               <h3 className="filter-title">Sort By</h3>

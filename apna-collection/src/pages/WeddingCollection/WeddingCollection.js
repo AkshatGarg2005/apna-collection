@@ -19,6 +19,14 @@ const WeddingCollection = () => {
   const [error, setError] = useState(null);
   const [favorites, setFavorites] = useState({});
   
+  // Mobile menu state
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  
+  // Toggle sidebar function for mobile
+  const toggleSidebar = () => {
+    setIsSidebarOpen(!isSidebarOpen);
+  };
+  
   // Function to filter products when category button is clicked
   const handleCategoryClick = (category) => {
     setCurrentCategory(category);
@@ -30,6 +38,21 @@ const WeddingCollection = () => {
     } else {
       // This is a placeholder - in the future, you'll filter based on wedding-specific categories
       setFilteredProducts(products);
+    }
+    
+    // Close sidebar on mobile after selecting a category
+    if (window.innerWidth < 992) {
+      setIsSidebarOpen(false);
+    }
+  };
+  
+  // Function to handle occasion tag clicks
+  const handleOccasionClick = (occasion) => {
+    // Add your filter logic for occasions here
+    
+    // Close sidebar on mobile after selecting an occasion
+    if (window.innerWidth < 992) {
+      setIsSidebarOpen(false);
     }
   };
   
@@ -110,14 +133,16 @@ const WeddingCollection = () => {
     addToCart(productToAdd);
     
     // Animation effect
-    const button = e.target;
-    button.textContent = 'Added!';
-    button.style.backgroundColor = '#c59b6d';
-    
-    setTimeout(() => {
-      button.textContent = 'Add to Cart';
-      button.style.backgroundColor = '#333';
-    }, 1000);
+    const button = e.target.closest('button');
+    if (button) {
+      button.textContent = 'Added!';
+      button.style.backgroundColor = '#c59b6d';
+      
+      setTimeout(() => {
+        button.textContent = 'Add to Cart';
+        button.style.backgroundColor = '#333';
+      }, 1000);
+    }
   };
 
   // Function to toggle favorite status using WishlistContext
@@ -142,20 +167,6 @@ const WeddingCollection = () => {
       ...prev,
       [product.id]: isAdded
     }));
-    
-    // Update the icon appearance
-    const icon = e.target;
-    
-    // Toggle the icon classes
-    if (isAdded) {
-      icon.classList.remove('far');
-      icon.classList.add('fas');
-      icon.style.color = '#e74c3c';
-    } else {
-      icon.classList.remove('fas');
-      icon.classList.add('far');
-      icon.style.color = '#777';
-    }
   };
 
   // Helper function to capitalize first letter
@@ -181,6 +192,12 @@ const WeddingCollection = () => {
           </p>
         </div>
         
+        {/* Mobile Filter Toggle Button */}
+        <button className="mobile-filter-toggle" onClick={toggleSidebar}>
+          <i className={`fas ${isSidebarOpen ? 'fa-times' : 'fa-filter'}`}></i> 
+          {isSidebarOpen ? 'Close Filters' : 'Show Categories'}
+        </button>
+        
         {loading ? (
           <div className="loading-container">
             <div className="loading-spinner"></div>
@@ -197,8 +214,14 @@ const WeddingCollection = () => {
         ) : (
           <div className="wedding-layout">
             {/* Sidebar with wedding categories */}
-            <aside className="category-sidebar">
-              <h2 className="sidebar-title">Wedding Categories</h2>
+            <aside className={`category-sidebar ${isSidebarOpen ? 'active' : ''}`}>
+              <div className="sidebar-header">
+                <h2 className="sidebar-title">Wedding Categories</h2>
+                <button className="sidebar-close" onClick={() => setIsSidebarOpen(false)}>
+                  <i className="fas fa-times"></i>
+                </button>
+              </div>
+              
               <ul className="category-list">
                 <li className="category-item">
                   <button 
@@ -245,12 +268,22 @@ const WeddingCollection = () => {
               <div className="wedding-occasions">
                 <h3 className="occasion-title">Shop by Occasion</h3>
                 <div className="occasion-tags">
-                  <span className="occasion-tag">Engagement</span>
-                  <span className="occasion-tag">Reception</span>
-                  <span className="occasion-tag">Sangeet</span>
-                  <span className="occasion-tag">Haldi</span>
-                  <span className="occasion-tag">Ceremony</span>
+                  <span className="occasion-tag" onClick={() => handleOccasionClick('engagement')}>Engagement</span>
+                  <span className="occasion-tag" onClick={() => handleOccasionClick('reception')}>Reception</span>
+                  <span className="occasion-tag" onClick={() => handleOccasionClick('sangeet')}>Sangeet</span>
+                  <span className="occasion-tag" onClick={() => handleOccasionClick('haldi')}>Haldi</span>
+                  <span className="occasion-tag" onClick={() => handleOccasionClick('ceremony')}>Ceremony</span>
                 </div>
+              </div>
+              
+              <div className="wedding-assistance">
+                <h3>Need Styling Help?</h3>
+                <p>Our stylists can help you choose the perfect attire for your wedding day.</p>
+                <a href="#" className="assistance-button" onClick={(e) => {
+                  e.preventDefault();
+                  setIsSidebarOpen(false);
+                  navigate('/contact');
+                }}>Contact Stylist</a>
               </div>
             </aside>
             

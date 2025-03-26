@@ -84,6 +84,51 @@
   line-height: 1.8;
 }
 
+/* Mobile Filter Toggle Button */
+.mobile-filter-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 14px;
+  background-color: #c59b6d;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 10px rgba(197, 155, 109, 0.2);
+}
+
+.mobile-filter-toggle:hover {
+  background-color: #b08c5f;
+}
+
+.mobile-filter-toggle i {
+  font-size: 1.2rem;
+}
+
+/* Sidebar Header for Mobile */
+.sidebar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.sidebar-close {
+  display: none;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: #c59b6d;
+  cursor: pointer;
+}
+
 /* Wedding Layout */
 .wedding-layout {
   display: flex;
@@ -104,6 +149,8 @@
   top: 20px;
   align-self: flex-start;
   z-index: 5;
+  max-height: 80vh;
+  overflow-y: auto;
 }
 
 .sidebar-title {
@@ -128,10 +175,12 @@
 
 .category-list {
   list-style: none;
+  width: 100%;
 }
 
 .category-item {
   margin-bottom: 15px;
+  width: 100%;
 }
 
 .category-button {
@@ -196,6 +245,7 @@
   border-top: 1px solid #f0eae4;
   padding-top: 25px;
   margin-bottom: 30px;
+  width: 100%;
 }
 
 .occasion-title {
@@ -209,6 +259,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+  width: 100%;
 }
 
 .occasion-tag {
@@ -236,6 +287,8 @@
   background-color: #f4ebff;
   border-radius: 12px;
   border-left: 4px solid #8e44ad;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .wedding-assistance h3 {
@@ -291,6 +344,9 @@
 .products-count {
   font-size: 1rem;
   color: #777;
+  background-color: #f0eae4;
+  padding: 5px 12px;
+  border-radius: 20px;
 }
 
 .products-grid {
@@ -690,6 +746,14 @@
 }
 
 @media (max-width: 992px) {
+  .mobile-filter-toggle {
+    display: flex;
+  }
+  
+  .sidebar-close {
+    display: block;
+  }
+  
   .wedding-layout {
     flex-direction: column;
   }
@@ -697,23 +761,39 @@
   .category-sidebar {
     width: 100%;
     margin-bottom: 30px;
-    position: relative;
+    position: fixed;
     top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 100;
+    border-radius: 0;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    max-height: 100vh;
+    overflow-y: auto;
+    padding: 20px;
+  }
+  
+  .category-sidebar.active {
+    transform: translateX(0);
   }
   
   .category-list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
+    width: 100%;
+    display: block;
   }
   
   .category-item {
-    margin-bottom: 0;
+    width: 100%;
+    margin-bottom: 10px;
   }
   
   .category-button {
-    padding: 10px 15px;
-    font-size: 0.95rem;
+    width: 100%;
+    display: block;
+    padding: 12px 15px;
+    font-size: 1rem;
   }
   
   .wedding-title {
@@ -726,6 +806,15 @@
   
   .collection-title {
     font-size: 2rem;
+  }
+  
+  .occasion-tags {
+    flex-wrap: wrap;
+    width: 100%;
+  }
+  
+  .occasion-tag {
+    margin-bottom: 8px;
   }
 }
 
@@ -750,10 +839,31 @@
   .featured-items,
   .wedding-info-section {
     grid-template-columns: 1fr;
+    gap: 20px;
   }
   
   .collection-title {
     font-size: 1.8rem;
+  }
+  
+  .products-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  
+  .products-count {
+    align-self: flex-start;
+  }
+  
+  .product-image {
+    height: 280px;
+  }
+  
+  .add-to-cart {
+    width: 70%;
+    padding: 12px 10px;
+    font-size: 0.85rem;
   }
 }
 
@@ -763,31 +873,107 @@
   }
   
   .wedding-overlay {
-    padding: 20px;
+    padding: 25px 15px;
+    width: 90%;
   }
   
   .wedding-title {
     font-size: 1.8rem;
+    margin-bottom: 10px;
   }
   
   .wedding-subtitle {
     font-size: 0.9rem;
+    margin-bottom: 15px;
   }
   
   .collection-title {
     font-size: 1.5rem;
   }
   
+  .collection-description {
+    font-size: 0.95rem;
+    line-height: 1.6;
+  }
+  
+  .products-title {
+    font-size: 1.4rem;
+  }
+  
+  .product-info {
+    padding: 20px 15px;
+  }
+  
+  .product-name {
+    font-size: 1rem;
+  }
+  
+  .product-category {
+    font-size: 0.8rem;
+  }
+  
+  .product-price {
+    font-size: 1.1rem;
+    margin-bottom: 15px;
+  }
+  
+  .product-actions {
+    flex-direction: column;
+    gap: 15px;
+    align-items: center;
+  }
+  
+  .add-to-cart {
+    width: 100%;
+  }
+  
+  .product-favorite {
+    align-self: flex-end;
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background-color: rgba(255, 255, 255, 0.8);
+  }
+  
+  .wedding-inner {
+    padding: 0 15px;
+  }
+  
+  .mobile-filter-toggle {
+    padding: 12px;
+    font-size: 1rem;
+  }
+  
+  /* Fix for mobile sidebar styling */
+  .category-sidebar {
+    padding: 20px 15px;
+  }
+  
+  .occasion-tags {
+    flex-direction: column !important;
+    gap: 8px;
+  }
+  
+  .occasion-tag {
+    width: 100% !important;
+    display: block !important;
+    box-sizing: border-box;
+    text-align: center;
+  }
+  
   .category-button {
-    padding: 8px 12px;
-    font-size: 0.9rem;
+    width: 100% !important;
+    display: block !important;
+    box-sizing: border-box;
   }
   
-  .category-icon {
-    margin-right: 8px;
+  .wedding-assistance {
+    text-align: center;
   }
   
-  .product-image {
-    height: 280px;
+  .assistance-button {
+    width: 100%;
+    display: block;
+    text-align: center;
   }
 }

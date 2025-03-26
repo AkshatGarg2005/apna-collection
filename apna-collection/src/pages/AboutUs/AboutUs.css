@@ -1,4 +1,5 @@
 /* src/pages/AboutUs/AboutUs.css */
+/* Updated for better mobile responsiveness, especially for iPhone devices */
 .about-container {
   width: 100%;
   color: #333;
@@ -425,20 +426,25 @@
 
 @media (max-width: 768px) {
   .about-hero {
-    padding: 70px 30px;
+    padding: 70px 20px;
   }
   
-  .about-hero h1 {
+  .hero-content h1 {
     font-size: 2.5rem;
+  }
+  
+  .hero-content p {
+    font-size: 1.1rem;
   }
   
   .store-section, .values-section, .team-section, .testimonial-section, .visit-section {
     padding: 30px;
-    margin: 0 15px 30px;
+    margin: 0 15px 25px;
   }
   
   .store-content h2, .values-section h2, .team-section h2, .testimonial-section h2, .visit-section h2 {
     font-size: 2rem;
+    margin-bottom: 25px;
   }
   
   .team-grid {
@@ -449,40 +455,393 @@
   .detail-number {
     font-size: 2rem;
   }
+  
+  .value-item {
+    padding: 20px;
+  }
+  
+  .social-media-section h3 {
+    font-size: 1.8rem;
+    margin-bottom: 30px;
+  }
+  
+  .social-links {
+    padding: 20px 30px;
+    gap: 30px;
+  }
+  
+  .social-icon {
+    font-size: 30px;
+  }
+  
+  .testimonial {
+    padding: 30px 20px;
+  }
+  
+  .quote {
+    font-size: 1.1rem;
+    line-height: 1.7;
+  }
 }
 
 @media (max-width: 576px) {
   .about-hero {
-    padding: 50px 20px;
+    padding: 50px 15px;
+    margin-bottom: 30px;
   }
   
-  .about-hero h1 {
+  .hero-content h1 {
     font-size: 2rem;
+    margin-bottom: 15px;
+  }
+  
+  .hero-content p {
+    font-size: 1rem;
   }
   
   .store-section, .values-section, .team-section, .testimonial-section, .visit-section {
-    padding: 25px;
+    padding: 20px 15px;
     margin: 0 10px 20px;
+    border-radius: 8px;
+  }
+  
+  .store-content h2, .values-section h2, .team-section h2, .testimonial-section h2, .visit-section h2 {
+    font-size: 1.8rem;
+    margin-bottom: 20px;
+  }
+  
+  .values-section h2:after, .team-section h2:after, .testimonial-section h2:after, .visit-section h2:after {
+    width: 50px;
+  }
+  
+  .store-content p {
+    font-size: 1rem;
+    line-height: 1.6;
+    margin-bottom: 15px;
   }
   
   .values-grid {
     grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  
+  .value-item {
+    padding: 20px 15px;
+  }
+  
+  .value-item h3 {
+    font-size: 1.2rem;
+    margin-bottom: 10px;
+  }
+  
+  .value-item p {
+    font-size: 0.9rem;
   }
   
   .store-details {
     flex-direction: column;
+    margin-top: 25px;
   }
   
   .detail-item {
     margin-bottom: 20px;
   }
   
+  .detail-number {
+    font-size: 1.8rem;
+    margin-bottom: 5px;
+  }
+  
+  .detail-label {
+    font-size: 0.9rem;
+  }
+  
   .store-image img {
-    height: 250px;
+    height: 220px;
   }
   
   .member-image {
-    width: 150px;
+    width: 140px;
+    height: 140px;
+    margin-bottom: 20px;
+  }
+  
+  .team-member {
+    padding: 20px 15px;
+  }
+  
+  .team-member h3 {
+    font-size: 1.3rem;
+  }
+  
+  .member-role {
+    font-size: 1rem;
+    margin-bottom: 10px;
+  }
+  
+  .member-bio {
+    font-size: 0.9rem;
+    line-height: 1.6;
+  }
+  
+  .quote {
+    font-size: 1rem;
+    padding: 0 15px;
+  }
+  
+  .quote:before, .quote:after {
+    font-size: 2rem;
+  }
+  
+  .customer-name {
+    font-size: 0.9rem;
+    margin-top: 20px;
+  }
+  
+  .address, .hours, .contact {
+    padding: 20px 15px;
+  }
+  
+  .visit-content h3 {
+    font-size: 1.2rem;
+    margin-bottom: 15px;
+  }
+  
+  .visit-content p {
+    font-size: 0.9rem;
+    margin-bottom: 8px;
+  }
+  
+  .social-media-section {
+    margin: 40px auto;
+  }
+  
+  .social-media-section h3 {
+    font-size: 1.5rem;
+    margin-bottom: 25px;
+  }
+  
+  .social-links {
+    padding: 20px 15px;
+    gap: 25px;
+    border-radius: 30px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  
+  .social-icon {
+    font-size: 28px;
+    min-width: 40px;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  /* Fix for mobile touch targets */
+  .social-link {
+    display: flex;
+    padding: 5px;
+  }
+}
+
+/* iPhone and modern mobile optimizations */
+@media (max-width: 414px) {
+  .about-container {
+    overflow-x: hidden; /* Prevents horizontal scroll on iPhones */
+  }
+  
+  .about-hero {
+    padding: 40px 15px;
+    margin-bottom: 25px;
+  }
+  
+  .hero-content h1 {
+    font-size: 1.8rem;
+    margin-bottom: 12px;
+    padding: 0 5px;
+  }
+  
+  .hero-content p {
+    font-size: 0.95rem;
+    padding: 0 10px;
+  }
+  
+  .store-section, .values-section, .team-section, .testimonial-section, .visit-section {
+    padding: 18px 12px;
+    margin: 0 8px 18px;
+    border-radius: 8px;
+  }
+  
+  .store-content h2, .values-section h2, .team-section h2, .testimonial-section h2, .visit-section h2 {
+    font-size: 1.5rem;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+  }
+  
+  .store-content h2:after {
+    width: 40px;
+    height: 2px;
+  }
+  
+  .store-content p {
+    font-size: 0.95rem;
+    line-height: 1.5;
+    margin-bottom: 12px;
+  }
+  
+  .store-image {
+    margin-bottom: 25px;
+  }
+  
+  .store-image img {
+    height: 170px;
+    border-radius: 6px;
+  }
+  
+  .detail-number {
+    font-size: 1.5rem;
+    margin-bottom: 3px;
+  }
+  
+  .detail-label {
+    font-size: 0.85rem;
+  }
+  
+  .value-item {
+    padding: 15px 12px;
+    margin-bottom: 15px;
+  }
+  
+  .value-item h3 {
+    font-size: 1.1rem;
+    margin-bottom: 8px;
+  }
+  
+  .value-item p {
+    font-size: 0.85rem;
+    line-height: 1.5;
+  }
+  
+  .team-member {
+    padding: 15px 10px;
+  }
+  
+  .member-image {
+    width: 110px;
+    height: 110px;
+    margin-bottom: 15px;
+  }
+  
+  .team-member h3 {
+    font-size: 1.2rem;
+    margin-bottom: 3px;
+  }
+  
+  .member-role {
+    font-size: 0.9rem;
+    margin-bottom: 8px;
+  }
+  
+  .member-bio {
+    font-size: 0.85rem;
+    line-height: 1.5;
+    max-width: 95%;
+  }
+  
+  .testimonial {
+    padding: 20px 15px;
+  }
+  
+  .quote {
+    font-size: 0.9rem;
+    line-height: 1.6;
+    padding: 0 10px;
+  }
+  
+  .quote:before, .quote:after {
+    font-size: 1.8rem;
+  }
+  
+  .customer-name {
+    font-size: 0.85rem;
+    margin-top: 18px;
+  }
+  
+  .visit-content {
+    margin-bottom: 25px;
+  }
+  
+  .address, .hours, .contact {
+    padding: 15px 10px;
+    margin-bottom: 15px;
+  }
+  
+  .visit-content h3 {
+    font-size: 1.1rem;
+    margin-bottom: 10px;
+  }
+  
+  .visit-content p {
+    font-size: 0.85rem;
+    margin-bottom: 6px;
+    line-height: 1.5;
+  }
+  
+  .social-media-section {
+    margin: 30px auto;
+  }
+  
+  .social-media-section h3 {
+    font-size: 1.3rem;
+    margin-bottom: 20px;
+  }
+  
+  .social-links {
+    padding: 15px 10px;
+    gap: 22px;
+    border-radius: 25px;
+    margin: 0 8px;
+  }
+  
+  .social-icon {
+    font-size: 24px; /* Larger touch target for social icons */
+    padding: 8px; /* Additional padding for better touch targets */
+  }
+  
+  /* Safe area padding for notched iPhones */
+  .safe-area-padding {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+}
+
+/* iPhone 5/SE (320px) specific optimizations */
+@media (max-width: 320px) {
+  .hero-content h1 {
+    font-size: 1.6rem;
+  }
+  
+  .store-content h2, .values-section h2, .team-section h2, .testimonial-section h2, .visit-section h2 {
+    font-size: 1.4rem;
+  }
+  
+  .store-image img {
     height: 150px;
+  }
+  
+  .member-image {
+    width: 100px;
+    height: 100px;
+  }
+  
+  .social-links {
+    gap: 15px;
+  }
+  
+  .social-icon {
+    font-size: 22px;
   }
 }

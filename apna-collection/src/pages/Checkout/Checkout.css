@@ -1032,45 +1032,6 @@
   animation: numberUpdate 0.5s ease-out;
 }
 
-/* Responsive Styles */
-@media (max-width: 992px) {
-  .checkout-content {
-    flex-direction: column;
-  }
-  
-  .form-row {
-    flex-direction: column;
-    gap: 20px;
-  }
-  
-  .payment-methods {
-    flex-direction: column;
-  }
-  
-  .address-cards {
-    flex-direction: column;
-  }
-}
-
-@media (max-width: 480px) {
-  .cart-item {
-    flex-wrap: wrap;
-  }
-  
-  .item-quantity {
-    margin-top: 10px;
-  }
-  
-  .item-total {
-    width: auto;
-    margin-top: 10px;
-  }
-  
-  .checkout-progress {
-    display: none;
-  }
-}
-
 /* Phone validation and form styling */
 .input-error {
   border-color: #dc3545 !important;
@@ -1168,3 +1129,504 @@
   box-shadow: 0 0 0 3px rgba(197, 155, 109, 0.15);
 }
 
+/* Enhanced Mobile Responsiveness */
+@media (max-width: 992px) {
+  .checkout-content {
+    flex-direction: column;
+  }
+  
+  .form-row {
+    flex-direction: column;
+    gap: 20px;
+  }
+  
+  .payment-methods {
+    flex-direction: column;
+  }
+  
+  .address-cards {
+    flex-direction: column;
+  }
+  
+  .checkout-section {
+    padding: 25px;
+    margin-bottom: 25px;
+  }
+  
+  .checkout-title {
+    font-size: 2.4rem;
+  }
+  
+  .section-title {
+    font-size: 1.3rem;
+  }
+  
+  .checkout-container {
+    margin: 30px auto 60px;
+  }
+}
+
+@media (max-width: 768px) {
+  .checkout-title {
+    font-size: 2rem;
+  }
+  
+  .checkout-subtitle {
+    font-size: 1rem;
+  }
+  
+  .checkout-section {
+    padding: 20px;
+    margin-bottom: 20px;
+    border-radius: 15px;
+  }
+  
+  .section-title {
+    font-size: 1.2rem;
+    margin-bottom: 20px;
+  }
+  
+  .checkout-container {
+    padding: 0 15px;
+    margin: 20px auto 50px;
+  }
+  
+  .payment-methods {
+    gap: 10px;
+  }
+  
+  .payment-label {
+    padding: 15px 10px;
+  }
+  
+  .payment-icon {
+    font-size: 1.5rem;
+  }
+  
+  .payment-name {
+    font-size: 0.85rem;
+  }
+  
+  .place-order-btn {
+    min-height: 55px;
+    font-size: 1.05rem;
+  }
+  
+  .summary-total .summary-value {
+    font-size: 1.3rem;
+  }
+  
+  .add-address-btn {
+    padding: 10px 15px;
+  }
+}
+
+@media (max-width: 576px) {
+  .checkout-title {
+    font-size: 1.8rem;
+    padding-bottom: 10px;
+  }
+  
+  .checkout-title::after {
+    width: 80px;
+    height: 2px;
+  }
+  
+  .checkout-subtitle {
+    font-size: 0.9rem;
+  }
+  
+  .checkout-header {
+    margin-bottom: 25px;
+  }
+  
+  .checkout-section {
+    padding: 15px;
+    border-radius: 12px;
+  }
+  
+  .section-title {
+    font-size: 1.1rem;
+    margin-bottom: 15px;
+  }
+  
+  .cart-item {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 15px 0;
+  }
+  
+  .item-image {
+    width: 70px;
+    height: 85px;
+    margin-bottom: 10px;
+  }
+  
+  .item-details {
+    width: 100%;
+    margin-bottom: 10px;
+  }
+  
+  .item-info {
+    flex-wrap: wrap;
+  }
+  
+  .item-info span {
+    margin-right: 10px;
+    padding-right: 10px;
+  }
+  
+  .item-quantity {
+    margin-right: 0;
+    margin-bottom: 10px;
+  }
+  
+  .item-total {
+    width: 100%;
+    text-align: left;
+  }
+  
+  .item-remove {
+    position: absolute;
+    top: 15px;
+    right: 5px;
+    margin-left: 0;
+  }
+  
+  .form-input {
+    padding: 12px 15px;
+    font-size: 0.95rem;
+  }
+  
+  .place-order-btn {
+    min-height: 50px;
+    font-size: 1rem;
+    padding: 14px;
+  }
+  
+  .summary-total .summary-value {
+    font-size: 1.2rem;
+  }
+  
+  .payment-icons {
+    gap: 10px;
+    font-size: 1.5rem;
+  }
+  
+  .summary-label, .summary-value {
+    font-size: 0.95rem;
+  }
+  
+  .summary-total .summary-label {
+    font-size: 1rem;
+  }
+  
+  .secure-info {
+    font-size: 0.8rem;
+  }
+  
+  .field-note {
+    font-size: 0.75rem;
+  }
+  
+  .quantity-btn, .quantity-input {
+    width: 30px;
+    height: 30px;
+  }
+  
+  .address-card {
+    min-width: auto;
+    padding: 12px;
+  }
+  
+  .address-details {
+    font-size: 0.85rem;
+  }
+  
+  .cod-info {
+    padding: 12px;
+    font-size: 0.85rem;
+  }
+  
+  .note-textarea {
+    min-height: 80px;
+    padding: 12px;
+    font-size: 0.9rem;
+  }
+  
+  /* Mobile-optimized item layout */
+  .item-details-wrapper {
+    display: flex;
+    width: 100%;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+  
+  .item-quantity-total-wrapper {
+    display: flex;
+    width: 100%;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  /* Better touch target sizes for mobile */
+  .quantity-btn {
+    min-width: 36px;
+    min-height: 36px;
+  }
+  
+  .add-address-btn {
+    width: 100%;
+    padding: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .checkout-progress {
+    display: none;
+  }
+  
+  .checkout-title {
+    font-size: 1.6rem;
+  }
+  
+  .checkout-subtitle {
+    font-size: 0.85rem;
+  }
+  
+  .section-title {
+    font-size: 1rem;
+    padding-bottom: 8px;
+  }
+  
+  .section-title::after {
+    width: 30px;
+    height: 2px;
+  }
+  
+  .form-label {
+    font-size: 0.9rem;
+    margin-bottom: 6px;
+  }
+  
+  .form-input {
+    padding: 10px 12px;
+    font-size: 0.9rem;
+    border-radius: 10px;
+  }
+  
+  .place-order-btn {
+    border-radius: 30px;
+  }
+  
+  /* Optimize cart item display */
+  .cart-item {
+    position: relative;
+    padding-right: 30px; /* Space for the remove button */
+  }
+  
+  .item-image {
+    margin-right: 0;
+  }
+  
+  .item-quantity-price-wrapper {
+    display: flex;
+    width: 100%;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 10px;
+  }
+  
+  /* Adjust the layout for better mobile experience */
+  .mobile-item-row {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    margin-bottom: 5px;
+  }
+  
+  .mobile-item-col {
+    flex: 1;
+  }
+  
+  /* Float the item image beside details for better space usage */
+  .mobile-item-header {
+    display: flex;
+    width: 100%;
+    gap: 10px;
+  }
+  
+  /* Mobile-friendly payment selection */
+  .payment-method {
+    width: 100%;
+  }
+  
+  /* Mobile-optimized address cards */
+  .address-card {
+    width: 100%;
+    padding: 10px;
+  }
+  
+  /* Stack summary rows better */
+  .summary-row {
+    padding: 12px 0;
+  }
+  
+  /* More thumb-friendly buttons */
+  .place-order-btn {
+    min-height: 48px;
+    box-shadow: 0 5px 15px rgba(197, 155, 109, 0.3);
+  }
+}
+
+/* Modify cart item layout for mobile */
+@media (max-width: 576px) {
+  .cart-item {
+    display: grid;
+    grid-template-columns: 80px 1fr;
+    grid-template-areas: 
+      "image details"
+      "image quantity"
+      "image total";
+    gap: 8px;
+    padding-top: 15px;
+    padding-bottom: 15px;
+    position: relative;
+  }
+  
+  .item-image {
+    grid-area: image;
+    align-self: start;
+    margin-right: 0;
+  }
+  
+  .item-details {
+    grid-area: details;
+    margin-bottom: 0;
+    padding-right: 30px; /* Make room for the remove button */
+  }
+  
+  .item-quantity {
+    grid-area: quantity;
+    margin: 0;
+  }
+  
+  .item-total {
+    grid-area: total;
+    margin-top: 5px;
+    width: auto;
+  }
+  
+  .item-remove {
+    position: absolute;
+    top: 15px;
+    right: 0;
+  }
+  
+  /* Ensure quantity controls are touch-friendly */
+  .quantity-control {
+    height: 36px;
+  }
+  
+  .quantity-btn {
+    width: 36px;
+    height: 36px;
+  }
+  
+  .quantity-input {
+    width: 40px;
+    height: 36px;
+  }
+  
+  /* Keep cart item hover effect consistent */
+  .cart-item:hover {
+    transform: none;
+  }
+  
+  .cart-item:hover .item-image {
+    transform: none;
+  }
+}
+
+/* Touch-friendly form elements */
+@media (max-width: 576px) {
+  .form-input, 
+  select.form-input,
+  .note-textarea {
+    font-size: 16px; /* Prevent iOS zoom on focus */
+  }
+  
+  .form-group {
+    margin-bottom: 15px;
+  }
+  
+  /* Make payment options more visible */
+  .payment-method {
+    margin-bottom: 5px;
+  }
+  
+  .payment-label {
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 10px;
+    padding: 12px;
+  }
+  
+  .payment-icon {
+    margin-bottom: 0;
+  }
+  
+  /* Adjust the address card layout */
+  .address-card {
+    padding: 12px;
+  }
+  
+  .address-details {
+    font-size: 0.85rem;
+  }
+  
+  /* Optimize form spacing */
+  .form-row {
+    gap: 15px;
+  }
+  
+  /* Better mobile spacing */
+  .checkout-container {
+    margin: 15px auto 40px;
+  }
+}
+
+/* Fix sticky hover states on mobile */
+@media (hover: none) {
+  .cart-item:hover,
+  .cart-item:hover .item-image,
+  .summary-row:hover .summary-value,
+  .summary-row:hover {
+    transform: none;
+    background-color: transparent;
+  }
+  
+  .payment-label:hover {
+    transform: none;
+    box-shadow: none;
+  }
+  
+  .place-order-btn:hover {
+    transform: none;
+    box-shadow: 0 10px 25px rgba(197, 155, 109, 0.3), 0 2px 3px rgba(197, 155, 109, 0.2);
+    background: linear-gradient(135deg, #d4af7a, #c59b6d);
+  }
+  
+  .add-address-btn:hover {
+    transform: none;
+  }
+}
+
+/* Fix for iPhone notch and safe areas */
+@supports (padding: max(0px)) {
+  .checkout-container {
+    padding-left: max(20px, env(safe-area-inset-left));
+    padding-right: max(20px, env(safe-area-inset-right));
+    padding-bottom: max(20px, env(safe-area-inset-bottom));
+  }
+}

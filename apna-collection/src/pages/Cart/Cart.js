@@ -15,6 +15,7 @@ const Cart = () => {
   const [promoError, setPromoError] = useState('');
   const [promoSuccess, setPromoSuccess] = useState('');
   const [isLoadingPromo, setIsLoadingPromo] = useState(false);
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
   const navigate = useNavigate();
   
   // References for animated values
@@ -31,10 +32,38 @@ const Cart = () => {
 
   // Constants
   const TAX_RATE = 0.18;
+  const MOBILE_BREAKPOINT = 768;
+  const LARGE_PHONE_BREAKPOINT = 896; // For larger phones like iPhone Pro Max models
+  const TABLET_BREAKPOINT = 992;
+
+  // Determine if mobile view
+  const isMobile = windowWidth <= MOBILE_BREAKPOINT;
+  const isLargePhone = windowWidth <= LARGE_PHONE_BREAKPOINT && windowWidth > MOBILE_BREAKPOINT;
+  const isTablet = windowWidth <= TABLET_BREAKPOINT;
+
+  // Window resize listener
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowWidth(window.innerWidth);
+      
+      // Update mobile viewport height variable for better mobile handling
+      if (typeof document !== 'undefined') {
+        const vh = window.innerHeight * 0.01;
+        document.documentElement.style.setProperty('--vh', `${vh}px`);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    handleResize(); // Set initial size
+    
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
 
   // Checkout handler with animation
   const handleCheckout = (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     if (!cart || cart.length === 0) return;
     
     setIsCheckingOut(true);
@@ -248,13 +277,15 @@ const Cart = () => {
   return (
     <div className="cart-container" style={{
       maxWidth: '1200px',
-      margin: '40px auto',
-      padding: '0 20px',
-      backgroundColor: '#E1D9D2'
+      margin: isMobile ? '20px auto' : '40px auto',
+      padding: isMobile ? '0 15px' : '0 20px',
+      backgroundColor: '#E1D9D2',
+      width: '100%',
+      overflowX: 'hidden'
     }}>
       <h1 className="page-title" style={{
-        fontSize: '2.5rem',
-        marginBottom: '40px',
+        fontSize: isMobile ? '1.8rem' : '2.5rem',
+        marginBottom: isMobile ? '25px' : '40px',
         textAlign: 'center',
         color: '#333',
         fontWeight: 600,
@@ -265,8 +296,10 @@ const Cart = () => {
       
       <div className="cart-layout" style={{
         display: 'grid',
-        gridTemplateColumns: window.innerWidth > 992 ? '2fr 1fr' : '1fr',
-        gap: '40px'
+        gridTemplateColumns: !isTablet ? '2fr 1fr' : '1fr',
+        gap: isMobile || isLargePhone ? '15px' : '40px',
+        width: '100%',
+        position: 'relative' // For positioning the sticky footer
       }}>
         <div className="cart-items" style={{
           backgroundColor: 'transparent'
@@ -274,30 +307,31 @@ const Cart = () => {
           {!cart || cart.length === 0 ? (
             <div className="empty-cart" style={{
               textAlign: 'center',
-              padding: '80px 0',
+              padding: isMobile ? '50px 15px' : '80px 0',
               backgroundColor: 'white',
               borderRadius: '12px',
               boxShadow: '0 8px 20px rgba(0, 0, 0, 0.05)'
             }}>
               <i className="fas fa-shopping-bag" style={{
-                fontSize: '5rem',
+                fontSize: isMobile ? '4rem' : '5rem',
                 color: '#e1d9d2',
-                marginBottom: '30px',
+                marginBottom: isMobile ? '20px' : '30px',
                 display: 'block'
               }}></i>
               <p style={{
-                fontSize: '1.3rem',
+                fontSize: isMobile ? '1.1rem' : '1.3rem',
                 color: '#666',
-                marginBottom: '30px'
+                marginBottom: isMobile ? '20px' : '30px'
               }}>Your shopping cart is empty</p>
               <Link to="/shop" className="empty-cart-btn" style={{
                 display: 'inline-block',
-                padding: '12px 30px',
+                padding: isMobile ? '10px 25px' : '12px 30px',
                 backgroundColor: '#c59b6d',
                 color: 'white',
                 borderRadius: '30px',
                 fontWeight: 500,
-                transition: 'all 0.3s'
+                transition: 'all 0.3s',
+                fontSize: isMobile ? '0.95rem' : '1rem'
               }}>Continue Shopping</Link>
             </div>
           ) : (
@@ -311,32 +345,43 @@ const Cart = () => {
                     backgroundColor: '#FFFFFF',
                     borderRadius: '12px',
                     boxShadow: '0 8px 20px rgba(0, 0, 0, 0.05)',
-                    padding: '25px',
-                    marginBottom: '25px',
+                    padding: isMobile || isLargePhone ? '20px 20px' : '25px',
+                    marginBottom: isMobile || isLargePhone ? '20px' : '25px',
                     display: 'flex',
+                    flexDirection: isMobile || isLargePhone ? 'column' : 'row',
                     position: 'relative',
                     transition: 'all 0.3s ease',
-                    overflow: 'hidden',
+                    overflow: 'visible', // Changed from hidden to visible
+                    width: '100%',
+                    maxWidth: '100%',
                     border: '1px solid rgba(0,0,0,0.03)',
                     animation: 'fadeIn 0.5s ease forwards',
                     animationDelay: `${0.1 * index}s`
                   }}
                 >
-                  <img 
-                    src={item.image || "/api/placeholder/400/500"} 
-                    alt={item.name} 
-                    className="item-image" 
-                    style={{
-                      width: window.innerWidth > 768 ? '120px' : '100%',
-                      height: window.innerWidth > 768 ? '150px' : '200px',
-                      objectFit: 'cover',
-                      borderRadius: '8px',
-                      marginRight: window.innerWidth > 768 ? '25px' : '0',
-                      marginBottom: window.innerWidth > 768 ? '0' : '15px',
-                      boxShadow: '0 4px 10px rgba(0, 0, 0, 0.1)',
-                      transition: 'all 0.3s ease'
-                    }}
-                  />
+                  <div className="item-image-container" style={{
+                    width: isMobile || isLargePhone ? '100%' : '120px',
+                    marginRight: isMobile || isLargePhone ? '0' : '25px',
+                    marginBottom: isMobile || isLargePhone ? '15px' : '0',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    boxSizing: 'border-box'
+                  }}>
+                    <img 
+                      src={item.image || "/api/placeholder/400/500"} 
+                      alt={item.name} 
+                      className="item-image" 
+                      style={{
+                        width: isMobile || isLargePhone ? '120px' : '120px',
+                        height: isMobile || isLargePhone ? '150px' : '150px',
+                        objectFit: 'cover',
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 10px rgba(0, 0, 0, 0.1)',
+                        transition: 'all 0.3s ease',
+                        maxWidth: '100%'
+                      }}
+                    />
+                  </div>
                   <div className="item-details" style={{
                     flex: 1,
                     display: 'flex',
@@ -345,15 +390,17 @@ const Cart = () => {
                   }}>
                     <div>
                       <h3 className="item-name" style={{
-                        fontSize: '1.3rem',
+                        fontSize: isMobile || isLargePhone ? '1.1rem' : '1.3rem',
                         fontWeight: 600,
                         marginBottom: '8px',
-                        color: '#222'
+                        color: '#222',
+                        paddingRight: isMobile || isLargePhone ? '0' : '30px', // Space for remove button
+                        wordBreak: 'break-word'
                       }}>{item.name}</h3>
                       <p className="item-size" style={{
                         color: '#666',
                         marginBottom: '12px',
-                        fontSize: '0.95rem',
+                        fontSize: isMobile || isLargePhone ? '0.9rem' : '0.95rem',
                         backgroundColor: '#f7f5f2',
                         display: 'inline-block',
                         padding: '3px 12px',
@@ -363,7 +410,7 @@ const Cart = () => {
                       </p>
                       <p className="item-price" style={{
                         fontWeight: 600,
-                        fontSize: '1.2rem',
+                        fontSize: isMobile || isLargePhone ? '1.1rem' : '1.2rem',
                         color: '#c59b6d',
                         marginBottom: '15px',
                         position: 'relative'
@@ -373,16 +420,22 @@ const Cart = () => {
                       display: 'flex',
                       justifyContent: 'space-between',
                       alignItems: 'center',
-                      flexDirection: window.innerWidth > 768 ? 'row' : 'column',
-                      gap: window.innerWidth > 768 ? '0' : '15px'
+                      flexDirection: isMobile || isLargePhone ? 'column' : 'row',
+                      gap: isMobile || isLargePhone ? '15px' : '0',
+                      width: '100%',
+                      boxSizing: 'border-box'
                     }}>
                       <div className="quantity-control" style={{
                         display: 'flex',
                         alignItems: 'center',
                         backgroundColor: '#f7f5f2',
-                        padding: '5px',
+                        padding: '5px 10px',
                         borderRadius: '30px',
-                        boxShadow: '0 2px 5px rgba(0,0,0,0.03)'
+                        boxShadow: '0 2px 5px rgba(0,0,0,0.03)',
+                        width: isMobile || isLargePhone ? '100%' : 'auto',
+                        justifyContent: isMobile || isLargePhone ? 'space-between' : 'flex-start',
+                        boxSizing: 'border-box',
+                        minWidth: isMobile || isLargePhone ? '100%' : '140px'
                       }}>
                         {/* Show trash icon when quantity is 1, minus button otherwise */}
                         {item.quantity === 1 ? (
@@ -390,8 +443,8 @@ const Cart = () => {
                             className="quantity-btn trash" 
                             onClick={() => removeFromCart(item.id, item.size, item.color)}
                             style={{
-                              width: '30px',
-                              height: '30px',
+                              width: isMobile || isLargePhone ? '40px' : '30px',
+                              height: isMobile || isLargePhone ? '40px' : '30px',
                               backgroundColor: '#fff',
                               border: 'none',
                               borderRadius: '50%',
@@ -405,7 +458,7 @@ const Cart = () => {
                               boxShadow: '0 2px 5px rgba(0,0,0,0.05)'
                             }}
                           >
-                            <i className="fas fa-trash-alt" style={{ fontSize: '0.85rem' }}></i>
+                            <i className="fas fa-trash-alt" style={{ fontSize: isMobile || isLargePhone ? '0.9rem' : '0.85rem' }}></i>
                           </button>
                         ) : (
                           <button 
@@ -416,8 +469,8 @@ const Cart = () => {
                               }
                             }}
                             style={{
-                              width: '30px',
-                              height: '30px',
+                              width: isMobile || isLargePhone ? '40px' : '30px',
+                              height: isMobile || isLargePhone ? '40px' : '30px',
                               backgroundColor: '#fff',
                               border: 'none',
                               borderRadius: '50%',
@@ -444,22 +497,22 @@ const Cart = () => {
                           }}
                           className="quantity-input"
                           style={{
-                            width: '40px',
-                            height: '30px',
+                            width: isMobile || isLargePhone ? '60px' : '40px',
+                            height: isMobile || isLargePhone ? '40px' : '30px',
                             textAlign: 'center',
                             margin: '0 10px',
                             border: 'none',
                             backgroundColor: 'transparent',
                             fontWeight: 500,
-                            fontSize: '1rem'
+                            fontSize: isMobile || isLargePhone ? '1.1rem' : '1rem'
                           }}
                         />
                         <button 
                           className="quantity-btn increase" 
                           onClick={() => updateQuantity(item.id, item.size, item.color, item.quantity + 1)}
                           style={{
-                            width: '30px',
-                            height: '30px',
+                            width: isMobile || isLargePhone ? '40px' : '30px',
+                            height: isMobile || isLargePhone ? '40px' : '30px',
                             backgroundColor: '#fff',
                             border: 'none',
                             borderRadius: '50%',
@@ -476,9 +529,12 @@ const Cart = () => {
                       </div>
                       <div className="item-subtotal animated-value" style={{
                         fontWeight: 600,
-                        fontSize: '1.1rem',
+                        fontSize: isMobile || isLargePhone ? '1.2rem' : '1.1rem',
                         color: '#333',
-                        alignSelf: window.innerWidth > 768 ? 'auto' : 'flex-end'
+                        alignSelf: isMobile || isLargePhone ? 'flex-end' : 'auto',
+                        width: isMobile || isLargePhone ? '100%' : 'auto',
+                        textAlign: isMobile || isLargePhone ? 'right' : 'inherit',
+                        boxSizing: 'border-box'
                       }}>
                         {formatCurrency(displayItemSubtotals[itemKey] || (item.price * item.quantity))}
                       </div>
@@ -489,20 +545,21 @@ const Cart = () => {
                     onClick={() => removeFromCart(item.id, item.size, item.color)}
                     style={{
                       position: 'absolute',
-                      top: '20px',
-                      right: '20px',
+                      top: isMobile || isLargePhone ? '15px' : '20px',
+                      right: isMobile || isLargePhone ? '15px' : '20px',
                       background: 'none',
                       border: 'none',
                       fontSize: '0.9rem',
                       color: '#999',
                       cursor: 'pointer',
                       transition: 'all 0.2s',
-                      width: '30px',
-                      height: '30px',
+                      width: isMobile || isLargePhone ? '34px' : '30px',
+                      height: isMobile || isLargePhone ? '34px' : '30px',
                       borderRadius: '50%',
                       display: 'flex',
                       justifyContent: 'center',
-                      alignItems: 'center'
+                      alignItems: 'center',
+                      zIndex: 5
                     }}
                   >
                     <i className="fas fa-times"></i>
@@ -517,26 +574,35 @@ const Cart = () => {
           backgroundColor: '#FFFFFF',
           borderRadius: '12px',
           boxShadow: '0 8px 20px rgba(0, 0, 0, 0.05)',
-          padding: '30px',
+          padding: isMobile || isLargePhone ? '15px' : '30px',
           height: 'fit-content',
-          position: window.innerWidth > 992 ? 'sticky' : 'relative',
-          top: window.innerWidth > 992 ? '30px' : '0',
-          border: '1px solid rgba(0,0,0,0.03)'
+          position: !isTablet ? 'sticky' : 'relative',
+          top: !isTablet ? '30px' : '0',
+          border: '1px solid rgba(0,0,0,0.03)',
+          marginBottom: isMobile || isLargePhone ? '70px' : '0', // Extra margin for mobile to account for the sticky footer
+          width: '100%',
+          boxSizing: 'border-box',
+          ...(isMobile || isLargePhone ? {
+            maxHeight: 'calc(var(--vh, 1vh) * 60)', // 60% of viewport height
+            overflow: 'auto',
+            position: 'relative'
+          } : {})
         }}>
           <h2 className="summary-title" style={{
-            fontSize: '1.4rem',
+            fontSize: isMobile || isLargePhone ? '1.2rem' : '1.4rem',
             fontWeight: 600,
-            marginBottom: '25px',
-            paddingBottom: '15px',
+            marginBottom: isMobile || isLargePhone ? '15px' : '25px',
+            paddingBottom: isMobile || isLargePhone ? '10px' : '15px',
             borderBottom: '2px solid #f5f3ef',
-            color: '#222'
+            color: '#222',
+            wordBreak: 'break-word'
           }}>Order Summary</h2>
           
           <div className="summary-row" style={{
             display: 'flex',
             justifyContent: 'space-between',
-            marginBottom: '15px',
-            fontSize: '1rem',
+            marginBottom: isMobile || isLargePhone ? '10px' : '15px',
+            fontSize: isMobile || isLargePhone ? '1rem' : '1rem',
             color: '#555'
           }}>
             <span>Subtotal</span>
@@ -548,7 +614,7 @@ const Cart = () => {
               display: 'flex',
               justifyContent: 'space-between',
               marginBottom: '15px',
-              fontSize: '1rem',
+              fontSize: isMobile || isLargePhone ? '1.05rem' : '1rem',
               color: '#28a745'
             }}>
               <span>Discount</span>
@@ -559,8 +625,8 @@ const Cart = () => {
           <div className="summary-row" style={{
             display: 'flex',
             justifyContent: 'space-between',
-            marginBottom: '15px',
-            fontSize: '1rem',
+            marginBottom: isMobile || isLargePhone ? '10px' : '15px',
+            fontSize: isMobile || isLargePhone ? '1rem' : '1rem',
             color: '#555'
           }}>
             <span>Tax (GST 18%)</span>
@@ -570,8 +636,8 @@ const Cart = () => {
           <div className="summary-row" style={{
             display: 'flex',
             justifyContent: 'space-between',
-            marginBottom: '15px',
-            fontSize: '1rem',
+            marginBottom: isMobile || isLargePhone ? '10px' : '15px',
+            fontSize: isMobile || isLargePhone ? '1rem' : '1rem',
             color: '#555'
           }}>
             <span>Shipping</span>
@@ -581,11 +647,11 @@ const Cart = () => {
           <div className="summary-row total" style={{
             display: 'flex',
             justifyContent: 'space-between',
-            marginBottom: '15px',
-            fontSize: '1.3rem',
+            marginBottom: isMobile || isLargePhone ? '10px' : '15px',
+            fontSize: isMobile || isLargePhone ? '1.2rem' : '1.3rem',
             fontWeight: 600,
-            marginTop: '25px',
-            paddingTop: '20px',
+            marginTop: isMobile || isLargePhone ? '15px' : '25px',
+            paddingTop: isMobile || isLargePhone ? '12px' : '20px',
             borderTop: '2px solid #f5f3ef',
             color: '#222'
           }}>
@@ -594,19 +660,20 @@ const Cart = () => {
           </div>
           
           <div className="promo-code" style={{
-            marginTop: '25px',
-            paddingTop: '20px',
+            marginTop: isMobile || isLargePhone ? '15px' : '25px',
+            paddingTop: isMobile || isLargePhone ? '12px' : '20px',
             borderTop: '2px solid #f5f3ef'
           }}>
             <h3 style={{
-              fontSize: '1rem',
-              marginBottom: '15px',
+              fontSize: isMobile || isLargePhone ? '1rem' : '1rem',
+              marginBottom: isMobile || isLargePhone ? '10px' : '15px',
               color: '#555'
             }}>Promo Code</h3>
             
             <div className="promo-form" style={{
               display: 'flex',
-              marginBottom: '20px'
+              marginBottom: isMobile || isLargePhone ? '15px' : '20px',
+              flexWrap: isMobile || isLargePhone ? 'wrap' : 'nowrap'
             }}>
               <input 
                 type="text" 
@@ -617,11 +684,13 @@ const Cart = () => {
                 disabled={isLoadingPromo}
                 style={{
                   flex: 1,
-                  padding: '12px 15px',
+                  padding: isMobile || isLargePhone ? '10px 12px' : '12px 15px',
                   border: '1px solid #e1d9d2',
-                  borderRadius: '4px 0 0 4px',
-                  fontSize: '0.9rem',
-                  backgroundColor: isLoadingPromo ? '#f9f9f9' : 'white'
+                  borderRadius: isMobile || isLargePhone ? '4px' : '4px 0 0 4px',
+                  fontSize: isMobile || isLargePhone ? '0.9rem' : '0.9rem',
+                  backgroundColor: isLoadingPromo ? '#f9f9f9' : 'white',
+                  marginBottom: isMobile || isLargePhone ? '8px' : 0,
+                  width: isMobile || isLargePhone ? '100%' : 'auto'
                 }}
               />
               <button 
@@ -634,10 +703,13 @@ const Cart = () => {
                   backgroundColor: isLoadingPromo ? '#d0b895' : '#c59b6d',
                   color: 'white',
                   border: 'none',
-                  borderRadius: '0 4px 4px 0',
+                  borderRadius: isMobile || isLargePhone ? '4px' : '0 4px 4px 0',
                   fontWeight: 500,
                   cursor: isLoadingPromo ? 'wait' : 'pointer',
-                  transition: 'background-color 0.3s'
+                  transition: 'background-color 0.3s',
+                  fontSize: isMobile || isLargePhone ? '0.9rem' : 'inherit',
+                  height: isMobile || isLargePhone ? '38px' : 'auto',
+                  width: isMobile || isLargePhone ? '100%' : 'auto'
                 }}
               >
                 {isLoadingPromo ? 'Applying...' : 'Apply'}
@@ -645,13 +717,21 @@ const Cart = () => {
             </div>
             
             {promoError && (
-              <div style={{ color: '#dc3545', fontSize: '0.9rem', marginBottom: '15px' }}>
+              <div style={{ 
+                color: '#dc3545', 
+                fontSize: isMobile || isLargePhone ? '1rem' : '0.9rem', 
+                marginBottom: '15px' 
+              }}>
                 {promoError}
               </div>
             )}
             
             {promoSuccess && (
-              <div style={{ color: '#28a745', fontSize: '0.9rem', marginBottom: '15px' }}>
+              <div style={{ 
+                color: '#28a745', 
+                fontSize: isMobile || isLargePhone ? '1rem' : '0.9rem', 
+                marginBottom: '15px' 
+              }}>
                 {promoSuccess}
               </div>
             )}
@@ -661,7 +741,7 @@ const Cart = () => {
             className={`checkout-btn ${isCheckingOut ? 'animating' : ''}`}
             onClick={handleCheckout}
             style={{
-              display: 'block',
+              display: isMobile || isLargePhone ? 'none' : 'block', // Hide on mobile since we have sticky footer
               width: '100%',
               padding: '15px',
               backgroundColor: '#c59b6d',
@@ -692,8 +772,8 @@ const Cart = () => {
           
           <div className="continue-shopping" style={{
             textAlign: 'center',
-            marginTop: '20px',
-            fontSize: '0.95rem',
+            marginTop: isMobile || isLargePhone ? '12px' : '20px',
+            fontSize: isMobile || isLargePhone ? '0.9rem' : '0.95rem',
             color: '#666'
           }}>
             <Link to="/shop" style={{
@@ -706,15 +786,17 @@ const Cart = () => {
           <div className="payment-options" style={{
             display: 'flex',
             justifyContent: 'center',
-            gap: '10px',
-            marginTop: '25px'
+            gap: isMobile || isLargePhone ? '10px' : '10px',
+            marginTop: isMobile || isLargePhone ? '15px' : '25px',
+            flexWrap: 'wrap',
+            padding: '0 10px'
           }}>
             <img 
               src="https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg" 
               alt="Visa" 
               className="payment-icon"
               style={{
-                width: '40px',
+                width: isMobile || isLargePhone ? '30px' : '40px',
                 height: 'auto',
                 opacity: 1,
                 transition: 'opacity 0.3s'
@@ -725,7 +807,7 @@ const Cart = () => {
               alt="Mastercard" 
               className="payment-icon"
               style={{
-                width: '40px',
+                width: isMobile || isLargePhone ? '30px' : '40px',
                 height: 'auto',
                 opacity: 1,
                 transition: 'opacity 0.3s'
@@ -736,7 +818,7 @@ const Cart = () => {
               alt="PayPal" 
               className="payment-icon"
               style={{
-                width: '40px',
+                width: isMobile || isLargePhone ? '30px' : '40px',
                 height: 'auto',
                 opacity: 1,
                 transition: 'opacity 0.3s'
@@ -747,7 +829,7 @@ const Cart = () => {
               alt="UPI" 
               className="payment-icon"
               style={{
-                width: '40px',
+                width: isMobile || isLargePhone ? '30px' : '40px',
                 height: 'auto',
                 opacity: 1,
                 transition: 'opacity 0.3s'
@@ -757,17 +839,93 @@ const Cart = () => {
         </div>
       </div>
       
+      {/* Mobile-only Sticky Checkout Bar */}
+      {(isMobile || isLargePhone) && cart && cart.length > 0 && (
+        <div className="mobile-sticky-checkout" style={{
+          position: 'fixed',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          backgroundColor: '#fff',
+          padding: '10px 15px',
+          boxShadow: '0 -4px 10px rgba(0, 0, 0, 0.1)',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          zIndex: 100,
+          borderTop: '1px solid #f0f0f0'
+        }}>
+          <div className="sticky-total">
+            <div style={{ fontSize: '0.8rem', color: '#666' }}>Total:</div>
+            <div style={{ fontWeight: 'bold', fontSize: '1.2rem' }}>{formatCurrency(displayTotal)}</div>
+          </div>
+          <button 
+            onClick={handleCheckout}
+            style={{
+              backgroundColor: '#c59b6d',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              padding: '10px 20px',
+              fontWeight: 500,
+              fontSize: '1rem',
+              cursor: 'pointer',
+              boxShadow: '0 2px 5px rgba(197, 155, 109, 0.3)'
+            }}
+            disabled={isCheckingOut}
+          >
+            {isCheckingOut ? 'Processing...' : 'Checkout'}
+          </button>
+        </div>
+      )}
+      
       <style>
         {`
           body {
             background-color: #E1D9D2;
             color: #333;
             line-height: 1.6;
+            max-width: 100vw;
+            overflow-x: hidden;
           }
           
           @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
+          }
+          
+          /* Custom scrollbar for cart summary on mobile */
+          .cart-summary::-webkit-scrollbar {
+            width: 4px;
+          }
+          
+          .cart-summary::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+          }
+          
+          .cart-summary::-webkit-scrollbar-thumb {
+            background: #c59b6d;
+            border-radius: 4px;
+          }
+          
+          .cart-summary::-webkit-scrollbar-thumb:hover {
+            background: #b08c5f;
+          }
+          
+          /* Fade effect for summary to indicate scrollable content */
+          @media (max-width: 896px) {
+            .cart-summary::after {
+              content: '';
+              position: absolute;
+              bottom: 0;
+              left: 0;
+              right: 0;
+              height: 30px;
+              background: linear-gradient(to top, rgba(255,255,255,1), rgba(255,255,255,0));
+              pointer-events: none;
+              z-index: 1;
+            }
           }
           
           .cart-item:hover {
@@ -927,6 +1085,52 @@ const Cart = () => {
           
           .checkout-btn.animating::before {
             animation: ripple 1s ease-out;
+          }
+          
+          /* Mobile specific styles */
+          @media (max-width: 896px) {
+            .item-controls {
+              margin-top: 15px;
+            }
+            
+            .quantity-control {
+              margin-bottom: 5px;
+            }
+            
+            input[type="number"]::-webkit-inner-spin-button,
+            input[type="number"]::-webkit-outer-spin-button {
+              -webkit-appearance: none;
+              margin: 0;
+            }
+            
+            input[type="number"] {
+              -moz-appearance: textfield;
+            }
+            
+            /* Fix horizontal scrolling */
+            .cart-container, 
+            .cart-layout,
+            .cart-items,
+            .cart-item,
+            .cart-summary {
+              max-width: 100%;
+              box-sizing: border-box;
+            }
+            
+            /* Safe area inset for notched phones */
+            .mobile-sticky-checkout {
+              padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+            }
+            
+            /* Animation for sticky bar */
+            @keyframes slideUp {
+              from { transform: translateY(100%); }
+              to { transform: translateY(0); }
+            }
+            
+            .mobile-sticky-checkout {
+              animation: slideUp 0.3s ease-out;
+            }
           }
         `}
       </style>
