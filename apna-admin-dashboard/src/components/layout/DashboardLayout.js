@@ -1,5 +1,5 @@
 // src/components/layout/DashboardLayout.js
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { 
@@ -18,16 +18,31 @@ import {
   FaTag,
   FaHome,
   FaEnvelope,
-  FaTicketAlt // New icon for coupons
+  FaTicketAlt
 } from 'react-icons/fa';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import NotificationsCenter from '../notifications/NotificationsCenter';
 
 const DashboardLayout = ({ children, title }) => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const location = useLocation();
   const navigate = useNavigate();
   const { logout, currentAdmin } = useAdminAuth();
+
+  // Check if we're on mobile and close sidebar by default
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth <= 768;
+      setIsMobile(mobile);
+      if (mobile) setSidebarOpen(false);
+    };
+
+    window.addEventListener('resize', handleResize);
+    handleResize(); // Initial check
+    
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const handleLogout = async () => {
     await logout();
@@ -44,6 +59,9 @@ const DashboardLayout = ({ children, title }) => {
 
   return (
     <DashboardContainer>
+      {/* Overlay for mobile */}
+      {isMobile && sidebarOpen && <Overlay onClick={toggleSidebar} />}
+      
       {/* Sidebar */}
       <Sidebar className={sidebarOpen ? 'open' : 'closed'}>
         <SidebarHeader>
@@ -55,6 +73,7 @@ const DashboardLayout = ({ children, title }) => {
           <SidebarMenuItem 
             to="/" 
             className={isActive('/') ? 'active' : ''}
+            onClick={() => isMobile && setSidebarOpen(false)}
           >
             <FaChartLine className="menu-icon" />
             <span>Dashboard</span>
@@ -63,6 +82,7 @@ const DashboardLayout = ({ children, title }) => {
           <SidebarMenuItem 
             to="/orders" 
             className={isActive('/orders') ? 'active' : ''}
+            onClick={() => isMobile && setSidebarOpen(false)}
           >
             <FaShoppingBag className="menu-icon" />
             <span>Orders</span>
@@ -71,6 +91,7 @@ const DashboardLayout = ({ children, title }) => {
           <SidebarMenuItem 
             to="/products" 
             className={isActive('/products') ? 'active' : ''}
+            onClick={() => isMobile && setSidebarOpen(false)}
           >
             <FaTshirt className="menu-icon" />
             <span>Products</span>
@@ -79,15 +100,17 @@ const DashboardLayout = ({ children, title }) => {
           <SidebarMenuItem 
             to="/customers" 
             className={isActive('/customers') ? 'active' : ''}
+            onClick={() => isMobile && setSidebarOpen(false)}
           >
             <FaUsers className="menu-icon" />
             <span>Customers</span>
           </SidebarMenuItem>
           
-          {/* New Coupons Menu Item */}
+          {/* Coupons Menu Item */}
           <SidebarMenuItem 
             to="/coupons" 
             className={isActive('/coupons') ? 'active' : ''}
+            onClick={() => isMobile && setSidebarOpen(false)}
           >
             <FaTicketAlt className="menu-icon" />
             <span>Coupons</span>
@@ -96,6 +119,7 @@ const DashboardLayout = ({ children, title }) => {
           <SidebarMenuItem 
             to="/contact-messages" 
             className={isActive('/contact-messages') ? 'active' : ''}
+            onClick={() => isMobile && setSidebarOpen(false)}
           >
             <FaEnvelope className="menu-icon" />
             <span>Contact Messages</span>
@@ -104,6 +128,7 @@ const DashboardLayout = ({ children, title }) => {
           <SidebarMenuItem 
             to="/featured-products" 
             className={isActive('/featured-products') ? 'active' : ''}
+            onClick={() => isMobile && setSidebarOpen(false)}
           >
             <FaHome className="menu-icon" />
             <span>Homepage Featured</span>
@@ -113,6 +138,7 @@ const DashboardLayout = ({ children, title }) => {
           <SidebarMenuItem 
             to="/end-of-season-products" 
             className={isActive('/end-of-season-products') ? 'active' : ''}
+            onClick={() => isMobile && setSidebarOpen(false)}
           >
             <FaTag className="menu-icon" />
             <span>End of Season Sale</span>
@@ -122,6 +148,7 @@ const DashboardLayout = ({ children, title }) => {
           <SidebarMenuItem 
             to="/festive-products" 
             className={isActive('/festive-products') ? 'active' : ''}
+            onClick={() => isMobile && setSidebarOpen(false)}
           >
             <FaStar className="menu-icon" />
             <span>Festive Collection</span>
@@ -131,6 +158,7 @@ const DashboardLayout = ({ children, title }) => {
           <SidebarMenuItem 
             to="/wedding-products" 
             className={isActive('/wedding-products') ? 'active' : ''}
+            onClick={() => isMobile && setSidebarOpen(false)}
           >
             <FaRing className="menu-icon" />
             <span>Wedding Collection</span>
@@ -139,6 +167,7 @@ const DashboardLayout = ({ children, title }) => {
           <SidebarMenuItem 
             to="/upload" 
             className={isActive('/upload') ? 'active' : ''}
+            onClick={() => isMobile && setSidebarOpen(false)}
           >
             <FaUpload className="menu-icon" />
             <span>Upload Product</span>
@@ -186,6 +215,23 @@ const DashboardContainer = styled.div`
   display: flex;
   min-height: 100vh;
   background-color: #f5f7fa;
+  position: relative;
+`;
+
+const Overlay = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 5;
+  animation: fadeIn 0.3s ease;
+  
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
 `;
 
 const Sidebar = styled.div`
@@ -208,6 +254,7 @@ const Sidebar = styled.div`
   
   @media (max-width: 768px) {
     width: 240px;
+    z-index: 15;
   }
 `;
 
@@ -236,6 +283,21 @@ const SidebarMenu = styled.div`
   flex-direction: column;
   flex-grow: 1;
   padding: 0 15px;
+  overflow-y: auto;
+  
+  /* Custom scrollbar for webkit browsers */
+  &::-webkit-scrollbar {
+    width: 5px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.3);
+    border-radius: 10px;
+  }
 `;
 
 const SidebarMenuItem = styled(Link)`
@@ -266,6 +328,12 @@ const SidebarMenuItem = styled(Link)`
   .menu-icon {
     font-size: 18px;
     margin-right: 15px;
+    min-width: 18px;
+  }
+  
+  @media (max-width: 768px) {
+    padding: 16px 20px;
+    margin-bottom: 3px;
   }
 `;
 
@@ -292,6 +360,13 @@ const LogoutButton = styled.button`
   .menu-icon {
     font-size: 18px;
     margin-right: 15px;
+    min-width: 18px;
+  }
+  
+  @media (max-width: 768px) {
+    padding: 16px 20px;
+    margin-top: 10px;
+    margin-bottom: 20px;
   }
 `;
 
@@ -323,6 +398,10 @@ const DashboardHeader = styled.header`
   top: 0;
   z-index: 5;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  
+  @media (max-width: 768px) {
+    padding: 15px 20px;
+  }
 `;
 
 const ToggleButton = styled.button`
@@ -342,6 +421,11 @@ const ToggleButton = styled.button`
     background-color: #f0f0f0;
     color: #8e44ad;
   }
+  
+  @media (max-width: 768px) {
+    padding: 12px;
+    font-size: 22px;
+  }
 `;
 
 const PageTitle = styled.h1`
@@ -350,8 +434,12 @@ const PageTitle = styled.h1`
   color: #333;
   margin: 0;
   
-  @media (max-width: 576px) {
-    font-size: 20px;
+  @media (max-width: 768px) {
+    font-size: 18px;
+    max-width: 50%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 `;
 
@@ -359,6 +447,10 @@ const HeaderRight = styled.div`
   display: flex;
   align-items: center;
   gap: 20px;
+  
+  @media (max-width: 768px) {
+    gap: 10px;
+  }
 `;
 
 const UserInfo = styled.div`
@@ -372,7 +464,7 @@ const UserName = styled.span`
   font-weight: 500;
   color: #555;
   
-  @media (max-width: 576px) {
+  @media (max-width: 768px) {
     display: none;
   }
 `;
@@ -394,8 +486,8 @@ const PageContent = styled.div`
   flex-grow: 1;
   overflow-y: auto;
   
-  @media (max-width: 576px) {
-    padding: 20px;
+  @media (max-width: 768px) {
+    padding: 20px 15px;
   }
 `;
 
