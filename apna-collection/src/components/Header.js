@@ -313,11 +313,7 @@ const Header = () => {
               <i className="fas fa-search"></i>
             </div>
             
-            {currentUser && (
-              <div className="icon">
-                <NotificationsCenter />
-              </div>
-            )}
+            {/* Notification bell removed from mobile view */}
             
             <div className="icon">
               <Link to="/cart">
