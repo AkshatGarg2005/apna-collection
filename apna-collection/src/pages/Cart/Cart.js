@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../../context/CartContext';
 import { useAuth } from '../../context/AuthContext';
-import { validateCoupon } from '../../services/couponService';
+import { validateCoupon, getAvailableCoupons } from '../../services/couponService';
 
 const Cart = () => {
   const { cart, removeFromCart, updateCartItemQuantity } = useCart();
@@ -16,6 +16,8 @@ const Cart = () => {
   const [promoSuccess, setPromoSuccess] = useState('');
   const [isLoadingPromo, setIsLoadingPromo] = useState(false);
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+  const [availableCoupons, setAvailableCoupons] = useState([]);
+  const [showAvailableCoupons, setShowAvailableCoupons] = useState(false);
   const navigate = useNavigate();
   
   // References for animated values
@@ -40,6 +42,20 @@ const Cart = () => {
   const isMobile = windowWidth <= MOBILE_BREAKPOINT;
   const isLargePhone = windowWidth <= LARGE_PHONE_BREAKPOINT && windowWidth > MOBILE_BREAKPOINT;
   const isTablet = windowWidth <= TABLET_BREAKPOINT;
+
+  // Fetch available coupons on load
+  useEffect(() => {
+    const fetchCoupons = async () => {
+      try {
+        const coupons = await getAvailableCoupons();
+        setAvailableCoupons(coupons);
+      } catch (error) {
+        console.error('Error fetching available coupons:', error);
+      }
+    };
+    
+    fetchCoupons();
+  }, []);
 
   // Window resize listener
   useEffect(() => {
@@ -140,6 +156,12 @@ const Cart = () => {
       setIsLoadingPromo(false);
       setPromoCode(''); // Clear the input field
     }
+  };
+
+  // Apply a selected coupon from the available coupons list
+  const applySelectedCoupon = (code) => {
+    setPromoCode(code);
+    setTimeout(() => applyPromoCode(), 100);
   };
 
   // Animation for counting up/down
@@ -733,6 +755,73 @@ const Cart = () => {
                 marginBottom: '15px' 
               }}>
                 {promoSuccess}
+              </div>
+            )}
+
+            {/* Available Coupons Section */}
+            {availableCoupons.length > 0 && (
+              <div className="available-coupons">
+                <button 
+                  onClick={() => setShowAvailableCoupons(!showAvailableCoupons)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#c59b6d',
+                    fontSize: '0.9rem',
+                    cursor: 'pointer',
+                    textDecoration: 'underline',
+                    padding: 0,
+                    marginBottom: '10px'
+                  }}
+                >
+                  {showAvailableCoupons ? 'Hide available coupons' : 'View available coupons'}
+                </button>
+                
+                {showAvailableCoupons && (
+                  <div className="coupons-list" style={{ marginTop: '10px' }}>
+                    {availableCoupons.map(coupon => (
+                      <div 
+                        key={coupon.id} 
+                        className="coupon-card"
+                        style={{
+                          border: '1px dashed #c59b6d',
+                          borderRadius: '4px',
+                          padding: '10px',
+                          marginBottom: '10px',
+                          backgroundColor: '#faf7f2'
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div>
+                            <div style={{ fontWeight: 'bold', fontSize: '1rem' }}>{coupon.code}</div>
+                            <div style={{ fontSize: '0.85rem', color: '#666' }}>
+                              {coupon.discountType === 'percentage' ? 
+                                `${coupon.discount}% off (Max ${formatCurrency(coupon.maxDiscount)})` : 
+                                `${formatCurrency(coupon.discount)} off`}
+                            </div>
+                            <div style={{ fontSize: '0.85rem', color: '#666' }}>
+                              Min order: {formatCurrency(coupon.minOrder)}
+                            </div>
+                          </div>
+                          <button 
+                            onClick={() => applySelectedCoupon(coupon.code)}
+                            style={{
+                              backgroundColor: '#c59b6d',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '4px',
+                              padding: '5px 10px',
+                              cursor: 'pointer',
+                              fontSize: '0.85rem'
+                            }}
+                          >
+                            Apply
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>

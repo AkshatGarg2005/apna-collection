@@ -1,5 +1,11 @@
 // src/services/couponService.js
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { 
+  collection, 
+  query, 
+  where, 
+  getDocs,
+  Timestamp 
+} from 'firebase/firestore';
 import { db } from '../firebase/config';
 
 /**
@@ -11,10 +17,13 @@ import { db } from '../firebase/config';
  */
 export const validateCoupon = async (code, orderAmount, userId = null) => {
   try {
+    // Standardize coupon code (uppercase)
+    const formattedCode = code.trim().toUpperCase();
+    
     // Find coupon with the given code
     const couponsQuery = query(
       collection(db, 'coupons'),
-      where('code', '==', code)
+      where('code', '==', formattedCode)
     );
     
     const couponsSnapshot = await getDocs(couponsQuery);
@@ -42,8 +51,23 @@ export const validateCoupon = async (code, orderAmount, userId = null) => {
     
     // Check expiration dates
     const now = new Date();
-    const startDate = coupon.startDate?.toDate ? coupon.startDate.toDate() : new Date(coupon.startDate);
-    const endDate = coupon.endDate?.toDate ? coupon.endDate.toDate() : new Date(coupon.endDate);
+    
+    // Handle both Timestamp objects and regular dates
+    let startDate, endDate;
+    
+    if (coupon.startDate instanceof Timestamp || 
+        (coupon.startDate && typeof coupon.startDate.toDate === 'function')) {
+      startDate = coupon.startDate.toDate();
+    } else {
+      startDate = new Date(coupon.startDate);
+    }
+    
+    if (coupon.endDate instanceof Timestamp || 
+        (coupon.endDate && typeof coupon.endDate.toDate === 'function')) {
+      endDate = coupon.endDate.toDate();
+    } else {
+      endDate = new Date(coupon.endDate);
+    }
     
     if (now < startDate) {
       return {
@@ -140,6 +164,35 @@ export const validateCoupon = async (code, orderAmount, userId = null) => {
   }
 };
 
+/**
+ * Get all available/active coupons for display
+ * @returns {Promise<Array>} Array of active coupons
+ */
+export const getAvailableCoupons = async () => {
+  try {
+    const now = new Date();
+    const nowTimestamp = Timestamp.fromDate(now);
+    
+    const couponsQuery = query(
+      collection(db, 'coupons'),
+      where('active', '==', true),
+      where('startDate', '<=', nowTimestamp),
+      where('endDate', '>=', nowTimestamp)
+    );
+    
+    const couponsSnapshot = await getDocs(couponsQuery);
+    
+    return couponsSnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+  } catch (error) {
+    console.error('Error getting available coupons:', error);
+    return [];
+  }
+};
+
 export default {
-  validateCoupon
+  validateCoupon,
+  getAvailableCoupons
 };
